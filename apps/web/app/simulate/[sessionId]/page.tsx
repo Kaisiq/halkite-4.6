@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
@@ -350,7 +351,7 @@ export default function SimulatePage() {
 
   return (
     <div
-      className="flex flex-col min-h-screen"
+      className="app-shell flex min-h-screen flex-col"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
       {/* ---- Navigation ---- */}
@@ -756,7 +757,7 @@ export default function SimulatePage() {
               {/* View Full Report button */}
               <button
                 type="button"
-                onClick={() => router.push(`/report/${sessionId}`)}
+                onClick={() => router.push(`/report/${sessionId}` as Route)}
                 className="mt-auto rounded-lg border px-5 py-2.5 text-sm font-semibold transition-all hover:bg-[rgba(110,231,200,0.08)]"
                 style={{
                   borderColor: "rgba(110, 231, 200, 0.30)",

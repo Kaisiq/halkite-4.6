@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, use } from "react";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import * as d3 from "d3";
 
@@ -14,21 +15,21 @@ import type { GraphNode } from "@/lib/types";
 // ---------------------------------------------------------------------------
 
 const LAYER_COLORS: Record<string, string> = {
-  People: "#3B82F6",
-  Technology: "#10B981",
-  Supply: "#F59E0B",
-  Financial: "#EAB308",
-  Facilities: "#EF4444",
-  Operations: "#8B5CF6",
+  People: "#82a8ea",
+  Technology: "#79d0c0",
+  Supply: "#deac63",
+  Financial: "#d5cf77",
+  Facilities: "#d9816c",
+  Operations: "#7d93d8",
 };
 
 const FALLBACK_COLORS = [
-  "#06B6D4",
-  "#F472B6",
-  "#A78BFA",
-  "#FB923C",
-  "#34D399",
-  "#FBBF24",
+  "#9bb4ec",
+  "#79d0c0",
+  "#d6c16f",
+  "#dd9d68",
+  "#7c92d7",
+  "#c98869",
 ];
 
 function layerColor(layer: string): string {
@@ -350,7 +351,7 @@ export default function NetworkPage({ params }: PageProps) {
   // ---- Loading state ----
   if (!graph) {
     return (
-      <div className="flex flex-col min-h-screen">
+      <div className="app-shell flex min-h-screen flex-col">
         <NavBar sessionId={sessionId} />
         <div className="flex-1 grid place-items-center">
           <div className="text-center">
@@ -370,7 +371,7 @@ export default function NetworkPage({ params }: PageProps) {
 
   // ---- Render ----
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="app-shell flex h-screen flex-col overflow-hidden">
       <NavBar sessionId={sessionId} />
 
       <div className="flex flex-1 min-h-0">
@@ -581,7 +582,7 @@ export default function NetworkPage({ params }: PageProps) {
                 background: "transparent",
               }}
               onClick={() =>
-                router.push(`/simulate/${sessionId}`)
+                router.push(`/simulate/${sessionId}` as Route)
               }
             >
               Start Simulation

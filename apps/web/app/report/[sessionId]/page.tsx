@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
@@ -256,7 +257,7 @@ function ScenarioCard({
           {/* View on Network button */}
           <button
             type="button"
-            onClick={() => router.push(`/network/${sessionId}`)}
+            onClick={() => router.push(`/network/${sessionId}` as Route)}
             className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-2 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -363,7 +364,7 @@ function EmptyState({ sessionId }: { sessionId: string }) {
         recommendations for your network.
       </p>
       <Link
-        href={`/simulate/${sessionId}`}
+        href={`/simulate/${sessionId}` as Route}
         className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[var(--background)] no-underline transition-colors hover:opacity-90"
         style={{ background: "var(--accent)" }}
       >
@@ -423,7 +424,7 @@ export default function ReportPage() {
   const hasData = scenarios.length > 0;
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+    <div className="app-shell min-h-screen" style={{ background: "var(--background)" }}>
       <NavBar sessionId={sessionId} />
 
       <main className="mx-auto max-w-4xl px-6 py-10">
