@@ -1,0 +1,101 @@
+{
+  "semantic_space": "Organizational Resilience",
+  "vectors": {
+    "V_CRITICALITY": {
+      "base": "operational_criticality",
+      "components": {
+        "mission_essential": 0.9,
+        "revenue_impact": 0.8,
+        "legal_exposure": 0.7,
+        "customer_churn": 0.6,
+        "brand_damage": 0.5
+      },
+      "seed_words": [
+        "mission",
+        "revenue",
+        "legal",
+        "customer",
+        "brand",
+        "vital",
+        "primary"
+      ]
+    },
+    "V_CONNECTIVITY": {
+      "base": "blast_radius",
+      "components": {
+        "hub_centrality": 0.9,
+        "dependency_depth": 0.8,
+        "fan_out": 0.9,
+        "global_reach": 0.7,
+        "cross_layer": 0.8
+      },
+      "seed_words": [
+        "hub",
+        "central",
+        "gateway",
+        "nexus",
+        "global",
+        "shared",
+        "foundation"
+      ]
+    },
+    "V_FRAGILITY": {
+      "base": "irreplaceability",
+      "components": {
+        "scarcity": 0.9,
+        "legacy_debt": 0.8,
+        "monopoly": 0.7,
+        "undocumented": 0.6,
+        "custom_built": 0.5
+      },
+      "seed_words": [
+        "sole",
+        "unique",
+        "legacy",
+        "niche",
+        "SME",
+        "expert",
+        "proprietary"
+      ]
+    },
+    "V_RECOVERY_LOAD": {
+      "base": "recovery_penalty",
+      "components": {
+        "data_gravity": 0.9,
+        "logistics_burden": 0.7,
+        "admin_overhead": 0.6,
+        "physical_access": 0.8,
+        "stateful_complexity": 0.9
+      },
+      "seed_words": [
+        "re-indexing",
+        "manual",
+        "physical",
+        "lead-time",
+        "rebuild",
+        "restore"
+      ]
+    },
+    "V_HISTORICAL": {
+      "base": "historical_incident_impact",
+      "components": {
+        "prior_incident": 0.9,
+        "near_miss": 0.7,
+        "regulatory_finding": 0.8,
+        "audit_flag": 0.6,
+        "insurance_claim": 0.5
+      },
+      "seed_words": [
+        "incident",
+        "outage",
+        "breach",
+        "failure",
+        "recall",
+        "audit",
+        "finding"
+      ]
+    }
+  },
+  "dimensions": 1024,
+  "note": "This vector map represents conceptual centroids in a high-dimensional resilience space."
+}
