@@ -26,8 +26,8 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/web ./apps/web
 
-ARG NEXT_PUBLIC_API_BASE_URL=
-ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+ARG NEXT_PUBLIC_API_BASE_URL=https://achilles-api.sislelabs.com
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=136705022509-2a9bp1u2dc49gcdhippmku59n0b94ti5.apps.googleusercontent.com
 ENV API_INTERNAL_BASE_URL=http://api:8000
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
