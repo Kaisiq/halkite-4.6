@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define how NEXUS should behave when presented live to a jury.
+Define how Achilles should behave when presented live to a jury.
 
 ## Demo principle
 

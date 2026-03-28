@@ -53,7 +53,7 @@ Step 5: RETURN GRAPH
 ```
 Library: PyPDF2 or pdfplumber
 Extract: all text pages
-If scanned/image PDF: use Claude Vision to read
+If scanned/image PDF: use Claude vision to read
 ```
 
 ### DOCX
@@ -73,7 +73,7 @@ Format as structured tables in text
 
 ### Images
 ```
-Library: Pillow + Claude Vision API
+Library: Pillow + Claude API
 Send image to Claude with prompt:
 "Extract all entities and relationships visible in this 
 image (org chart, diagram, whiteboard, etc.)"

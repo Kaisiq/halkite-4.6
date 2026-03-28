@@ -1,1 +1,3 @@
-# Halkite 4.6
+# Achilles
+
+Claude context mirror of `docs/`. See `docs/` for authoritative versions.
