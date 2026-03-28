@@ -6,10 +6,12 @@ import pytest
 
 from nexus_api.agents.base import Agent, AgentBrief
 from nexus_api.agents.bridge_breaker import BridgeBreaker
+from nexus_api.agents.cascading_domino import CascadingDomino
 from nexus_api.agents.cluster_isolator import ClusterIsolator
 from nexus_api.agents.compound_exploiter import CompoundExploiter
 from nexus_api.agents.critical_node import CriticalNodeAttacker
 from nexus_api.agents.layer_assassin import LayerAssassin
+from nexus_api.agents.recovery_maximizer import RecoveryCostMaximizer
 from nexus_api.briefing.briefing import (
     create_all_agents,
     generate_all_briefs,
@@ -47,19 +49,21 @@ EXPECTED_AGENT_TYPES = [
     "compound_exploiter",
     "layer_assassin",
     "cluster_isolator",
+    "cascading_domino",
+    "recovery_maximizer",
 ]
 
 
 def test_generate_all_briefs(briefs):
-    """Should produce exactly 5 briefs with the expected agent types."""
-    assert len(briefs) == 5
+    """Should produce exactly 7 briefs with the expected agent types."""
+    assert len(briefs) == 7
     actual_types = [b.agent_type for b in briefs]
     assert actual_types == EXPECTED_AGENT_TYPES
 
 
 def test_create_all_agents(agents):
-    """Should produce 5 agents, each the correct concrete type."""
-    assert len(agents) == 5
+    """Should produce 7 agents, each the correct concrete type."""
+    assert len(agents) == 7
 
     expected_classes = [
         CriticalNodeAttacker,
@@ -67,6 +71,8 @@ def test_create_all_agents(agents):
         CompoundExploiter,
         LayerAssassin,
         ClusterIsolator,
+        CascadingDomino,
+        RecoveryCostMaximizer,
     ]
     for agent, expected_cls in zip(agents, expected_classes, strict=True):
         assert isinstance(agent, expected_cls)

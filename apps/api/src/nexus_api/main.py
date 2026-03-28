@@ -187,13 +187,19 @@ def _serialize_state(state: Any) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Health check
+# Health check & sessions
 # ---------------------------------------------------------------------------
 
 
 @app.get("/api/health")
 def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/sessions")
+def list_sessions() -> JSONResponse:
+    """List all known session IDs."""
+    return JSONResponse({"session_ids": store.list_ids()})
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +229,7 @@ async def upload_files(
         session = store.create()
         session.graph = result.graph
         session.r_unit = result.r_unit
+        store.persist(session)
 
         # Persist the standard format to disk
         if result.standard is not None:
@@ -269,6 +276,7 @@ async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResp
         session = store.create()
         session.graph = result.graph
         session.r_unit = result.r_unit
+        store.persist(session)
 
         if result.standard is not None:
             save_standard(session.session_id, result.standard)
@@ -339,6 +347,7 @@ async def reingest(body: ReingestRequest) -> JSONResponse:
     session.vulnerability_report = None
     session.state_tree = None
     session.final_report = None
+    store.persist(session)
 
     return JSONResponse(
         {
@@ -419,6 +428,7 @@ async def update_graph(body: GraphUpdateRequest) -> JSONResponse:
 
     graph.rebuild()
     session.graph = graph
+    store.persist(session)
 
     return JSONResponse(
         {
@@ -683,6 +693,7 @@ async def explore(body: ExploreRequest) -> JSONResponse:
         logger.warning("Narrative generation failed (non-fatal): %s", exc)
 
     session.final_report = report
+    store.persist(session)
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -1183,6 +1194,7 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
             logger.warning("Narrative generation failed (non-fatal): %s", exc)
 
         session.final_report = report
+        store.persist(session)
 
         complete_msg: dict[str, Any] = {
             "type": "complete",

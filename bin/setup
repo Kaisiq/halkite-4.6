@@ -73,8 +73,12 @@ EOF
 
   echo
   echo "Setup complete."
-  echo "Next step:"
-  echo "  ./bin/dev"
+  echo
+  echo "Next steps:"
+  echo "  ./bin/dev                     # start API + frontend (in-memory sessions)"
+  echo "  docker compose up --build -d  # start full stack with MongoDB persistence"
+  echo
+  echo "Optional: set MONGODB_URI in .env for persistent sessions without Docker."
 }
 
 main "$@"

@@ -30,6 +30,8 @@ def test_json_path() -> Path:
 
 @pytest.fixture
 def test_json_bytes(test_json_path: Path) -> bytes:
+    if not test_json_path.exists():
+        pytest.skip("docs/test.json not present")
     return test_json_path.read_bytes()
 
 
@@ -335,7 +337,10 @@ class TestBuildGraphFromStandard:
         standard = StandardFormat.model_validate(minimal_standard_dict)
         graph, _ = build_graph_from_standard(standard)
 
-        assert graph.edges[0].meta == "Alice manages the server"
+        # Weight inference replaces string meta with provenance dict
+        meta = graph.edges[0].meta
+        assert isinstance(meta, dict)
+        assert "prior_weight" in meta
 
     def test_from_test_json(self, test_json_bytes: bytes):
         """Build graph from the full docs/test.json."""
@@ -442,5 +447,9 @@ class TestBuildGraphFromStandard:
         graph, _ = build_graph_from_standard(standard)
         assert graph.get_node("ceo").theta == pytest.approx(0.645)
         assert graph.get_node("ceo").r == pytest.approx(10.0)
-        assert graph.edges[0].weight == pytest.approx(0.405)
+        # Weight inference blends the prior (0.405) with structural analysis
+        edge = graph.edges[0]
+        assert 0 < edge.weight <= 1.0
+        assert isinstance(edge.meta, dict)
+        assert edge.meta["prior_weight"] == pytest.approx(0.405)
         assert graph.scoring_policy["version"] == "v1"
