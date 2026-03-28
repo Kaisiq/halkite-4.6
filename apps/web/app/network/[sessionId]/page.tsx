@@ -15,53 +15,40 @@ import type { GraphNode } from "@/lib/types";
 // ---------------------------------------------------------------------------
 
 const LAYER_COLORS: Record<string, string> = {
-  People: "#82a8ea",
-  Technology: "#79d0c0",
-  Supply: "#deac63",
-  Financial: "#d5cf77",
-  Facilities: "#d9816c",
-  Operations: "#7d93d8",
+  People: "var(--layer-people)",
+  Technology: "var(--layer-tech)",
+  Supply: "var(--layer-supply)",
+  Financial: "var(--layer-financial)",
+  Facilities: "var(--layer-facilities)",
+  Operations: "var(--layer-ops)",
 };
 
 const FALLBACK_COLORS = [
-  "#9bb4ec",
-  "#79d0c0",
-  "#d6c16f",
-  "#dd9d68",
-  "#7c92d7",
-  "#c98869",
+  "var(--layer-people)",
+  "var(--layer-tech)",
+  "var(--layer-supply)",
+  "var(--layer-financial)",
+  "var(--layer-facilities)",
+  "var(--layer-ops)",
 ];
 
 function layerColor(layer: string): string {
-  if (LAYER_COLORS[layer]) return LAYER_COLORS[layer];
-  // deterministic fallback for custom layers
+  const direct = LAYER_COLORS[layer];
+  if (direct) return direct;
+
   let hash = 0;
-  for (let i = 0; i < layer.length; i++) {
-    hash = layer.charCodeAt(i) + ((hash << 5) - hash);
+  for (const char of layer) {
+    hash = (hash << 5) - hash + char.charCodeAt(0);
+    hash |= 0;
   }
+
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
 }
 
-function mixHex(a: string, b: string, ratio: number): string {
-  const clampRatio = Math.max(0, Math.min(1, ratio));
-  const parse = (hex: string) => Number.parseInt(hex, 16);
-  const ar = parse(a.slice(1, 3));
-  const ag = parse(a.slice(3, 5));
-  const ab = parse(a.slice(5, 7));
-  const br = parse(b.slice(1, 3));
-  const bg = parse(b.slice(3, 5));
-  const bb = parse(b.slice(5, 7));
-
-  const toHex = (value: number) =>
-    Math.round(value).toString(16).padStart(2, "0");
-
-  return `#${toHex(ar + (br - ar) * clampRatio)}${toHex(ag + (bg - ag) * clampRatio)}${toHex(ab + (bb - ab) * clampRatio)}`;
-}
-
 function impactColor(impact: number, failed: boolean): string {
-  if (failed) return "#d14a3e";
+  if (failed) return "var(--danger)";
   const normalized = Math.max(0, Math.min(1, impact));
-  return mixHex("#7b97b9", "#d14a3e", normalized);
+  return `color-mix(in oklch, var(--danger) ${Math.round(normalized * 100)}%, var(--muted-strong))`;
 }
 
 interface OrbitNode extends GraphNode {
@@ -391,9 +378,9 @@ export default function NetworkPage({ params }: PageProps) {
           return Math.min(1, point.opacity * (node.phi ? 1 : 0.94));
         })
         .attr("stroke", (node) => {
-          if (node.phi) return "#ffd4c8";
+          if (node.phi) return "var(--danger)";
           if (hovered === node.id) return "rgba(255,255,255,0.86)";
-          if (selected === node.id) return "rgba(245, 199, 109, 0.95)";
+          if (selected === node.id) return "var(--selected)";
           return "rgba(255,255,255,0.16)";
         })
         .attr("stroke-width", (node) =>
@@ -476,23 +463,30 @@ export default function NetworkPage({ params }: PageProps) {
 
       <div className="flex flex-1 min-h-0">
         {/* ================================================================
-            LEFT: D3 Graph Canvas (70%)
+            LEFT: D3 Graph Canvas (70.8%)
             ================================================================ */}
-        <div
-          className="relative flex-[7] min-w-0"
-          style={{ background: "var(--background)" }}
-        >
-          <div className="pointer-events-none absolute left-5 top-5 z-10 rounded-2xl border border-white/8 bg-[color:rgb(7_15_26_/_0.76)] px-4 py-3 backdrop-blur-xl">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-              3D impact field
-            </p>
-            <p className="mt-1 text-sm text-[var(--foreground)]">
-              Uniform node size. Impact drives the shift toward red.
-            </p>
-            <div className="mt-3 flex items-center gap-3 text-[0.68rem] uppercase tracking-[0.18em] text-[var(--muted)]">
-              <span>Low</span>
-              <span className="h-2 w-24 rounded-full bg-gradient-to-r from-[#7b97b9] to-[#d14a3e]" />
-              <span>High</span>
+        <div className="relative flex-[7.08] min-w-0">
+          <div className="pointer-events-none absolute left-8 top-8 z-10 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+              <div className="mono-label text-[10px] text-[var(--accent-soft)]">
+                TOPOLOGY_MONITOR_ACTIVE
+              </div>
+            </div>
+            <div className="bracket-box rounded-2xl border-white/5 bg-black/40 backdrop-blur-xl p-5">
+              <p className="mono-label text-[9px] mb-2 opacity-50">
+                RESILIENCE_FIELD_INDEX
+              </p>
+              <p className="text-sm font-medium text-[var(--foreground)] leading-tight">
+                Node radius reflects dependency weight.
+                <br />
+                Color mapping indicates health loss impact.
+              </p>
+              <div className="mt-4 flex items-center justify-between gap-4">
+                <span className="mono-label text-[8px]">STABLE</span>
+                <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-[var(--healthy)] via-[var(--warn)] to-[var(--danger)] opacity-60" />
+                <span className="mono-label text-[8px]">CRITICAL</span>
+              </div>
             </div>
           </div>
 
@@ -500,104 +494,103 @@ export default function NetworkPage({ params }: PageProps) {
             ref={svgRef}
             className="block w-full h-full"
             style={{ background: "transparent" }}
-          />
+            role="img"
+            aria-label="3D Organizational Resilience Graph"
+          >
+            <title>
+              Interactive 3D graph showing organizational dependencies and their
+              relative risk levels.
+            </title>
+          </svg>
 
           {/* Layer toggles overlay */}
-          <div
-            className="absolute bottom-4 left-4 flex flex-col gap-1.5 p-3 rounded-xl text-xs"
-            style={{
-              background: "var(--panel)",
-              border: "1px solid rgba(156, 176, 197, 0.1)",
-              backdropFilter: "blur(12px)",
-            }}
-          >
-            <span
-              className="font-semibold mb-1 text-[10px] uppercase tracking-wider"
-              style={{ color: "var(--muted)" }}
-            >
-              Layers
-            </span>
-            {layers.map((layer) => (
-              <label
-                key={layer}
-                className="flex items-center gap-2 cursor-pointer select-none"
-                style={{ color: "var(--foreground)" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={!hiddenLayers.has(layer)}
-                  onChange={() => toggleLayer(layer)}
-                  className="accent-[var(--accent)] w-3.5 h-3.5"
-                />
-                <span
-                  className="inline-block w-2.5 h-2.5 rounded-full"
-                  style={{ background: layerColor(layer) }}
-                />
-                {layer}
-              </label>
-            ))}
+          <div className="absolute bottom-8 left-8 flex flex-col gap-4 p-6 rounded-3xl border border-white/5 bg-black/40 backdrop-blur-xl">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-4 bg-white/20" />
+              <span className="mono-label text-[10px]">LAYER_FILTER</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {layers.map((layer) => (
+                <label
+                  key={layer}
+                  className="group flex items-center gap-3 cursor-pointer select-none py-1 transition-opacity hover:opacity-100"
+                  style={{ opacity: hiddenLayers.has(layer) ? 0.3 : 1 }}
+                >
+                  <div className="relative flex h-4 w-4 items-center justify-center rounded border border-white/20 transition-all group-hover:border-[var(--accent-soft)]">
+                    {!hiddenLayers.has(layer) && (
+                      <div className="h-2 w-2 rounded-[1px] bg-[var(--accent)]" />
+                    )}
+                    <input
+                      type="checkbox"
+                      checked={!hiddenLayers.has(layer)}
+                      onChange={() => toggleLayer(layer)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <div
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: layerColor(layer) }}
+                  />
+                  <span className="mono-label text-[9px] text-[var(--foreground)]">
+                    {layer.toUpperCase()}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ================================================================
-            RIGHT: Analysis Panel (30%)
+            RIGHT: Analysis Panel (29.2%)
             ================================================================ */}
-        <aside
-          className="flex-[3] min-w-0 overflow-y-auto p-5 flex flex-col gap-5 border-l"
-          style={{
-            background: "var(--panel)",
-            borderColor: "rgba(156, 176, 197, 0.1)",
-          }}
-        >
+        <aside className="flex-[2.92] min-w-0 overflow-y-auto p-8 flex flex-col gap-8 border-l border-white/5 bg-black/20 backdrop-blur-md">
           {/* ---- Network Health ---- */}
-          <section>
-            <h2
-              className="text-xs font-semibold uppercase tracking-wider mb-2"
-              style={{ color: "var(--muted)" }}
-            >
-              Network Health
-            </h2>
-            <p
-              className="text-4xl font-bold tabular-nums"
-              style={{ color: "var(--accent)" }}
-            >
-              H ={" "}
-              {vulnerabilityReport
-                ? vulnerabilityReport.network_health.toFixed(2)
-                : "--"}
-            </p>
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-1 w-6 bg-[var(--accent)]" />
+              <div className="mono-label text-[10px]">SYSTEM_INTEGRITY</div>
+            </div>
+            <div className="bracket-box rounded-[32px] border-white/5 bg-white/[0.02] p-8">
+              <div className="mono-label text-[9px] mb-2 opacity-40 text-center">
+                NETWORK_HEALTH_QUOTIENT
+              </div>
+              <div className="display-face text-6xl font-bold tracking-tighter text-center tabular-nums text-[var(--accent)]">
+                {vulnerabilityReport
+                  ? vulnerabilityReport.network_health.toFixed(2)
+                  : "0.00"}
+                <span className="text-xl opacity-20 ml-1">_H</span>
+              </div>
+            </div>
           </section>
 
           {/* ---- Layer Health Bars ---- */}
           {vulnerabilityReport && (
-            <section>
-              <h3
-                className="text-xs font-semibold uppercase tracking-wider mb-2"
-                style={{ color: "var(--muted)" }}
-              >
-                Layer Health
-              </h3>
-              <div className="flex flex-col gap-2">
+            <section className="flex flex-col gap-6">
+              <div className="mono-label text-[10px] text-[var(--accent-soft)]">
+                LAYER_DIAGNOSTICS
+              </div>
+              <div className="grid gap-4">
                 {Object.entries(vulnerabilityReport.layer_analysis).map(
                   ([layer, info]) => (
-                    <div key={layer}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <span style={{ color: layerColor(layer) }}>
-                          {layer}
+                    <div key={layer} className="flex flex-col gap-2">
+                      <div className="flex justify-between items-end px-1">
+                        <span
+                          className="mono-label text-[9px] font-bold"
+                          style={{ color: layerColor(layer) }}
+                        >
+                          {layer.toUpperCase()}
                         </span>
-                        <span style={{ color: "var(--muted)" }}>
-                          {info.layer_health.toFixed(2)}
+                        <span className="font-mono text-[10px] opacity-60">
+                          {Math.round(info.layer_health * 100)}%_INTEGRITY
                         </span>
                       </div>
-                      <div
-                        className="h-1.5 rounded-full overflow-hidden"
-                        style={{ background: "rgba(156, 176, 197, 0.12)" }}
-                      >
+                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all"
+                          className="h-full rounded-full transition-all duration-1000"
                           style={{
                             width: `${info.layer_health * 100}%`,
                             background: layerColor(layer),
+                            boxShadow: `0 0 8px ${layerColor(layer)}44`,
                           }}
                         />
                       </div>
@@ -610,62 +603,64 @@ export default function NetworkPage({ params }: PageProps) {
 
           {/* ---- Top Risks ---- */}
           {topRisks.length > 0 && (
-            <section>
-              <h3
-                className="text-xs font-semibold uppercase tracking-wider mb-2"
-                style={{ color: "var(--muted)" }}
-              >
-                Top Risks
-              </h3>
-              <ol className="flex flex-col gap-1.5">
+            <section className="flex flex-col gap-4">
+              <div className="mono-label text-[10px] text-[var(--danger)]">
+                CRITICAL_CHOKEPOINTS
+              </div>
+              <div className="flex flex-col gap-2">
                 {topRisks.map((r, i) => {
                   const node = graph.nodes.find((n) => n.id === r.node_id);
                   return (
-                    <li
+                    <button
                       key={r.node_id}
-                      className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
-                      style={{
-                        background:
-                          selectedNodeId === r.node_id
-                            ? "rgba(110, 231, 200, 0.1)"
-                            : "transparent",
-                      }}
+                      className={`group flex items-center justify-between rounded-xl border p-4 text-left transition-all ${
+                        selectedNodeId === r.node_id
+                          ? "border-[var(--danger)]/40 bg-[var(--danger)]/10"
+                          : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                      }`}
                       onClick={() => setSelectedNode(r.node_id)}
                     >
-                      <span>
-                        <span style={{ color: "var(--muted)" }}>{i + 1}. </span>
-                        {node?.name ?? r.node_id}
-                      </span>
-                      <span
-                        className="tabular-nums text-xs"
-                        style={{ color: "#EF4444" }}
-                      >
-                        -{r.health_loss.toFixed(2)}
-                      </span>
-                    </li>
+                      <div className="flex items-center gap-3">
+                        <span className="mono-label text-[9px] opacity-30">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="text-sm font-bold tracking-tight text-[var(--foreground)] uppercase">
+                          {node?.name ?? r.node_id}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="mono-label text-[8px] text-[var(--danger)]">
+                          IMPACT_LOSS
+                        </span>
+                        <span className="font-mono text-xs font-bold text-[var(--danger)]">
+                          -{r.health_loss.toFixed(3)}
+                        </span>
+                      </div>
+                    </button>
                   );
                 })}
-              </ol>
+              </div>
             </section>
           )}
 
           {/* ---- Summary stats ---- */}
           {vulnerabilityReport && (
-            <section className="grid grid-cols-2 gap-3">
+            <section className="grid grid-cols-2 gap-4">
               <StatCard
-                label="Bridges"
+                label="BRIDGE_NODES"
                 value={vulnerabilityReport.bridge_nodes.length}
               />
               <StatCard
-                label="Clusters"
+                label="CLUSTERS_DETECTED"
                 value={vulnerabilityReport.clusters.length}
               />
               {highestSynergy && (
                 <div className="col-span-2">
                   <StatCard
-                    label="Highest Synergy"
-                    value={`${highestSynergy.node_a} + ${highestSynergy.node_b}`}
-                    sub={`${highestSynergy.synergy_ratio.toFixed(1)}x`}
+                    label="MAX_SYNERGY_COLLAPSE"
+                    value={`${highestSynergy.node_a.toUpperCase()} + ${highestSynergy.node_b.toUpperCase()}`}
+                    sub={`${highestSynergy.synergy_ratio.toFixed(1)}x AMPLIFICATION`}
+                    accent="var(--danger)"
                   />
                 </div>
               )}
@@ -673,38 +668,25 @@ export default function NetworkPage({ params }: PageProps) {
           )}
 
           {/* ---- Actions ---- */}
-          <div className="flex flex-col gap-2 mt-auto pt-4">
+          <div className="flex flex-col gap-3 mt-auto pt-6 border-t border-white/5">
             <button
-              className="w-full py-2.5 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-40"
-              style={{
-                background: "var(--accent)",
-                color: "var(--background)",
-              }}
+              className="accent-button w-full py-5 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
               onClick={() => runAnalysis()}
               disabled={analyzing}
             >
-              {analyzing ? "Analyzing..." : "Run Analysis"}
+              {analyzing ? "CALCULATING..." : "RUN ANALYSIS"}
             </button>
 
             <button
-              className="w-full py-2.5 rounded-lg text-sm font-semibold border transition-colors"
-              style={{
-                borderColor: "var(--accent)",
-                color: "var(--accent)",
-                background: "transparent",
-              }}
+              className="ghost-button w-full py-5 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
               onClick={() => router.push(`/simulate/${sessionId}` as Route)}
             >
-              Start Simulation
+              START SIMULATION →
             </button>
 
             {selectedNodeId && (
               <button
-                className="w-full py-2 rounded-lg text-sm font-semibold transition-opacity"
-                style={{
-                  background: "#DC2626",
-                  color: "#fff",
-                }}
+                className="w-full py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all bg-[var(--danger)] text-white hover:brightness-110 shadow-[0_0_24px_rgba(239,68,68,0.2)]"
                 onClick={() =>
                   runCascade({
                     target: selectedNodeId,
@@ -712,42 +694,47 @@ export default function NetworkPage({ params }: PageProps) {
                   })
                 }
               >
-                Kill Node: {selectedNode?.name ?? selectedNodeId}
+                TERMINATE_NODE:{" "}
+                {selectedNode?.name?.toUpperCase() ??
+                  selectedNodeId.toUpperCase()}
               </button>
             )}
           </div>
 
           {/* ---- Node Detail Panel ---- */}
           {selectedNode && (
-            <section
-              className="rounded-xl p-4 mt-2 border"
-              style={{
-                background: "rgba(9, 19, 35, 0.9)",
-                borderColor: "rgba(156, 176, 197, 0.12)",
-              }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold">{selectedNode.name}</h3>
+            <section className="control-surface-strong absolute bottom-8 right-8 z-20 w-[360px] overflow-hidden rounded-[32px] p-8 shadow-[0_32px_80px_rgba(0,0,0,0.5)] fade-rise">
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <div className="mono-label text-[9px] text-[var(--accent-soft)]">
+                    NODE_PROPERTIES
+                  </div>
+                  <h3 className="display-face text-2xl font-bold tracking-tight text-[var(--foreground)] uppercase">
+                    {selectedNode.name}
+                  </h3>
+                </div>
                 <button
-                  className="text-xs px-2 py-0.5 rounded"
-                  style={{ color: "var(--muted)" }}
+                  className="mono-label !text-[9px] opacity-40 hover:opacity-100"
                   onClick={() => setSelectedNode(null)}
                 >
-                  Close
+                  [ CLOSE ]
                 </button>
               </div>
+
               <div
-                className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full mb-3"
+                className="inline-block text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-lg mb-6"
                 style={{
-                  background: layerColor(selectedNode.layer) + "22",
+                  background: layerColor(selectedNode.layer) + "15",
                   color: layerColor(selectedNode.layer),
+                  border: `1px solid ${layerColor(selectedNode.layer)}33`,
                 }}
               >
-                {selectedNode.layer}
+                LAYER: {selectedNode.layer.toUpperCase()}
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+
+              <div className="grid grid-cols-2 gap-4">
                 <NodeStat
-                  label="Impact"
+                  label="IMPACT_WEIGHT"
                   value={(
                     impactByNodeId.get(selectedNode.id) ?? selectedNode.theta
                   ).toFixed(3)}
@@ -757,29 +744,46 @@ export default function NetworkPage({ params }: PageProps) {
                   )}
                 />
                 <NodeStat
-                  label="Health (h)"
+                  label="HEALTH_STATE"
                   value={selectedNode.h.toFixed(3)}
+                  accentColor={
+                    selectedNode.phi ? "var(--danger)" : "var(--healthy)"
+                  }
                 />
                 <NodeStat
-                  label="Importance (theta)"
+                  label="LOCAL_THETA"
                   value={selectedNode.theta.toFixed(3)}
                 />
                 <NodeStat
-                  label="Recovery (r)"
-                  value={selectedNode.r.toLocaleString()}
+                  label="RECOVERY_COST"
+                  value={`$${(selectedNode.r / 1000).toFixed(0)}K`}
                 />
-                <div className="col-span-2">
-                  <NodeStat
-                    label="Connections"
-                    value={String(selectedEdges.length)}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <NodeStat
-                    label="Failed (phi)"
-                    value={selectedNode.phi ? "Yes" : "No"}
-                    alert={selectedNode.phi}
-                  />
+                <div className="col-span-2 pt-2">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-px flex-1 bg-white/5" />
+                    <span className="mono-label text-[8px] opacity-30">
+                      CONNECTIONS
+                    </span>
+                    <div className="h-px flex-1 bg-white/5" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedEdges.map((e, i) => {
+                      const otherId =
+                        e.from === selectedNode.id ? e.to : e.from;
+                      const otherNode = graph.nodes.find(
+                        (n) => n.id === otherId,
+                      );
+                      return (
+                        <div
+                          key={i}
+                          className="rounded-md border border-white/5 bg-white/5 px-2 py-1 font-mono text-[9px] opacity-60"
+                        >
+                          {otherNode?.name?.toUpperCase() ??
+                            otherId.toUpperCase()}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </section>
@@ -798,31 +802,23 @@ function StatCard({
   label,
   value,
   sub,
+  accent,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  accent?: string;
 }) {
   return (
-    <div
-      className="rounded-lg p-3 border"
-      style={{
-        background: "rgba(9, 19, 35, 0.6)",
-        borderColor: "rgba(156, 176, 197, 0.08)",
-      }}
-    >
+    <div className="bracket-box flex flex-col gap-2 rounded-2xl border-white/5 bg-white/[0.02] p-4">
+      <p className="mono-label !text-[8px] opacity-40">{label}</p>
       <p
-        className="text-[10px] uppercase tracking-wider mb-1"
-        style={{ color: "var(--muted)" }}
+        className="text-sm font-bold tracking-tight uppercase"
+        style={{ color: accent }}
       >
-        {label}
+        {value}
       </p>
-      <p className="text-lg font-bold tabular-nums">{value}</p>
-      {sub && (
-        <p className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
-          {sub}
-        </p>
-      )}
+      {sub && <p className="mono-label !text-[8px] opacity-60">{sub}</p>}
     </div>
   );
 }
@@ -839,17 +835,12 @@ function NodeStat({
   accentColor?: string;
 }) {
   return (
-    <div>
+    <div className="flex flex-col gap-1">
+      <p className="mono-label !text-[8px] opacity-40">{label}</p>
       <p
-        className="text-[10px] uppercase tracking-wider"
-        style={{ color: "var(--muted)" }}
-      >
-        {label}
-      </p>
-      <p
-        className="font-semibold tabular-nums"
+        className="font-mono text-sm font-bold tabular-nums"
         style={{
-          color: alert ? "#EF4444" : (accentColor ?? "var(--foreground)"),
+          color: alert ? "var(--danger)" : (accentColor ?? "var(--foreground)"),
         }}
       >
         {value}

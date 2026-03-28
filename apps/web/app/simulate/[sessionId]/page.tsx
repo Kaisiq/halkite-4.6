@@ -74,13 +74,13 @@ interface TreeEdge {
 function severityColor(label: string): string {
   switch (label.toUpperCase()) {
     case "CRITICAL":
-      return "#ef4444";
+      return "var(--danger)";
     case "HIGH":
-      return "#f59e0b";
+      return "var(--warn)";
     case "MEDIUM":
-      return "#eab308";
+      return "oklch(0.85 0.12 95)";
     default:
-      return "#6ee7c8";
+      return "var(--accent)";
   }
 }
 
@@ -89,9 +89,9 @@ function severityColor(label: string): string {
 // ---------------------------------------------------------------------------
 
 function healthColor(H: number): string {
-  if (H > 0.7) return "#22c55e";
-  if (H > 0.3) return "#eab308";
-  return "#ef4444";
+  if (H > 0.7) return "var(--healthy)";
+  if (H > 0.3) return "var(--warn)";
+  return "var(--danger)";
 }
 
 // ---------------------------------------------------------------------------
@@ -846,161 +846,128 @@ export default function SimulatePage() {
   return (
     <div
       className="app-shell flex min-h-screen flex-col"
-      style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
       {/* ---- Navigation ---- */}
       <NavBar sessionId={sessionId} />
 
       {/* ---- Agent Controls ---- */}
       <section
-        className="mx-6 mt-6 rounded-2xl border p-6"
-        style={{
-          background: "var(--panel)",
-          borderColor: "rgba(156, 176, 197, 0.10)",
-          backdropFilter: "blur(16px)",
-        }}
+        className="mx-8 mt-8 rounded-[40px] border border-white/5 bg-black/20 p-8 backdrop-blur-xl"
       >
-        <h2
-          className="text-xs font-semibold tracking-widest uppercase mb-5"
-          style={{ color: "var(--accent)" }}
-        >
-          Agent Controls
-        </h2>
-
-        {/* Agents row */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          {AGENTS.map((agent) => {
-            const active = enabledAgents.has(agent.type);
-            return (
-              <button
-                key={agent.type}
-                type="button"
-                onClick={() => toggleAgent(agent.type)}
-                className="flex items-center gap-2.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all select-none"
-                style={{
-                  background: active
-                    ? "rgba(110, 231, 200, 0.08)"
-                    : "transparent",
-                  borderColor: active
-                    ? "rgba(110, 231, 200, 0.30)"
-                    : "rgba(156, 176, 197, 0.12)",
-                  color: active ? "var(--accent)" : "var(--muted)",
-                }}
-              >
-                {/* Checkbox indicator */}
-                <span
-                  className="flex items-center justify-center w-4 h-4 rounded border text-[10px]"
-                  style={{
-                    borderColor: active
-                      ? "var(--accent)"
-                      : "rgba(156, 176, 197, 0.3)",
-                    background: active ? "var(--accent)" : "transparent",
-                    color: active ? "var(--background)" : "transparent",
-                  }}
-                >
-                  {active ? "\u2713" : ""}
-                </span>
-                {agent.label}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="h-1 w-6 bg-[var(--accent)]" />
+          <h2 className="mono-label text-[10px] text-[var(--accent-soft)]">
+            ADVERSARIAL_SIMULATION_CONTROLS
+          </h2>
         </div>
 
-        {/* Sliders row */}
-        <div className="flex flex-wrap items-end gap-8 mb-6">
-          {/* Depth slider */}
-          <div className="flex flex-col gap-1.5 min-w-[200px]">
-            <label
-              className="text-xs font-medium"
-              style={{ color: "var(--muted)" }}
-            >
-              Depth&nbsp;
-              <span style={{ color: "var(--foreground)" }}>{depth}</span>
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={depth}
-              onChange={(e) => setDepth(Number(e.target.value))}
-              className="w-full accent-[#6ee7c8]"
-            />
-            <div
-              className="flex justify-between text-[10px]"
-              style={{ color: "var(--muted)" }}
-            >
-              <span>1</span>
-              <span>10</span>
+        <div className="grid gap-10 lg:grid-cols-[1fr_auto]">
+          <div className="flex flex-col gap-8">
+            {/* Agents row */}
+            <div className="flex flex-col gap-4">
+              <div className="mono-label text-[9px] opacity-40">ACTIVE_AGENTS</div>
+              <div className="flex flex-wrap gap-3">
+                {AGENTS.map((agent) => {
+                  const active = enabledAgents.has(agent.type);
+                  return (
+                    <button
+                      key={agent.type}
+                      type="button"
+                      onClick={() => toggleAgent(agent.type)}
+                      className={`flex items-center gap-3 rounded-2xl border px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${
+                        active
+                          ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
+                          : "border-white/5 bg-white/[0.02] text-[var(--muted)] hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <div className={`h-1.5 w-1.5 rounded-full transition-all ${active ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" : "bg-white/10"}`} />
+                      {agent.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sliders row */}
+            <div className="grid gap-12 sm:grid-cols-2 lg:max-w-3xl">
+              {/* Depth slider */}
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-end">
+                  <label className="mono-label text-[9px] opacity-40">
+                    EXPLORATION_DEPTH
+                  </label>
+                  <span className="font-mono text-xl font-bold text-[var(--foreground)]">{depth.toString().padStart(2, '0')}</span>
+                </div>
+                <div className="relative flex items-center h-6">
+                  <div className="absolute h-[1px] w-full bg-white/5" />
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={depth}
+                    onChange={(e) => setDepth(Number(e.target.value))}
+                    className="absolute w-full appearance-none bg-transparent accent-[var(--accent)] cursor-pointer [&::-webkit-slider-runnable-track]:h-[1px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:shadow-[0_0_12px_var(--accent)]"
+                  />
+                </div>
+              </div>
+
+              {/* Tree limit slider */}
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-end">
+                  <label className="mono-label text-[9px] opacity-40">
+                    NODE_COMPUTE_LIMIT
+                  </label>
+                  <span className="font-mono text-xl font-bold text-[var(--foreground)]">
+                    {(treeLimit / 1000).toFixed(1)}K
+                  </span>
+                </div>
+                <div className="relative flex items-center h-6">
+                  <div className="absolute h-[1px] w-full bg-white/5" />
+                  <input
+                    type="range"
+                    min={100}
+                    max={10000}
+                    step={100}
+                    value={treeLimit}
+                    onChange={(e) => setTreeLimit(Number(e.target.value))}
+                    className="absolute w-full appearance-none bg-transparent accent-[var(--accent)] cursor-pointer [&::-webkit-slider-runnable-track]:h-[1px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:shadow-[0_0_12px_var(--accent)]"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Tree limit slider */}
-          <div className="flex flex-col gap-1.5 min-w-[240px]">
-            <label
-              className="text-xs font-medium"
-              style={{ color: "var(--muted)" }}
+          <div className="flex flex-col justify-end">
+            <button
+              type="button"
+              onClick={handleRun}
+              disabled={exploring || enabledAgents.size === 0}
+              className="accent-button min-w-[240px] rounded-full py-6 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
             >
-              Tree Limit&nbsp;
-              <span style={{ color: "var(--foreground)" }}>
-                {treeLimit.toLocaleString()}
-              </span>
-            </label>
-            <input
-              type="range"
-              min={100}
-              max={10000}
-              step={100}
-              value={treeLimit}
-              onChange={(e) => setTreeLimit(Number(e.target.value))}
-              className="w-full accent-[#6ee7c8]"
-            />
-            <div
-              className="flex justify-between text-[10px]"
-              style={{ color: "var(--muted)" }}
-            >
-              <span>100</span>
-              <span>10,000</span>
-            </div>
+              {exploring ? "COMPUTING..." : "RUN EXPLORATION →"}
+            </button>
           </div>
         </div>
-
-        {/* Run button */}
-        <button
-          type="button"
-          onClick={handleRun}
-          disabled={exploring || enabledAgents.size === 0}
-          className="rounded-lg px-6 py-2.5 text-sm font-semibold transition-all disabled:opacity-40"
-          style={{
-            background: "var(--accent)",
-            color: "var(--background)",
-          }}
-        >
-          {exploring ? "Exploring..." : "Run Exploration"}
-        </button>
       </section>
 
       {/* ---- Bottom: Tree + Results ---- */}
-      <div className="flex flex-1 gap-6 mx-6 my-6 min-h-0">
+      <div className="flex flex-1 gap-8 mx-8 my-8 min-h-0">
         {/* -- Left: State Tree Visualization -- */}
         <section
           ref={containerRef}
-          className="relative flex-1 rounded-2xl border overflow-hidden"
-          style={{
-            background: "var(--panel)",
-            borderColor: "rgba(156, 176, 197, 0.10)",
-            backdropFilter: "blur(16px)",
-            minHeight: 480,
-          }}
+          className="relative flex-1 rounded-[48px] border border-white/5 bg-black/20 backdrop-blur-md overflow-hidden"
+          style={{ minHeight: 480 }}
         >
-          <h3
-            className="absolute top-4 left-5 text-xs font-semibold tracking-widest uppercase z-10"
-            style={{ color: "var(--accent)" }}
-          >
-            State Tree
-          </h3>
-          <div className="pointer-events-none absolute right-5 top-4 z-10 rounded-full border border-white/8 bg-[color:rgb(9_19_35_/_0.88)] px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-            Click any branch to focus its path
+          <div className="absolute top-8 left-8 z-10 flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+              <div className="mono-label text-[10px] text-[var(--accent-soft)]">STATE_TREE_TOPOLOGY</div>
+            </div>
           </div>
+          <div className="pointer-events-none absolute right-8 top-8 z-10 rounded-full border border-white/5 bg-black/40 px-5 py-2 backdrop-blur-md">
+            <span className="mono-label text-[9px] opacity-60">INTERACTION: CLICK_BRANCH_TO_FOCUS</span>
+          </div>
+
 
           {/* Empty / loading / error states */}
           {!vizData?.state_tree && !exploring && (
@@ -1081,70 +1048,58 @@ export default function SimulatePage() {
         </section>
 
         {/* -- Right: Progress / Results Panel -- */}
-        <section
-          className="w-[380px] shrink-0 rounded-2xl border p-5 flex flex-col gap-5 overflow-y-auto"
-          style={{
-            background: "var(--panel)",
-            borderColor: "rgba(156, 176, 197, 0.10)",
-            backdropFilter: "blur(16px)",
-          }}
+        <aside
+          className="flex-[4] min-w-[340px] max-w-[480px] rounded-[48px] border border-white/5 bg-black/20 p-8 flex flex-col gap-8 overflow-y-auto backdrop-blur-md"
         >
-          <h3
-            className="text-xs font-semibold tracking-widest uppercase"
-            style={{ color: "var(--accent)" }}
-          >
-            {exploring ? "Exploring..." : treeStats ? "Results" : "Progress"}
-          </h3>
+          <div className="flex items-center gap-3">
+            <div className="h-1 w-4 bg-[var(--accent)]" />
+            <h3 className="mono-label text-[10px]">
+              {exploring ? "MONITORING_THREAD..." : treeStats ? "SIMULATION_RESULTS" : "SYSTEM_LOG"}
+            </h3>
+          </div>
 
           {/* -- Before exploration -- */}
           {!exploring && !treeStats && !exploreError && (
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              Configure agents and parameters above, then click{" "}
-              <span style={{ color: "var(--accent)" }}>Run Exploration</span> to
-              begin state-tree analysis.
-            </p>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm leading-relaxed text-[var(--muted)]">
+                Initialize the adversarial engine to discover high-consequence
+                failure paths across the organizational topology.
+              </p>
+              <div className="h-px w-full bg-white/5" />
+              <div className="mono-label text-[9px] opacity-40">WAITING_FOR_TRIGGER...</div>
+            </div>
           )}
 
           {/* -- Error state -- */}
           {exploreError && (
             <div
-              className="rounded-lg border p-3 text-sm"
-              style={{
-                borderColor: "rgba(239, 68, 68, 0.3)",
-                background: "rgba(239, 68, 68, 0.06)",
-                color: "#ef4444",
-              }}
+              className="bracket-box rounded-2xl border-[var(--danger)]/20 bg-[var(--danger)]/5 p-4 text-xs text-[var(--danger)]"
             >
+              <div className="mono-label text-[8px] mb-1">CRITICAL_EXCEPTION</div>
               {exploreError}
             </div>
           )}
 
           {/* -- During exploration -- */}
           {exploring && (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-4">
                 <div
-                  className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
-                  style={{
-                    borderColor: "var(--accent)",
-                    borderTopColor: "transparent",
-                  }}
+                  className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin border-[var(--accent)]"
                 />
-                <span className="text-sm" style={{ color: "var(--muted)" }}>
-                  Searching state space...
+                <span className="mono-label text-[10px] text-[var(--accent-soft)]">
+                  PARALLEL_STATE_SEARCH_ACTIVE
                 </span>
               </div>
-              {/* Animated skeleton bars */}
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-3 rounded-full animate-pulse"
-                  style={{
-                    background: "rgba(156, 176, 197, 0.08)",
-                    width: `${70 - i * 15}%`,
-                  }}
-                />
-              ))}
+              <div className="flex flex-col gap-3">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-1.5 rounded-full animate-pulse bg-white/5"
+                    style={{ width: `${80 - i * 15}%` }}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -1152,207 +1107,129 @@ export default function SimulatePage() {
           {!exploring && treeStats && (
             <>
               {/* Summary stats */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <StatCard
-                  label="Nodes Explored"
-                  value={treeStats.total_nodes_explored.toLocaleString()}
+                  label="NODES_EXPLORED"
+                  value={treeStats.total_nodes_explored.toLocaleString().replace(/,/g, '_')}
                 />
                 <StatCard
-                  label="Max Depth"
-                  value={String(treeStats.max_depth_reached)}
+                  label="MAX_DEPTH"
+                  value={String(treeStats.max_depth_reached).padStart(2, '0')}
                 />
                 <StatCard
-                  label="Compute Time"
-                  value={`${(treeStats.computation_time_ms / 1000).toFixed(1)}s`}
+                  label="COMPUTE_LATENCY"
+                  value={`${(treeStats.computation_time_ms / 1000).toFixed(1)}S`}
                 />
-                <StatCard label="Scenarios" value={String(scenarios.length)} />
+                <StatCard label="UNIQUE_SCENARIOS" value={String(scenarios.length).padStart(2, '0')} />
               </div>
 
               {currentPathBriefing && (
-                <div
-                  className="rounded-2xl border p-4"
-                  style={{
-                    borderColor: "rgba(156, 176, 197, 0.12)",
-                    background: "rgba(255, 255, 255, 0.025)",
-                  }}
-                >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <p
-                        className="text-[11px] font-semibold uppercase tracking-[0.22em]"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Current Path Briefing
-                      </p>
-                      <h4
-                        className="mt-1 text-base font-semibold"
-                        style={{ color: "var(--foreground)" }}
-                      >
-                        {currentPathBriefing.title}
-                      </h4>
-                    </div>
-                    <span
-                      className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em]"
-                      style={{
-                        color: severityColor(currentPathBriefing.severityLabel),
-                        background: `${severityColor(currentPathBriefing.severityLabel)}18`,
-                      }}
-                    >
-                      {currentPathBriefing.severityLabel}
-                    </span>
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-white/5" />
+                    <span className="mono-label text-[9px] opacity-40">SELECTED_PATH_DIAGNOSTICS</span>
+                    <div className="h-px flex-1 bg-white/5" />
                   </div>
 
-                  <div className="space-y-4 text-sm leading-6">
-                    <div>
-                      <p
-                        className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Impact
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <MiniMetric
-                          label="Health loss"
-                          value={currentPathBriefing.impact.healthLoss.toFixed(
-                            2,
-                          )}
-                          tone="#ef4444"
-                        />
-                        <MiniMetric
-                          label="Last delta"
-                          value={currentPathBriefing.impact.deltaH.toFixed(2)}
-                          tone="#f59e0b"
-                        />
-                        <MiniMetric
-                          label="Failed nodes"
-                          value={String(currentPathBriefing.impact.failedCount)}
-                          tone="var(--foreground)"
-                        />
-                        <MiniMetric
-                          label="Impact score"
-                          value={currentPathBriefing.impact.estimatedImpact.toFixed(
-                            2,
-                          )}
-                          tone="var(--accent)"
-                        />
+                  <div
+                    className="bracket-box flex flex-col gap-6 rounded-[32px] border-white/5 bg-white/[0.02]"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <div
+                          className="mono-label text-[9px] text-[var(--accent-soft)]"
+                        >
+                          CASE_STUDY
+                        </div>
+                        <h4
+                          className="display-face text-xl font-bold tracking-tight text-[var(--foreground)] uppercase"
+                        >
+                          {currentPathBriefing.title}
+                        </h4>
                       </div>
+                      <span
+                        className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest"
+                        style={{
+                          color: severityColor(currentPathBriefing.severityLabel),
+                          background: `${severityColor(currentPathBriefing.severityLabel)}18`,
+                          border: `1px solid ${severityColor(currentPathBriefing.severityLabel)}33`,
+                        }}
+                      >
+                        {currentPathBriefing.severityLabel}
+                      </span>
                     </div>
 
-                    <div>
-                      <p
-                        className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        What happened
-                      </p>
-                      <p style={{ color: "var(--foreground)" }}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <MiniMetric
+                        label="TOTAL_H_LOSS"
+                        value={`-${currentPathBriefing.impact.healthLoss.toFixed(2)}`}
+                        tone="var(--danger)"
+                      />
+                      <MiniMetric
+                        label="CASCADE_COUNT"
+                        value={String(currentPathBriefing.impact.failedCount).padStart(2, '0')}
+                        tone="var(--foreground)"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                      <div className="mono-label text-[9px] opacity-40">EVENT_NARRATIVE</div>
+                      <p className="text-sm leading-relaxed text-[var(--muted-strong)]">
                         {currentPathBriefing.summary}
                       </p>
-                      <p className="mt-2" style={{ color: "var(--muted)" }}>
+                      <p className="text-xs leading-relaxed text-[var(--muted)] opacity-70">
                         {currentPathBriefing.story}
                       </p>
                     </div>
 
                     {currentPathBriefing.events.length > 0 && (
-                      <div>
-                        <p
-                          className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          Sequence
-                        </p>
-                        <div className="space-y-2">
+                      <div className="flex flex-col gap-4">
+                        <div className="mono-label text-[9px] opacity-40">PROPAGATION_SEQUENCE</div>
+                        <div className="flex flex-col gap-2">
                           {currentPathBriefing.events.map((event) => (
                             <div
                               key={`${event.step}-${event.event}`}
-                              className="rounded-xl border px-3 py-2"
-                              style={{
-                                borderColor: "rgba(156, 176, 197, 0.08)",
-                                background: "rgba(156, 176, 197, 0.04)",
-                              }}
+                              className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.02] p-3"
                             >
-                              <div className="flex items-center justify-between gap-3">
-                                <span style={{ color: "var(--foreground)" }}>
-                                  Step {event.step}: {event.event}
-                                </span>
-                                <span
-                                  className="tabular-nums text-xs"
-                                  style={{ color: "#ef4444" }}
-                                >
-                                  -{event.deltaH.toFixed(2)} H
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="mono-label !text-[8px] opacity-40">STEP_{String(event.step).padStart(2, '0')}</span>
+                                <span className="truncate text-[11px] font-bold text-[var(--foreground)] uppercase tracking-tight">
+                                  {event.event}
                                 </span>
                               </div>
-                              <p
-                                className="mt-1 text-xs"
-                                style={{ color: "var(--muted)" }}
+                              <span
+                                className="font-mono text-[11px] font-bold text-[var(--danger)] shrink-0"
                               >
-                                State settles at H {event.H.toFixed(2)} with{" "}
-                                {event.failures} failed nodes.
-                              </p>
+                                -{event.deltaH.toFixed(2)}H
+                              </span>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    <div>
-                      <p
-                        className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Forward projection
-                      </p>
-                      <p style={{ color: "var(--foreground)" }}>
-                        {currentPathBriefing.forecast}
-                      </p>
-                    </div>
-
-                    {currentPathBriefing.terminalBusinessOutlook && (
-                      <div>
-                        <p
-                          className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          Terminal outlook
-                        </p>
-                        <p style={{ color: "var(--foreground)" }}>
-                          {currentPathBriefing.terminalBusinessOutlook}
-                        </p>
-                      </div>
-                    )}
-
                     {currentPathBriefing.recommendations.length > 0 && (
-                      <div>
-                        <p
-                          className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          Recommended intervention
-                        </p>
-                        <ul className="space-y-2">
+                      <div className="flex flex-col gap-4">
+                        <div className="mono-label text-[9px] opacity-40">COUNTERMEASURE_ADVISORY</div>
+                        <div className="flex flex-col gap-3">
                           {currentPathBriefing.recommendations
                             .slice(0, 2)
                             .map((rec) => (
-                              <li
+                              <div
                                 key={`${rec.action}-${rec.reason}`}
-                                className="rounded-xl border px-3 py-2"
-                                style={{
-                                  borderColor: "rgba(110, 231, 200, 0.14)",
-                                  background: "rgba(110, 231, 200, 0.05)",
-                                }}
+                                className="bracket-box rounded-2xl border-[var(--accent)]/20 bg-[var(--accent)]/5 p-4"
                               >
-                                <p style={{ color: "var(--foreground)" }}>
+                                <p className="text-[11px] font-bold text-[var(--foreground)] uppercase tracking-tight">
                                   {rec.action}
                                 </p>
                                 <p
-                                  className="mt-1 text-xs"
-                                  style={{ color: "var(--muted)" }}
+                                  className="mt-2 text-[10px] leading-relaxed text-[var(--muted)]"
                                 >
                                   {rec.reason}
                                 </p>
-                              </li>
+                              </div>
                             ))}
-                        </ul>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1361,35 +1238,27 @@ export default function SimulatePage() {
 
               {/* Per-agent stats */}
               {agentStatEntries.length > 0 && (
-                <div>
-                  <p
-                    className="text-[11px] font-semibold uppercase tracking-wide mb-2"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Agent Breakdown
-                  </p>
+                <div className="flex flex-col gap-4">
+                  <div className="mono-label text-[9px] opacity-40">AGENT_DIAGNOSTICS</div>
                   <div className="flex flex-col gap-2">
                     {agentStatEntries.map(([name, stats]) => (
                       <div
                         key={name}
-                        className="flex items-center justify-between rounded-md px-3 py-2 text-xs"
-                        style={{ background: "rgba(156, 176, 197, 0.05)" }}
+                        className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3"
                       >
                         <span
-                          className="font-medium truncate max-w-[160px]"
-                          style={{ color: "var(--foreground)" }}
+                          className="mono-label text-[9px] font-bold text-[var(--muted-strong)]"
                         >
-                          {formatAgentName(name)}
+                          {formatAgentName(name).toUpperCase()}
                         </span>
                         <div
-                          className="flex gap-3"
-                          style={{ color: "var(--muted)" }}
+                          className="flex gap-4 font-mono text-[9px]"
                         >
-                          <span>{stats.nodes_explored} nodes</span>
+                          <span className="opacity-40">{stats.nodes_explored}_NODES</span>
                           <span
                             style={{ color: healthColor(stats.worst_H_found) }}
                           >
-                            H={stats.worst_H_found.toFixed(2)}
+                            MIN_H:{stats.worst_H_found.toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -1400,13 +1269,8 @@ export default function SimulatePage() {
 
               {/* Top 3 worst scenarios */}
               {topScenarios.length > 0 && (
-                <div>
-                  <p
-                    className="text-[11px] font-semibold uppercase tracking-wide mb-2"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Top Worst Scenarios
-                  </p>
+                <div className="flex flex-col gap-4">
+                  <div className="mono-label text-[9px] opacity-40">CRITICAL_VECTORS</div>
                   <div className="flex flex-col gap-2">
                     {topScenarios.map((s, i) => (
                       <button
@@ -1417,101 +1281,42 @@ export default function SimulatePage() {
                           const leaf = leafNodes[i];
                           setFocusedNodeId(leaf?.id ?? null);
                         }}
-                        className="w-full rounded-lg border p-3 text-left transition-all"
-                        style={{
-                          borderColor:
-                            activeScenarioIndex === i
-                              ? "rgba(110, 231, 200, 0.28)"
-                              : "rgba(156, 176, 197, 0.10)",
-                          background:
-                            activeScenarioIndex === i
-                              ? "rgba(110, 231, 200, 0.08)"
-                              : "rgba(156, 176, 197, 0.03)",
-                        }}
+                        className={`group flex items-center justify-between rounded-2xl border p-4 text-left transition-all ${
+                          activeScenarioIndex === i
+                            ? "border-[var(--danger)]/40 bg-[var(--danger)]/10"
+                            : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                        }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-3">
                           <span
-                            className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                            className="mono-label text-[8px] font-bold uppercase border px-1.5 py-0.5 rounded"
                             style={{
                               color: severityColor(s.severity_label),
+                              borderColor: `${severityColor(s.severity_label)}33`,
                               background: `${severityColor(s.severity_label)}15`,
                             }}
                           >
                             {s.severity_label}
                           </span>
-                          <span
-                            className="text-xs font-mono"
-                            style={{ color: healthColor(s.health_remaining) }}
-                          >
-                            H={s.health_remaining.toFixed(2)}
+                          <span className="text-xs font-bold tracking-tight text-[var(--foreground)] uppercase">
+                            SCENARIO_{String(i + 1).padStart(2, '0')}
                           </span>
                         </div>
-                        <p
-                          className="text-sm font-medium truncate"
-                          style={{ color: "var(--foreground)" }}
+                        <span
+                          className="font-mono text-[11px] font-bold"
+                          style={{ color: healthColor(s.health_remaining) }}
                         >
-                          {s.title}
-                        </p>
-                        <p
-                          className="mt-1 text-xs leading-relaxed"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          {s.summary}
-                        </p>
+                          {s.health_remaining.toFixed(2)}_H
+                        </span>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
-
-              {/* View Full Report button */}
-              <button
-                type="button"
-                onClick={() => router.push(`/report/${sessionId}` as Route)}
-                className="mt-auto rounded-lg border px-5 py-2.5 text-sm font-semibold transition-all hover:bg-[rgba(110,231,200,0.08)]"
-                style={{
-                  borderColor: "rgba(110, 231, 200, 0.30)",
-                  color: "var(--accent)",
-                }}
-              >
-                View Full Report
-              </button>
             </>
           )}
-        </section>
+        </aside>
       </div>
-
-      <RiskDocumentsPanel
-        graph={graph}
-        scenarios={scenarios}
-        recommendations={recommendations}
-      />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      className="rounded-lg p-3"
-      style={{ background: "rgba(156, 176, 197, 0.05)" }}
-    >
-      <p
-        className="text-[10px] font-semibold uppercase tracking-wide mb-0.5"
-        style={{ color: "var(--muted)" }}
-      >
-        {label}
-      </p>
-      <p
-        className="text-lg font-bold tabular-nums"
-        style={{ color: "var(--foreground)" }}
-      >
-        {value}
-      </p>
     </div>
   );
 }
@@ -1526,33 +1331,42 @@ function MiniMetric({
   tone: string;
 }) {
   return (
-    <div
-      className="rounded-xl border px-3 py-2"
-      style={{
-        borderColor: "rgba(156, 176, 197, 0.08)",
-        background: "rgba(156, 176, 197, 0.04)",
-      }}
-    >
+    <div className="flex flex-col gap-1">
       <p
-        className="text-[10px] font-semibold uppercase tracking-[0.18em]"
-        style={{ color: "var(--muted)" }}
+        className="mono-label !text-[8px] opacity-40"
       >
         {label}
       </p>
-      <p
-        className="mt-1 text-sm font-semibold tabular-nums"
-        style={{ color: tone }}
-      >
+      <p className="font-mono text-xs font-bold" style={{ color: tone }}>
         {value}
       </p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+function formatAgentName(name: string): string {
+  return name.replace(/_/g, " ");
+}
 
-function formatAgentName(raw: string): string {
-  return raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  accent?: string;
+}) {
+  return (
+    <div
+      className="bracket-box flex flex-col gap-2 rounded-2xl border-white/5 bg-white/[0.02] p-4"
+    >
+      <p
+        className="mono-label !text-[8px] opacity-40"
+      >
+        {label}
+      </p>
+      <p className="text-xs font-bold tracking-tight uppercase" style={{ color: accent }}>{value}</p>
+    </div>
+  );
 }

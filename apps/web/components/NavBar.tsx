@@ -19,18 +19,30 @@ export default function NavBar({ sessionId }: NavBarProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-30 border-b hairline bg-[color:rgb(8_15_27_/_0.72)] backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-[1600px] items-center gap-3 px-4 py-3 sm:px-6">
-        <Link href="/" className="mr-2 min-w-0">
-          <div className="eyebrow mb-1">Organizational Stress Testing</div>
-          <div className="display-face text-xl font-semibold tracking-[0.18em] text-[var(--foreground)]">
-            Halkantir
+    <nav className="sticky top-0 z-50 border-b border-white/5 bg-black/60 backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-[1720px] items-center gap-8 px-6 py-4 md:px-12">
+        <Link
+          href="/"
+          className="group flex items-center gap-4 transition-all hover:opacity-80"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)] shadow-[0_0_20px_rgba(110,231,200,0.15)] transition-transform group-hover:scale-105">
+            <span className="display-face text-xl font-black tracking-tighter">
+              H
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="display-face text-lg font-bold tracking-tight text-[var(--foreground)] uppercase leading-none">
+              Halkantir
+            </span>
+            <span className="mono-label !text-[9px] opacity-40">
+              NEXUS_SIMULATION_PLATFORM
+            </span>
           </div>
         </Link>
 
-        <div className="hidden h-10 w-px bg-white/10 lg:block" />
+        <div className="hidden h-8 w-px bg-white/5 lg:block" />
 
-        <div className="hidden min-w-0 flex-1 items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-6 lg:flex">
           {NAV_ITEMS.map(({ label, path }) => {
             const href = path(sessionId);
             const isActive = pathname.startsWith(href);
@@ -39,24 +51,35 @@ export default function NavBar({ sessionId }: NavBarProps) {
               <Link
                 key={label}
                 href={href}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-[color:rgb(123_220_198_/_0.12)] text-[var(--foreground)]"
-                    : "text-[var(--muted)] hover:bg-white/5 hover:text-[var(--foreground)]"
+                className={`relative px-2 py-1 transition-all hover:opacity-100 ${
+                  isActive ? "opacity-100" : "opacity-40"
                 }`}
               >
-                {label}
+                <div className="flex flex-col items-center">
+                  <span className="mono-label text-[10px]">
+                    {label.toUpperCase()}
+                  </span>
+                  {isActive && (
+                    <div className="absolute -bottom-[21px] h-[2px] w-full bg-[var(--accent)] shadow-[0_0_12px_rgba(123,220,198,0.4)]" />
+                  )}
+                </div>
               </Link>
             );
           })}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <div className="metric-chip hidden rounded-full px-3 py-2 text-xs font-medium sm:block">
-            Session {sessionId.slice(0, 8)}
+        <div className="ml-auto flex items-center gap-4">
+          <div className="hidden flex-col items-end sm:flex">
+            <div className="mono-label text-[9px] opacity-40">SESSION_ID</div>
+            <div className="font-mono text-[11px] font-bold text-[var(--muted-strong)]">
+              {sessionId.slice(0, 12).toUpperCase()}
+            </div>
           </div>
-          <div className="rounded-full border border-[color:rgb(123_220_198_/_0.22)] bg-[color:rgb(123_220_198_/_0.08)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-soft)]">
-            Live Graph
+          <div className="flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/5 px-4 py-2">
+            <span className="status-dot !mr-0 animate-pulse bg-[var(--accent)]" />
+            <span className="mono-label !text-[10px] text-[var(--accent-soft)]">
+              LIVE_GRAPH
+            </span>
           </div>
         </div>
       </div>

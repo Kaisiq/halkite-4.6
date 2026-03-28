@@ -248,6 +248,7 @@ async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResp
             extract_folder_id,
             import_drive_folder,
         )
+        from nexus_api.ingestion.standard import save_standard
 
         import asyncio
 
