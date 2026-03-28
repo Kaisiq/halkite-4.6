@@ -2,6 +2,7 @@
 
 Product specs, architecture, and business plan for the Halkantir organizational stress-testing platform.
 
+- `BUSINESS_MODEL_PRICING.md` — detailed packaging, pricing, billing cadence, and contract terms
 - `BUSINESS_PLAN.md` — pitch kit and market positioning
 - `PITCH_DECK_3MIN.md` — 3-minute jury deck with slide copy and speaker notes
 - `DEMO_VIDEO_WORKFLOW.md` — reproducible frontend video recording workflow

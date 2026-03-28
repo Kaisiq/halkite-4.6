@@ -95,7 +95,7 @@ Halkantir targets a specific wedge of this market: **automated structural risk a
 
 ### Enterprise (80%)
 
-- **Licensing model** — annual license based on organization size (node count in the dependency graph)
+- **Licensing model** — annual license based primarily on company size, with enterprise as the primary revenue driver
 - **On-prem deployment option** — critical for regulated industries. _"This solution can start in a garage with the level of security a bank requires."_
 - **Document generation** — automated compliance reports aligned with NIS2/DORA requirements
 - **Segmented data** — each department/entity gets isolated data views
@@ -105,16 +105,20 @@ Halkantir targets a specific wedge of this market: **automated structural risk a
 
 - A compliance consultant costs €1,500/day × 30-60 days = **€45K-90K per assessment**
 - Halkantir delivers comparable output in hours
-- Enterprise license: **€15K-50K/year** depending on org size
+- Enterprise license: annual pricing by employee band, starting at **€35K/year** for enterprise accounts
 - Land with an initial assessment engagement, expand to ongoing monitoring
 
 ### SME / Scaleup (20%)
 
-- **SaaS model** — self-serve, monthly/annual subscription
+- **Annual contract model** — feeder tier for future enterprise expansion, not a parallel primary business
+- **Quarterly billing** — all smaller accounts are sold on annual terms but billed quarterly to reduce entry friction
+- **First-quarter exit path** — new SMB and Growth customers can stop after quarter one without being charged the remaining quarters of year one
 - **No report generation** — instead, interactive dashboard showing risks and recommended actions ("don't sell them the report, sell them the fix")
 - **Lower touch** — product-led growth, content marketing, event demos
 
-**Pricing:** €200-500/month depending on team size
+**Pricing:** employee-band annual pricing, starting at **€6K/year** for SMB and increasing into enterprise bands for larger organizations.
+
+For the full packaging, billing cadence, triennial terms, and qualification rules, see `BUSINESS_MODEL_PRICING.md`.
 
 ---
 
