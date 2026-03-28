@@ -81,10 +81,10 @@ export interface NexusState {
   ) => Promise<void>;
   runCascade: (_event: CascadeEvent) => Promise<CascadeResponse | null>;
   resetSession: () => Promise<void>;
-  setSelectedNode: (id: string | null) => void;
-  setActiveScenario: (index: number | null) => void;
-  updateGraphOps: (ops: GraphOperation[]) => Promise<void>;
-  sendChatMessage: (message: string) => Promise<void>;
+  setSelectedNode: (_id: string | null) => void;
+  setActiveScenario: (_index: number | null) => void;
+  updateGraphOps: (_ops: GraphOperation[]) => Promise<void>;
+  sendChatMessage: (_message: string) => Promise<void>;
   loadChatHistory: () => Promise<void>;
   clearChat: () => Promise<void>;
 }
