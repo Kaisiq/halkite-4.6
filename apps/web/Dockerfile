@@ -26,8 +26,11 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/web ./apps/web
 
+ARG NEXT_PUBLIC_API_BASE_URL=
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 ENV API_INTERNAL_BASE_URL=http://api:8000
-ENV NEXT_PUBLIC_API_BASE_URL=
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
 
 RUN pnpm --filter @halkantir/web build
 
@@ -36,8 +39,7 @@ FROM node:22-alpine AS runtime
 ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
-    API_INTERNAL_BASE_URL=http://api:8000 \
-    NEXT_PUBLIC_API_BASE_URL=
+    API_INTERNAL_BASE_URL=http://api:8000
 
 WORKDIR /app
 

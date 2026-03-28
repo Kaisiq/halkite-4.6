@@ -53,14 +53,15 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     image: halkantir-web:latest
     restart: unless-stopped
     environment:
       HOSTNAME: 0.0.0.0
       PORT: 3000
       API_INTERNAL_BASE_URL: http://api:8000
-      NEXT_PUBLIC_API_BASE_URL: ""
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     depends_on:
       api:
         condition: service_healthy
