@@ -8,16 +8,27 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
 
 from nexus_api.session import SessionNotFoundError, store
+from nexus_api.waitlist import SlidingWindowRateLimiter, WaitlistStore, is_valid_email
 
 logger = logging.getLogger(__name__)
 
 _REQUIRED_ENV_VARS = ("GEMINI_API_KEY",)
+_WAITLIST_RATE_LIMIT = 5
+_WAITLIST_WINDOW_SECONDS = 60 * 60
 
 
 def _load_env_files() -> None:
@@ -73,6 +84,12 @@ app = FastAPI(
     description="Backend for the Halkantir organizational stress-testing platform.",
 )
 
+waitlist_store = WaitlistStore()
+waitlist_rate_limiter = SlidingWindowRateLimiter(
+    limit=_WAITLIST_RATE_LIMIT,
+    window_seconds=_WAITLIST_WINDOW_SECONDS,
+)
+
 _ALLOWED_ORIGINS = os.environ.get(
     "CORS_ORIGINS",
     "http://localhost:3000,http://localhost:3001,http://localhost:3003,http://127.0.0.1:3000",
@@ -93,6 +110,17 @@ app.add_middleware(
 
 def error_response(code: str, message: str, status: int = 400) -> JSONResponse:
     return JSONResponse({"error": message, "code": code}, status_code=status)
+
+
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for.strip():
+        return forwarded_for.split(",", 1)[0].strip() or None
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return None
 
 
 @app.exception_handler(SessionNotFoundError)
@@ -151,6 +179,24 @@ class ChatRequest(BaseModel):
         if not v.strip():
             raise ValueError("Message cannot be empty")
         return v
+
+
+class WaitlistSignupRequest(BaseModel):
+    email: str
+    company: str = ""
+    website: str = ""
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        if not is_valid_email(value):
+            raise ValueError("Enter a valid work email address.")
+        return value.strip()
+
+    @field_validator("company", "website")
+    @classmethod
+    def trim_optional_fields(cls, value: str) -> str:
+        return value.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +261,53 @@ def healthcheck() -> dict[str, str]:
 def list_sessions() -> JSONResponse:
     """List all known session IDs."""
     return JSONResponse({"session_ids": store.list_ids()})
+
+
+@app.post("/api/waitlist")
+async def create_waitlist_signup(
+    payload: WaitlistSignupRequest,
+    request: Request,
+) -> JSONResponse:
+    client_ip = _client_ip(request)
+    rate_limit_key = client_ip or "unknown"
+
+    if not waitlist_rate_limiter.allow(rate_limit_key):
+        return error_response(
+            "RATE_LIMITED",
+            "Too many signup attempts. Try again in an hour.",
+            429,
+        )
+
+    if payload.website:
+        return JSONResponse(
+            {
+                "status": "accepted",
+                "message": "Request received.",
+            }
+        )
+
+    created = waitlist_store.create_or_get(
+        email=payload.email,
+        company=payload.company,
+        source_ip=client_ip,
+        user_agent=request.headers.get("user-agent", ""),
+    )
+
+    if created:
+        return JSONResponse(
+            {
+                "status": "created",
+                "message": "You are on the launch list.",
+            },
+            status_code=201,
+        )
+
+    return JSONResponse(
+        {
+            "status": "already_registered",
+            "message": "That email is already on the launch list.",
+        }
+    )
 
 
 # ---------------------------------------------------------------------------

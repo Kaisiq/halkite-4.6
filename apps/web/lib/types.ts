@@ -324,6 +324,13 @@ export interface ChatHistoryResponse {
   messages: ChatMessage[];
 }
 
+// ---- Waitlist -------------------------------------------------------------
+
+export interface WaitlistSignupResponse {
+  status: "accepted" | "created" | "already_registered";
+  message: string;
+}
+
 // ---- API error envelope ---------------------------------------------------
 
 export interface ApiError {

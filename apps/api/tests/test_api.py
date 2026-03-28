@@ -7,12 +7,16 @@ for all requests.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from nexus_api import main as api_main
 from nexus_api.main import app
 from nexus_api.models.graph import Edge, Graph, Node
 from nexus_api.session import store
+from nexus_api.waitlist import SlidingWindowRateLimiter, WaitlistStore
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -25,6 +29,16 @@ def _transport() -> ASGITransport:
 
 def _base_url() -> str:
     return "http://testserver"
+
+
+@pytest.fixture(autouse=True)
+def reset_waitlist_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("HALKANTIR_DATA_DIR", str(tmp_path))
+    api_main.waitlist_store = WaitlistStore()
+    api_main.waitlist_rate_limiter = SlidingWindowRateLimiter(limit=5, window_seconds=3600)
 
 
 def test_api_bootstrap_requires_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -74,6 +88,84 @@ class TestHealthEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
+
+
+class TestWaitlistEndpoint:
+    async def test_waitlist_signup_accepts_valid_email(self) -> None:
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            resp = await client.post(
+                "/api/waitlist",
+                json={"email": "founder@example.com", "company": "Acme", "website": ""},
+                headers={"x-forwarded-for": "203.0.113.10"},
+            )
+
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["status"] == "created"
+
+    async def test_waitlist_signup_rejects_invalid_email(self) -> None:
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            resp = await client.post(
+                "/api/waitlist",
+                json={"email": "not-an-email", "company": "", "website": ""},
+            )
+
+        assert resp.status_code == 422
+
+    async def test_waitlist_signup_ignores_honeypot(self) -> None:
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            resp = await client.post(
+                "/api/waitlist",
+                json={
+                    "email": "bot@example.com",
+                    "company": "Spam Co",
+                    "website": "https://bot.invalid",
+                },
+            )
+
+            duplicate_resp = await client.post(
+                "/api/waitlist",
+                json={"email": "bot@example.com", "company": "", "website": ""},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "accepted"
+        assert duplicate_resp.status_code == 201
+        assert duplicate_resp.json()["status"] == "created"
+
+    async def test_waitlist_signup_rate_limits_by_ip(self) -> None:
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            for index in range(5):
+                resp = await client.post(
+                    "/api/waitlist",
+                    json={"email": f"user{index}@example.com", "company": "", "website": ""},
+                    headers={"x-forwarded-for": "198.51.100.7"},
+                )
+                assert resp.status_code == 201
+
+            limited_resp = await client.post(
+                "/api/waitlist",
+                json={"email": "overflow@example.com", "company": "", "website": ""},
+                headers={"x-forwarded-for": "198.51.100.7"},
+            )
+
+        assert limited_resp.status_code == 429
+        assert limited_resp.json()["code"] == "RATE_LIMITED"
+
+    async def test_waitlist_signup_returns_existing_status_for_duplicate(self) -> None:
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            first = await client.post(
+                "/api/waitlist",
+                json={"email": "repeat@example.com", "company": "", "website": ""},
+            )
+            second = await client.post(
+                "/api/waitlist",
+                json={"email": "REPEAT@example.com", "company": "", "website": ""},
+            )
+
+        assert first.status_code == 201
+        assert second.status_code == 200
+        assert second.json()["status"] == "already_registered"
 
 
 # ======================================================================

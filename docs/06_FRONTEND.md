@@ -58,9 +58,11 @@ API calls: fetch or axios
 **Interactions:**
 
 - Drag-drop or click-to-upload files
+- Launch-interest email form on `/` for pre-release contact capture
 - "Connect Google Drive" button for folder import via Google OAuth
 - Optional text description textarea
 - "Build Network" button → calls POST /api/upload
+- Launch-interest form → calls POST /api/waitlist with email validation, honeypot, and rate-limit-safe UX
 - Drive folder import → calls POST /api/google-drive/import
 - Loading state with progress messages
 - On success → navigate to Screen 2
