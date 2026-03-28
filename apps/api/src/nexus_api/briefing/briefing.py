@@ -22,7 +22,7 @@ Reference: docs/03_AGENT_BRIEFING.md
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from nexus_api.agents.base import Agent, AgentBrief
 from nexus_api.models.events import Event
@@ -442,7 +442,7 @@ def create_all_agents(
         if brief.agent_type == "monte_carlo":
             if mc_config is None:
                 raise ValueError("mc_config is required for monte_carlo agent.")
-            agents.append(cast("Agent", agent_cls(brief, mc_config)))  # type: ignore[call-arg]
+            agents.append(agent_cls(brief, mc_config))  # type: ignore[call-arg]
         else:
             agents.append(agent_cls(brief))
 

@@ -8,6 +8,7 @@ and :func:`~nexus_api.mc.resilience.run_resilience_analysis`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any, cast
 
 _MAX_RESILIENCE_SAMPLES = 5000
 
@@ -79,4 +80,4 @@ class MCConfig:
         """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in d.items() if k in known}
-        return cls(**filtered)
+        return cls(**cast("dict[str, Any]", filtered))
