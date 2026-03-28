@@ -462,9 +462,13 @@ export default function NetworkPage({ params }: PageProps) {
 
   const topRisks = vulnerabilityReport?.node_rankings.slice(0, 5) ?? [];
   const highestSynergy = vulnerabilityReport?.compound_pairs?.[0] ?? null;
-  const sortedScenarios = [...scenarios].sort(
-    (a, b) => b.severity - a.severity || a.rank - b.rank,
-  );
+  const sortedScenarios = scenarios
+    .map((scenario, originalIndex) => ({ scenario, originalIndex }))
+    .sort(
+      (a, b) =>
+        b.scenario.severity - a.scenario.severity ||
+        a.scenario.rank - b.scenario.rank,
+    );
   const impactByNodeId = new Map(
     (vulnerabilityReport?.node_rankings ?? []).map((entry) => [
       entry.node_id,
@@ -669,14 +673,20 @@ export default function NetworkPage({ params }: PageProps) {
                 </span>
               </p>
               <div className="divide-y divide-[var(--border)] border border-[var(--border)]">
-                {sortedScenarios.map((scenario, i) => (
+                {sortedScenarios.map(({ scenario, originalIndex }, i) => (
                   <button
-                    key={i}
+                    key={`${scenario.rank}-${scenario.title}`}
                     className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-alt)] ${
-                      activeScenarioIndex === i ? "bg-[var(--bg-alt)]" : ""
+                      activeScenarioIndex === originalIndex
+                        ? "bg-[var(--bg-alt)]"
+                        : ""
                     }`}
                     onClick={() =>
-                      setActiveScenario(activeScenarioIndex === i ? null : i)
+                      setActiveScenario(
+                        activeScenarioIndex === originalIndex
+                          ? null
+                          : originalIndex,
+                      )
                     }
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -720,7 +730,7 @@ export default function NetworkPage({ params }: PageProps) {
                     </div>
 
                     {/* Expanded detail */}
-                    {activeScenarioIndex === i && (
+                    {activeScenarioIndex === originalIndex && (
                       <div className="mt-2 pt-2 border-t border-[var(--border)] flex flex-col gap-3">
                         {/* Severity + metrics */}
                         <div className="flex items-center justify-between">

@@ -35,6 +35,7 @@ const FACT_INTERVAL_MS = 5_000;
 export default function LoadingPage() {
   const router = useRouter();
   const hasNavigated = useRef(false);
+  const pendingFactSwapRef = useRef<number | null>(null);
 
   const uploading = useNexusStore((s) => s.uploading);
   const uploadError = useNexusStore((s) => s.uploadError);
@@ -52,12 +53,18 @@ export default function LoadingPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setFactVisible(false);
-      setTimeout(() => {
+      pendingFactSwapRef.current = window.setTimeout(() => {
         setFactIndex((prev) => (prev + 1) % FUN_FACTS.length);
         setFactVisible(true);
       }, 400);
     }, FACT_INTERVAL_MS);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      if (pendingFactSwapRef.current !== null) {
+        window.clearTimeout(pendingFactSwapRef.current);
+      }
+    };
   }, []);
 
   // Navigate when upload completes (or fails)
@@ -78,7 +85,12 @@ export default function LoadingPage() {
     if (sessionId) {
       hasNavigated.current = true;
       router.replace(`/network/${sessionId}` as Route);
+      return;
     }
+
+    // Direct visits or page refreshes lose the in-memory upload state.
+    hasNavigated.current = true;
+    router.replace("/" as Route);
   }, [uploading, uploadError, sessionId, router]);
 
   // Cap progress at 90% while still uploading — the last step is the longest
