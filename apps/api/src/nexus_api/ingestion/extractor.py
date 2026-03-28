@@ -575,12 +575,22 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
             )
         )
 
-    return Graph(
+    graph = Graph(
         nodes=nodes,
         edges=edges,
         layers=layers,
         scoring_policy=scoring_policy,
     )
+
+    # Phase 2: Refine prior weights using topology-aware inference
+    try:
+        from nexus_api.engine.weight_inference import refine_weights
+
+        refine_weights(graph)
+    except Exception as exc:
+        logger.warning("Weight inference failed (using priors): %s", exc)
+
+    return graph
 
 
 # ---------------------------------------------------------------------------
