@@ -216,11 +216,15 @@ export default function DataInputPage() {
     driveFolderPath.find((folder) => folder.id === driveFolderId) ??
     null;
 
+  // Navigation after upload is handled by the /loading page.
+  // This effect only covers the case where user returns here with
+  // a completed session and no gaps (e.g. browser back button).
   useEffect(() => {
     if (!sessionId) return;
+    if (uploading) return;
     if (gaps.length > 0 || followUpQuestions.length > 0) return;
     router.push(`/network/${sessionId}` as Route);
-  }, [followUpQuestions.length, gaps.length, router, sessionId]);
+  }, [followUpQuestions.length, gaps.length, router, sessionId, uploading]);
 
   useEffect(() => {
     if (gaps.length > 0 || followUpQuestions.length > 0) {
@@ -395,9 +399,10 @@ export default function DataInputPage() {
     [addFiles],
   );
 
-  const handleBuild = async () => {
+  const handleBuild = () => {
     if (activeSource !== "files" || files.length === 0) return;
-    await uploadFiles(files, description || undefined);
+    uploadFiles(files, description || undefined);
+    router.push("/loading" as Route);
   };
 
   const handleProceed = () => {
@@ -515,21 +520,14 @@ export default function DataInputPage() {
     setActiveSource("drive");
     setFiles([]);
     useNexusStore.setState({ driveFolder: null, uploadError: null });
-    const imported = await importGoogleDriveFolder(
+    importGoogleDriveFolder(
       driveAccessTokenRef.current,
       driveFolderId.trim(),
       description || undefined,
     );
-    if (imported) {
-      setDriveDialogOpen(false);
-      return;
-    }
-
-    setDriveError(
-      useNexusStore.getState().uploadError ||
-        "Google Drive import failed. Check the folder id and your access.",
-    );
-  }, [description, driveFolderId, importGoogleDriveFolder]);
+    setDriveDialogOpen(false);
+    router.push("/loading" as Route);
+  }, [description, driveFolderId, importGoogleDriveFolder, router]);
 
   const handleWaitlistSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
