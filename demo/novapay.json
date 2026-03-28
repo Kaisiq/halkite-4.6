@@ -1,0 +1,122 @@
+{
+  "company": "NovaPay",
+  "founded": "2019",
+  "headquarters": "Sofia, Bulgaria",
+  "description": "NovaPay is a European fintech company providing digital payment infrastructure for SMEs. They offer a merchant payment gateway, a virtual IBAN platform for cross-border EUR/BGN transfers, and a white-label checkout SDK used by e-commerce platforms. The company processes approximately €180M in annual transaction volume across 12 European markets, serving 4,200+ merchants. Their tech stack runs on AWS with a microservices architecture, and they hold PSD2 and EMD2 licenses through a partnership with a licensed e-money institution.",
+
+  "organizational_structure": {
+    "leadership": [
+      {"name": "Stefan Dragov", "role": "CEO & Co-Founder", "responsibilities": "Company strategy, fundraising, banking partnerships, regulatory relationships"},
+      {"name": "Yana Koleva", "role": "CTO & Co-Founder", "responsibilities": "Platform architecture, engineering management, security, DevOps, incident response"},
+      {"name": "Nikolay Savov", "role": "VP Engineering", "responsibilities": "Backend services, payment processing pipeline, API gateway, database operations"},
+      {"name": "Desislava Petrova", "role": "Head of Compliance", "responsibilities": "PSD2/EMD2 compliance, AML/KYC processes, regulatory reporting, audit coordination"},
+      {"name": "Dimitar Hristov", "role": "Head of Product", "responsibilities": "Merchant dashboard, checkout SDK, virtual IBAN product, partner integrations"},
+      {"name": "Ivana Todorova", "role": "Head of Commercial", "responsibilities": "Merchant acquisition, partner channel, enterprise deals, pricing strategy"}
+    ],
+    "engineering_teams": [
+      {"team": "Core Payments", "size": 6, "lead": "Nikolay Savov (direct)", "focus": "Transaction processing, settlement engine, ledger, reconciliation. This team owns the most critical path — every euro flows through their code."},
+      {"team": "Platform & API", "size": 4, "lead": "Krasimir Ivanov (Tech Lead)", "focus": "Merchant-facing REST API, webhook delivery, checkout SDK, API authentication and rate limiting"},
+      {"team": "Risk & Fraud", "size": 3, "lead": "Yana Koleva (shared)", "focus": "Real-time transaction scoring, velocity checks, AML screening, fraud rule engine. Uses a single ML model maintained by one data scientist."},
+      {"team": "Infrastructure", "size": 2, "lead": "Yana Koleva (shared)", "focus": "AWS infrastructure, Kubernetes cluster, CI/CD pipelines, monitoring (Datadog), secrets management. Only two engineers for the entire infrastructure."},
+      {"team": "Frontend & Mobile", "size": 3, "lead": "Dimitar Hristov (shared)", "focus": "Merchant dashboard (React), partner portal, mobile companion app (React Native)"}
+    ],
+    "other_departments": [
+      {"dept": "Compliance & Legal", "size": 3, "focus": "AML/KYC operations, PSD2 reporting, GDPR DPO, contract management"},
+      {"dept": "Merchant Success", "size": 4, "focus": "Onboarding, technical integration support, churn prevention"},
+      {"dept": "Finance", "size": 2, "focus": "Treasury, settlement reconciliation, banking relationships, financial reporting"},
+      {"dept": "Sales & Marketing", "size": 3, "focus": "Inbound marketing, partner channel management, trade shows"}
+    ]
+  },
+
+  "product_portfolio": [
+    {"product": "NovaPay Gateway", "type": "Payment Processing API", "status": "Core product", "revenue_share": "55%", "note": "Merchant-facing payment gateway supporting cards (Visa/MC), bank transfers (SEPA), and local methods. Processes all transaction volume."},
+    {"product": "NovaIBAN", "type": "Virtual IBAN Platform", "status": "Growing", "revenue_share": "25%", "note": "Virtual EUR/BGN IBANs for SME treasury management and cross-border payments. Dependent on partner bank (First Investment Bank) for IBAN issuance."},
+    {"product": "NovaCheckout SDK", "type": "White-label Checkout", "status": "Active", "revenue_share": "12%", "note": "Embeddable JavaScript SDK for e-commerce platforms. Used by 800+ merchants. Depends on the Gateway API."},
+    {"product": "NovaDash", "type": "Merchant Dashboard", "status": "Active", "revenue_share": "included in gateway", "note": "React SPA for transaction monitoring, settlement reports, refund management, and API key administration."},
+    {"product": "Partner Portal", "type": "White-label Partner Management", "status": "Beta", "revenue_share": "8%", "note": "Allows payment facilitators to onboard their own sub-merchants. Early stage, 3 partners using it."}
+  ],
+
+  "technology_infrastructure": {
+    "cloud": {
+      "provider": "AWS (eu-central-1, Frankfurt)",
+      "services": ["EKS (Kubernetes)", "RDS (PostgreSQL 15)", "ElastiCache (Redis)", "S3", "SQS", "CloudFront", "Secrets Manager", "WAF"],
+      "single_region": true,
+      "note": "ALL services run in eu-central-1. No multi-region failover. RDS has a read replica but no cross-region standby."
+    },
+    "payment_processing": {
+      "card_processor": "Stripe Connect (primary), Adyen (backup for specific markets)",
+      "banking_partner": "First Investment Bank (FIBank) — sole banking partner for IBAN issuance, SEPA settlement, and fund holding",
+      "settlement_cycle": "T+1 for cards, T+0 for SEPA direct",
+      "note": "FIBank is a critical single point of failure. All merchant funds are held in FIBank accounts. If FIBank has issues, all settlements freeze."
+    },
+    "core_services": [
+      {"service": "payment-engine", "language": "Go", "db": "PostgreSQL (RDS)", "criticality": "CRITICAL — processes every transaction", "maintainers": 3},
+      {"service": "ledger-service", "language": "Go", "db": "PostgreSQL (RDS, same cluster)", "criticality": "CRITICAL — double-entry accounting for all fund movements", "maintainers": 2},
+      {"service": "risk-scoring", "language": "Python", "db": "Redis + PostgreSQL", "criticality": "HIGH — real-time fraud detection, blocks suspicious transactions", "maintainers": 1, "note": "Single ML model, maintained by one data scientist (Borislav). Bus factor of 1."},
+      {"service": "api-gateway", "language": "Node.js", "db": "Redis (rate limiting, session cache)", "criticality": "HIGH — all merchant API traffic routes through this", "maintainers": 2},
+      {"service": "webhook-dispatcher", "language": "Go", "db": "SQS + PostgreSQL", "criticality": "MEDIUM — delivers payment event notifications to merchants", "maintainers": 1},
+      {"service": "iban-service", "language": "Go", "db": "PostgreSQL", "criticality": "HIGH — manages virtual IBAN lifecycle, talks to FIBank API", "maintainers": 1, "note": "FIBank API integration maintained by a single engineer (Georgi). No documentation."},
+      {"service": "merchant-dashboard", "language": "React/TypeScript", "db": "reads from api-gateway", "criticality": "MEDIUM", "maintainers": 2},
+      {"service": "k8s-infrastructure", "language": "Terraform + Helm", "db": "N/A", "criticality": "CRITICAL — entire platform runs on this", "maintainers": 2, "note": "Only 2 infra engineers for the entire cloud estate."}
+    ],
+    "monitoring": {
+      "apm": "Datadog (APM + logs + metrics)",
+      "alerting": "PagerDuty → on-call rotation (3 engineers)",
+      "incident_response": "Yana Koleva (CTO) is the escalation point for all P1 incidents"
+    }
+  },
+
+  "key_dependencies": {
+    "banking": [
+      {"partner": "First Investment Bank (FIBank)", "dependency": "CRITICAL — sole banking partner", "services": "IBAN issuance, SEPA settlement, fund safeguarding, regulatory reporting", "alternatives": "None integrated. Onboarding a second bank takes 6-12 months.", "risk": "If FIBank has an outage or regulatory issue, ALL settlements and IBAN operations stop immediately."},
+      {"partner": "Stripe Connect", "dependency": "HIGH — primary card processor", "services": "Card acquiring, 3DS authentication, dispute handling", "alternatives": "Adyen is integrated as backup but only for 2 markets"},
+      {"partner": "SWIFT/SEPA Network", "dependency": "HIGH — cross-border transfers", "services": "EUR transfers via FIBank's SEPA access", "alternatives": "None — SEPA access is through FIBank"}
+    ],
+    "technology": [
+      {"provider": "AWS", "dependency": "CRITICAL — entire platform", "risk": "Single region (eu-central-1). Region-wide outage = total platform downtime."},
+      {"provider": "Datadog", "dependency": "MEDIUM — observability", "risk": "Outage means flying blind during incidents"},
+      {"provider": "Cloudflare", "dependency": "MEDIUM — DDoS protection and CDN for checkout SDK", "risk": "If Cloudflare goes down, checkout pages may be unreachable"}
+    ],
+    "regulatory": [
+      {"framework": "PSD2", "status": "Compliant via FIBank's e-money license (agent model)", "risk": "If FIBank loses their license, NovaPay cannot operate"},
+      {"framework": "GDPR", "status": "DPO appointed (Desislava Petrova, dual role)", "risk": "DPO is also Head of Compliance — resource constraint"},
+      {"framework": "AML/5AMLD", "status": "Automated KYC via Onfido + manual review", "risk": "Onfido is a single vendor for identity verification"}
+    ]
+  },
+
+  "financial_structure": {
+    "funding": "Series A (2023, €4.2M), runway through Q3 2026",
+    "revenue_model": "Transaction fees (0.8-1.5% per payment) + monthly SaaS fee per merchant (€49-299/mo) + IBAN fees (€5/mo per IBAN)",
+    "annual_revenue": "~€3.2M (2025 projected)",
+    "key_metrics": {
+      "monthly_transaction_volume": "€15M",
+      "active_merchants": 4200,
+      "average_transaction_value": "€47",
+      "merchant_churn_rate": "2.1% monthly"
+    },
+    "revenue_concentration": {
+      "top_10_merchants": "38% of total volume",
+      "top_1_merchant": "€2.1M monthly volume (14% of total)",
+      "note": "Losing the top merchant (GameZone.bg — online gaming platform) would be a significant revenue hit"
+    }
+  },
+
+  "facilities": {
+    "office": {"location": "Sofia, Bulgaria, co-working space at Puzl CowOrking", "size": "35 desks"},
+    "remote": "40% of engineering works remotely across Bulgaria and the EU",
+    "disaster_recovery_site": "None — no secondary office or DR facility"
+  },
+
+  "risks_and_known_vulnerabilities": [
+    "CRITICAL: First Investment Bank (FIBank) is the sole banking partner — handles ALL settlements, IBAN issuance, fund safeguarding, and provides the PSD2 license. Zero alternatives integrated. If FIBank has issues, the entire business stops.",
+    "CRITICAL: AWS eu-central-1 is the only deployment region. No cross-region failover. A region outage means total platform downtime.",
+    "CRITICAL: The CTO (Yana Koleva) is the escalation point for all P1 incidents, manages both Infrastructure and Risk teams, and is the only person with full system architecture knowledge. Bus factor of 1 for incident response.",
+    "HIGH: Risk scoring ML model is maintained by a single data scientist (Borislav). If he leaves, fraud detection capability degrades with no one to retrain or tune the model.",
+    "HIGH: FIBank IBAN API integration has no documentation and is maintained by one engineer (Georgi). If Georgi is unavailable, virtual IBAN operations cannot be debugged or modified.",
+    "HIGH: Payment engine and ledger share the same PostgreSQL RDS cluster. A database issue takes down both transaction processing AND accounting simultaneously.",
+    "MEDIUM: Only 2 infrastructure engineers manage the entire AWS/Kubernetes estate. On-call rotation is 3 people total, with the CTO as permanent escalation.",
+    "MEDIUM: Top merchant (GameZone.bg) represents 14% of transaction volume. Losing them would create a noticeable revenue gap.",
+    "MEDIUM: Compliance officer (Desislava) also serves as DPO — dual role creates bandwidth constraints during audit periods.",
+    "LOW: Webhook dispatcher has a single maintainer. If webhook delivery fails, merchants don't receive payment notifications, causing reconciliation issues."
+  ]
+}
