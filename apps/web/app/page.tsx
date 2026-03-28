@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { AnimatedBeam } from "@/components/ui/animated-beam";
+import { extractErrorMessage, joinWaitlist } from "@/lib/api";
 import { useNexusStore } from "@/lib/store";
 
 const ACCEPT_TYPES = [
@@ -26,6 +27,8 @@ const ACCEPT_STRING = ACCEPT_TYPES.join(",");
 const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 const DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+const WAITLIST_EMAIL_PATTERN =
+  /^(?=.{3,254}$)(?=.{1,64}@)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$/i;
 
 type GoogleTokenResponse = {
   access_token: string;
@@ -34,7 +37,7 @@ type GoogleTokenResponse = {
 };
 
 type GoogleTokenClient = {
-  requestAccessToken: (options?: { prompt?: string }) => void;
+  requestAccessToken: (_options?: { prompt?: string }) => void;
 };
 
 type GoogleTokenError = {
@@ -51,11 +54,11 @@ type InputSource = "files" | "drive" | null;
 
 type GoogleAccounts = {
   oauth2: {
-    initTokenClient: (config: {
+    initTokenClient: (_config: {
       client_id: string;
       scope: string;
-      callback: (response: GoogleTokenResponse) => void;
-      error_callback?: (error: GoogleTokenError) => void;
+      callback: (_response: GoogleTokenResponse) => void;
+      error_callback?: (_error: GoogleTokenError) => void;
     }) => GoogleTokenClient;
   };
 };
@@ -161,6 +164,11 @@ function displayDriveFolderLabel(value: string): string {
   return value;
 }
 
+function isValidWaitlistEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  return WAITLIST_EMAIL_PATTERN.test(normalized) && !normalized.includes("..");
+}
+
 export default function DataInputPage() {
   const router = useRouter();
   const {
@@ -191,6 +199,12 @@ export default function DataInputPage() {
   const [activeSource, setActiveSource] = useState<InputSource>(null);
   const [driveFolderBrowserLoading, setDriveFolderBrowserLoading] =
     useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistCompany, setWaitlistCompany] = useState("");
+  const [waitlistWebsite, setWaitlistWebsite] = useState("");
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+  const [waitlistSuccess, setWaitlistSuccess] = useState<string | null>(null);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const driveDialogRef = useRef<HTMLDivElement>(null);
   const driveFolderInputRef = useRef<HTMLInputElement>(null);
@@ -517,6 +531,38 @@ export default function DataInputPage() {
     );
   }, [description, driveFolderId, importGoogleDriveFolder]);
 
+  const handleWaitlistSubmit = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setWaitlistError(null);
+      setWaitlistSuccess(null);
+
+      const normalizedEmail = waitlistEmail.trim().toLowerCase();
+      if (!isValidWaitlistEmail(normalizedEmail)) {
+        setWaitlistError("Enter a valid email address.");
+        return;
+      }
+
+      try {
+        setWaitlistSubmitting(true);
+        const response = await joinWaitlist(
+          normalizedEmail,
+          waitlistCompany.trim(),
+          waitlistWebsite,
+        );
+        setWaitlistSuccess(response.message);
+        setWaitlistEmail("");
+        setWaitlistCompany("");
+        setWaitlistWebsite("");
+      } catch (error) {
+        setWaitlistError(extractErrorMessage(error));
+      } finally {
+        setWaitlistSubmitting(false);
+      }
+    },
+    [waitlistCompany, waitlistEmail, waitlistWebsite],
+  );
+
   return (
     <main className="min-h-screen">
       {/* Nav */}
@@ -549,27 +595,122 @@ export default function DataInputPage() {
       </nav>
 
       {/* Hero */}
-      <section className="flex min-h-screen flex-col justify-center px-6 pt-24 md:px-10">
-        <div className="mx-auto w-full max-w-[1400px]">
-          <h1 className="display-face text-[clamp(3rem,7.5vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.035em] max-w-[900px]">
-            Find the dependencies
-            that <span className="text-[var(--text-light)]">break</span> the
-            organization.
-          </h1>
-          <p className="mt-8 max-w-[600px] text-[22px] leading-[1.5] text-[var(--text-muted)]">
-            Deterministic stress-testing for complex human and technical
-            systems. Map, analyze, and preempt catastrophic failure paths.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              const el = document.getElementById("upload-section");
-              el?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="mt-12 border border-[var(--text)] bg-[var(--text)] px-12 py-4.5 text-[17px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)]"
+      <section className="flex min-h-screen flex-col justify-center px-6 pt-28 pb-16 md:px-10">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-12 lg:grid-cols-[minmax(0,1.2fr)_420px] lg:items-end">
+          <div>
+            <p className="mono-label">Deterministic Organizational Stress Testing</p>
+            <h1 className="display-face mt-6 max-w-[900px] text-[clamp(3rem,7.5vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.035em]">
+              Find the dependencies
+              that <span className="text-[var(--text-light)]">break</span> the
+              organization.
+            </h1>
+            <p className="mt-8 max-w-[640px] text-[22px] leading-[1.5] text-[var(--text-muted)]">
+              Deterministic stress-testing for complex human and technical
+              systems. Map, analyze, and preempt catastrophic failure paths.
+            </p>
+            <div className="mt-12 flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById("upload-section");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="border border-[var(--text)] bg-[var(--text)] px-12 py-4.5 text-[17px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)]"
+              >
+                Get Started
+              </button>
+              <a
+                href="#launch-access"
+                className="border border-[var(--border-strong)] px-8 py-4.5 text-[15px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
+              >
+                Join Launch List
+              </a>
+            </div>
+          </div>
+
+          <aside
+            id="launch-access"
+            className="dark-section relative overflow-hidden border border-white/10 p-7 sm:p-8"
           >
-            Get Started
-          </button>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_40%)]" />
+            <div className="relative">
+              <p className="mono-label">Launch Access</p>
+              <h2 className="display-face mt-4 text-[clamp(2rem,4vw,2.8rem)] leading-[1.02] tracking-[-0.03em]">
+                Request first-contact when Halkantir goes live.
+              </h2>
+              <p className="mt-4 max-w-sm text-[15px] leading-[1.7] text-white/68">
+                Leave a work email and we will notify you when launch access
+                opens. Abuse protection is enforced server-side.
+              </p>
+
+              <form className="mt-8 grid gap-4" onSubmit={handleWaitlistSubmit}>
+                <label className="grid gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
+                    Work Email
+                  </span>
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={waitlistEmail}
+                    onChange={(event) => setWaitlistEmail(event.target.value)}
+                    placeholder="team@company.com"
+                    className="border border-white/14 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/50"
+                    aria-invalid={waitlistError ? "true" : "false"}
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
+                    Company
+                  </span>
+                  <input
+                    type="text"
+                    autoComplete="organization"
+                    value={waitlistCompany}
+                    onChange={(event) => setWaitlistCompany(event.target.value)}
+                    placeholder="Optional"
+                    className="border border-white/14 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/50"
+                  />
+                </label>
+
+                <label
+                  className="pointer-events-none absolute -left-[9999px] top-auto h-px w-px overflow-hidden opacity-0"
+                  aria-hidden="true"
+                >
+                  <span>Website</span>
+                  <input
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={waitlistWebsite}
+                    onChange={(event) => setWaitlistWebsite(event.target.value)}
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={waitlistSubmitting}
+                  className="mt-2 border border-white bg-white px-6 py-3.5 text-[15px] font-medium text-black transition-all duration-200 hover:bg-transparent hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {waitlistSubmitting ? "Submitting..." : "Notify Me At Launch"}
+                </button>
+
+                {waitlistError ? (
+                  <p className="text-sm leading-relaxed text-[#ffb4b4]">
+                    {waitlistError}
+                  </p>
+                ) : null}
+
+                {waitlistSuccess ? (
+                  <p className="text-sm leading-relaxed text-[#b7f3d4]">
+                    {waitlistSuccess}
+                  </p>
+                ) : null}
+              </form>
+            </div>
+          </aside>
         </div>
       </section>
 
