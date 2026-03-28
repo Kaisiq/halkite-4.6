@@ -119,12 +119,8 @@ export default function DataInputPage() {
 
   useEffect(() => {
     if (!sessionId) return;
-    if (followUpQuestions.length > 0) {
-      setShowFollowUp(true);
-    } else {
-      router.push(`/network/${sessionId}` as Route);
-    }
-  }, [followUpQuestions, router, sessionId]);
+    router.push(`/network/${sessionId}` as Route);
+  }, [router, sessionId]);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming).filter((f) => {
@@ -396,6 +392,7 @@ export default function DataInputPage() {
                       className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={handleBuild}
                       disabled={files.length === 0 || uploading}
+                      suppressHydrationWarning
                     >
                       {uploading ? "Building Network" : "Build Network"}
                     </button>

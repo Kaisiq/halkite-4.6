@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
 import { useNexusStore } from "@/lib/store";
-import type { ExploreConfig } from "@/lib/types";
+import type { ExploreConfig, Scenario } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Agent definitions
@@ -55,10 +55,15 @@ interface TreeNode {
   H: number;
   delta_H: number;
   agent: string;
-  event: string;
-  failures: number;
+  event_summary: string;
+  failed_count: number;
   depth: number;
   parent_id: string | null;
+}
+
+interface TreeEdge {
+  from: string;
+  to: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,11 +103,14 @@ export default function SimulatePage() {
 
   // -- Store slices --
   const exploring = useNexusStore((s) => s.exploring);
+  const graph = useNexusStore((s) => s.graph);
   const scenarios = useNexusStore((s) => s.scenarios);
   const treeStats = useNexusStore((s) => s.treeStats);
   const vizData = useNexusStore((s) => s.vizData);
   const exploreError = useNexusStore((s) => s.exploreError);
   const runExploration = useNexusStore((s) => s.runExploration);
+  const activeScenarioIndex = useNexusStore((s) => s.activeScenarioIndex);
+  const setActiveScenario = useNexusStore((s) => s.setActiveScenario);
 
   // -- Local state --
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(
@@ -115,10 +123,15 @@ export default function SimulatePage() {
     y: number;
     node: TreeNode;
   } | null>(null);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [hoveredTreeNodeId, setHoveredTreeNodeId] = useState<string | null>(null);
+  const [revealedPathIds, setRevealedPathIds] = useState<Set<string>>(new Set());
 
   // -- Refs --
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const zoomTransformRef = useRef(d3.zoomIdentity);
+  const lastCenteredNodeRef = useRef<string | null>(null);
 
   // -- Sync sessionId to store --
   const storeSessionId = useNexusStore((s) => s.sessionId);
@@ -151,39 +164,300 @@ export default function SimulatePage() {
   }, [depth, treeLimit, enabledAgents, runExploration]);
 
   // -- Build D3 hierarchy from vizData --
-  const treeNodes = useMemo(() => {
+  const treeData = useMemo(() => {
     if (!vizData?.state_tree?.nodes?.length) return null;
-    return vizData.state_tree.nodes as TreeNode[];
+
+    const edges = (vizData.state_tree.edges ?? []) as TreeEdge[];
+    const parentByNodeId = new Map(edges.map((edge) => [edge.to, edge.from]));
+    const rawNodes = (vizData.state_tree.nodes ?? []) as Array<
+      Omit<TreeNode, "delta_H" | "failed_count" | "event_summary" | "parent_id"> & {
+        event_summary?: string;
+        failed_count?: number;
+      }
+    >;
+    const provisional = rawNodes.map((node) => ({
+      id: node.id,
+      H: node.H,
+      depth: node.depth,
+      agent: node.agent,
+      event_summary: node.event_summary ?? "root",
+      failed_count: node.failed_count ?? 0,
+      parent_id: parentByNodeId.get(node.id) ?? null,
+      delta_H: 0,
+    }));
+    const byId = new Map(provisional.map((node) => [node.id, node]));
+
+    for (const node of provisional) {
+      const parent = node.parent_id ? byId.get(node.parent_id) : null;
+      node.delta_H = parent ? Math.max(0, parent.H - node.H) : 0;
+    }
+
+    return {
+      nodes: provisional,
+      edges,
+    };
   }, [vizData]);
 
-  // -- Compute worst-path node ids for highlighting --
-  const worstPathIds = useMemo<Set<string>>(() => {
-    if (!scenarios?.length || !treeNodes?.length) return new Set();
-    // Find the worst scenario's path through the tree by tracing the
-    // lowest-H leaf back to root.
-    const worst = scenarios[0];
-    if (!worst) return new Set();
-
-    const nodeMap = new Map(treeNodes.map((n) => [n.id, n]));
-    // Find the leaf with the lowest H
-    let leaf: TreeNode | undefined;
-    let lowestH = Infinity;
-    for (const n of treeNodes) {
-      if (n.H < lowestH) {
-        lowestH = n.H;
-        leaf = n;
-      }
+  const treeNodes = treeData?.nodes ?? null;
+  const rootTreeNode = useMemo(
+    () => treeNodes?.find((node) => node.parent_id === null) ?? null,
+    [treeNodes],
+  );
+  const treeNodeMap = useMemo(
+    () => new Map((treeNodes ?? []).map((node) => [node.id, node])),
+    [treeNodes],
+  );
+  const childrenByNodeId = useMemo(() => {
+    const map = new Map<string, TreeNode[]>();
+    for (const node of treeNodes ?? []) {
+      if (!node.parent_id) continue;
+      const bucket = map.get(node.parent_id) ?? [];
+      bucket.push(node);
+      map.set(node.parent_id, bucket);
     }
-    if (!leaf) return new Set();
+    for (const bucket of map.values()) {
+      bucket.sort((a, b) => a.H - b.H);
+    }
+    return map;
+  }, [treeNodes]);
+
+  const leafNodes = useMemo(() => {
+    if (!treeNodes?.length) return [];
+    return [...treeNodes]
+      .filter((node) => !childrenByNodeId.has(node.id))
+      .sort((a, b) => a.H - b.H);
+  }, [childrenByNodeId, treeNodes]);
+
+  const scenarioFocusNode = useMemo(() => {
+    if (activeScenarioIndex === null || !leafNodes[activeScenarioIndex]) return null;
+    return leafNodes[activeScenarioIndex];
+  }, [activeScenarioIndex, leafNodes]);
+
+  const focusTargetId = focusedNodeId ?? scenarioFocusNode?.id ?? rootTreeNode?.id ?? null;
+
+  const ancestorIds = useMemo(() => {
+    if (!focusTargetId || !treeNodeMap.size) return new Set<string>();
+    const ids = new Set<string>();
+    let current = treeNodeMap.get(focusTargetId) ?? null;
+    while (current) {
+      ids.add(current.id);
+      current = current.parent_id ? (treeNodeMap.get(current.parent_id) ?? null) : null;
+    }
+    return ids;
+  }, [focusTargetId, treeNodeMap]);
+
+  useEffect(() => {
+    if (ancestorIds.size === 0) return;
+    setRevealedPathIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ancestorIds) next.add(id);
+      return next;
+    });
+  }, [ancestorIds]);
+
+  useEffect(() => {
+    if (!rootTreeNode) return;
+    setRevealedPathIds((prev) => {
+      if (prev.has(rootTreeNode.id)) return prev;
+      const next = new Set(prev);
+      next.add(rootTreeNode.id);
+      return next;
+    });
+  }, [rootTreeNode]);
+
+  const visibleTreeIds = useMemo(() => {
+    if (!treeNodes?.length || !rootTreeNode) return new Set<string>();
 
     const ids = new Set<string>();
-    let current: TreeNode | undefined = leaf;
+    const seedIds = new Set<string>([...revealedPathIds, focusTargetId ?? rootTreeNode.id]);
+
+    for (const seedId of seedIds) {
+      const queue: Array<{ id: string; distance: number }> = [{ id: seedId, distance: 0 }];
+
+      while (queue.length > 0) {
+        const item = queue.shift()!;
+        if (ids.has(item.id) && item.distance > 0) continue;
+        ids.add(item.id);
+        if (item.distance >= 1) continue;
+
+        for (const child of childrenByNodeId.get(item.id) ?? []) {
+          queue.push({ id: child.id, distance: item.distance + 1 });
+        }
+      }
+    }
+
+    for (const id of ancestorIds) {
+      ids.add(id);
+      for (const child of childrenByNodeId.get(id) ?? []) {
+        ids.add(child.id);
+      }
+    }
+
+    return ids;
+  }, [ancestorIds, childrenByNodeId, focusTargetId, revealedPathIds, rootTreeNode, treeNodes]);
+
+  const previewTreeIds = useMemo(() => {
+    if (!rootTreeNode) return new Set<string>();
+    const preview = new Set<string>();
+    const seedIds = new Set<string>([...revealedPathIds, focusTargetId ?? rootTreeNode.id]);
+
+    for (const seedId of seedIds) {
+      const queue: Array<{ id: string; distance: number }> = [{ id: seedId, distance: 0 }];
+
+      while (queue.length > 0) {
+        const item = queue.shift()!;
+        if (item.distance <= 1) {
+          for (const child of childrenByNodeId.get(item.id) ?? []) {
+            queue.push({ id: child.id, distance: item.distance + 1 });
+          }
+          continue;
+        }
+        if (!visibleTreeIds.has(item.id)) {
+          preview.add(item.id);
+        }
+        if (item.distance >= 3) continue;
+        for (const child of childrenByNodeId.get(item.id) ?? []) {
+          queue.push({ id: child.id, distance: item.distance + 1 });
+        }
+      }
+    }
+
+    return preview;
+  }, [childrenByNodeId, focusTargetId, revealedPathIds, rootTreeNode, visibleTreeIds]);
+
+  // -- Compute highlighted path ids for the current focus target --
+  const highlightedPathIds = useMemo<Set<string>>(() => {
+    if (!treeNodes?.length || !focusTargetId) return new Set();
+    const nodeMap = new Map(treeNodes.map((n) => [n.id, n]));
+    const ids = new Set<string>();
+    let current: TreeNode | undefined = nodeMap.get(focusTargetId);
     while (current) {
       ids.add(current.id);
       current = current.parent_id ? nodeMap.get(current.parent_id) : undefined;
     }
     return ids;
-  }, [scenarios, treeNodes]);
+  }, [focusTargetId, treeNodes]);
+
+  useEffect(() => {
+    if (scenarios.length > 0 && (activeScenarioIndex === null || activeScenarioIndex >= scenarios.length)) {
+      setActiveScenario(0);
+    }
+  }, [activeScenarioIndex, scenarios.length, setActiveScenario]);
+
+  const focusedPathNodes = useMemo(() => {
+    if (!focusTargetId || !treeNodeMap.size) return [] as TreeNode[];
+    const path: TreeNode[] = [];
+    let current = treeNodeMap.get(focusTargetId) ?? null;
+    while (current) {
+      path.push(current);
+      current = current.parent_id ? (treeNodeMap.get(current.parent_id) ?? null) : null;
+    }
+    return path.reverse();
+  }, [focusTargetId, treeNodeMap]);
+
+  const selectedScenario: Scenario | null =
+    activeScenarioIndex !== null && scenarios[activeScenarioIndex]
+      ? scenarios[activeScenarioIndex]
+      : scenarios[0] ?? null;
+
+  const nextBranchCandidates = useMemo(() => {
+    if (!focusTargetId) return [] as TreeNode[];
+    return [...(childrenByNodeId.get(focusTargetId) ?? [])].sort((a, b) => a.H - b.H);
+  }, [childrenByNodeId, focusTargetId]);
+
+  const currentPathBriefing = useMemo(() => {
+    if (!focusedPathNodes.length) return null;
+
+    const terminalNode = focusedPathNodes[focusedPathNodes.length - 1];
+    const failedNodeIds = new Set(selectedScenario?.failed_nodes ?? []);
+    const failedNodes = graph?.nodes.filter((node) => failedNodeIds.has(node.id)) ?? [];
+    const failedPeople = failedNodes.filter((node) => node.layer === "People");
+    const failedOps = failedNodes.filter((node) => node.layer !== "People");
+    const estimatedImpact = Math.max(
+      terminalNode.delta_H,
+      1 - terminalNode.H,
+      selectedScenario ? 1 - selectedScenario.health_remaining : 0,
+    );
+
+    const events = focusedPathNodes
+      .slice(1)
+      .map((node, index) => ({
+        step: index + 1,
+        event: node.event_summary,
+        deltaH: node.delta_H,
+        H: node.H,
+        failures: node.failed_count,
+      }));
+
+    const summary =
+      selectedScenario?.summary ??
+      (events.length > 0
+        ? `${events[0]?.event ?? "The first branch"} triggered a cascade that brought the network to H ${focusedPathNodes.at(-1)?.H.toFixed(2)}.`
+        : "The system is still at the initial state root.");
+
+    const story =
+      selectedScenario?.narrative ||
+      (events.length > 0
+        ? `The branch compounds through ${events.length} event${events.length === 1 ? "" : "s"}, with each step reducing resilience and widening the failure set around the focused path.`
+        : "No event has been applied yet. The tree is waiting for the first branch selection.");
+
+    const forecast = nextBranchCandidates.length > 0
+      ? (() => {
+          const worstNext = nextBranchCandidates[0];
+          const alternatives = nextBranchCandidates.slice(1, 3);
+          const altText =
+            alternatives.length > 0
+              ? `Other immediate continuations remain less severe, bottoming near H ${alternatives
+                  .map((node) => node.H.toFixed(2))
+                  .join(" / ")}.`
+              : "There are no materially softer immediate continuations from this node.";
+          return `If this branch continues, the most likely damaging next step is ${worstNext.event_summary}, which would push the state to roughly H ${worstNext.H.toFixed(2)} with ${worstNext.failed_count} failed nodes. ${altText}`;
+        })()
+      : `This branch currently terminates here. Based on the explored state space, this is an end-state candidate with network health at H ${focusedPathNodes.at(-1)?.H.toFixed(2)}.`;
+
+    const terminalBusinessOutlook =
+      nextBranchCandidates.length > 0
+        ? null
+        : (() => {
+            const peopleSentence =
+              failedPeople.length > 0
+                ? `${failedPeople.length} people-layer node${failedPeople.length === 1 ? "" : "s"} have been removed from the active business graph${failedPeople.length <= 4 ? `: ${failedPeople.map((node) => node.name).join(", ")}` : ""}. Expect leadership gaps, slower decisions, and loss of tacit coordination capacity.`
+                : "No explicit people-layer removals are recorded on this terminal branch, so the primary damage is operational rather than personnel-driven.";
+
+            const opsSentence =
+              failedOps.length > 0
+                ? `${failedOps.length} non-people dependencies are down, which implies disrupted systems, supplier relationships, or operating capabilities that the business will struggle to route around quickly.`
+                : "Operational dependencies remain partly intact, but the remaining network health still indicates a severely constrained operating posture.";
+
+            const recoverySentence =
+              selectedScenario
+                ? `The current scenario projects recovery cost around ${selectedScenario.recovery_cost.toLocaleString()}, so management should treat this as a continuity event rather than a temporary incident.`
+                : "Treat this as a sustained continuity failure, not a short-lived disturbance.";
+
+            return `${peopleSentence} ${opsSentence} ${recoverySentence}`;
+          })();
+
+    return {
+      title:
+        selectedScenario?.title ??
+        (focusedPathNodes.length > 1
+          ? `Focused branch at depth ${focusedPathNodes.at(-1)?.depth ?? 0}`
+          : "Root scenario"),
+      severityLabel: selectedScenario?.severity_label ?? "ACTIVE",
+      summary,
+      story,
+      forecast,
+      impact: {
+        healthLoss: 1 - terminalNode.H,
+        deltaH: terminalNode.delta_H,
+        failedCount: terminalNode.failed_count,
+        estimatedImpact,
+      },
+      terminalBusinessOutlook,
+      events,
+      recommendations: selectedScenario?.recommendations ?? [],
+    };
+  }, [focusedPathNodes, graph, nextBranchCandidates, selectedScenario]);
 
   // -- D3 tree rendering --
   useEffect(() => {
@@ -198,8 +472,8 @@ export default function SimulatePage() {
 
     svg.attr("width", width).attr("height", height);
 
-    // Build d3 hierarchy from flat list
-    const rootNode = treeNodes.find((n) => n.parent_id === null);
+    // Build d3 hierarchy from filtered list
+    const rootNode = rootTreeNode;
     if (!rootNode) return;
 
     interface HierarchyDatum {
@@ -210,6 +484,7 @@ export default function SimulatePage() {
 
     const childrenMap = new Map<string, TreeNode[]>();
     for (const n of treeNodes) {
+      if (!visibleTreeIds.has(n.id)) continue;
       if (n.parent_id) {
         const arr = childrenMap.get(n.parent_id) || [];
         arr.push(n);
@@ -218,7 +493,9 @@ export default function SimulatePage() {
     }
 
     function buildHierarchy(node: TreeNode): HierarchyDatum {
-      const kids = childrenMap.get(node.id) || [];
+      const kids = (childrenMap.get(node.id) || []).filter((child) =>
+        visibleTreeIds.has(child.id),
+      );
       return {
         id: node.id,
         data: node,
@@ -230,17 +507,46 @@ export default function SimulatePage() {
     const root = d3.hierarchy<HierarchyDatum>(rootHierarchy);
 
     // Tree layout
-    const margin = { top: 40, right: 40, bottom: 40, left: 40 };
-    const treeLayout = d3.tree<HierarchyDatum>().size([
-      width - margin.left - margin.right,
-      height - margin.top - margin.bottom,
-    ]);
+    const margin = { top: 76, right: 72, bottom: 160, left: 72 };
+    const innerHeight = height - margin.top - margin.bottom;
+    const innerWidth = width - margin.left - margin.right;
+    const leaves = root.leaves();
+    const leafGap = Math.max(92, Math.min(160, innerWidth / Math.max(leaves.length, 1)));
+    const depthGap = Math.max(116, Math.min(180, innerHeight / Math.max(root.height + 1, 2)));
 
-    treeLayout(root);
+    leaves.forEach((leaf, index) => {
+      leaf.x = index * leafGap;
+    });
 
-    const g = svg
+    root.eachAfter((node) => {
+      if (!node.children || node.children.length === 0) return;
+      const first = node.children[0];
+      const last = node.children[node.children.length - 1];
+      node.x = ((first.x ?? 0) + (last.x ?? 0)) / 2;
+    });
+
+    root.each((node) => {
+      node.y = node.depth * depthGap;
+    });
+
+    const totalTreeWidth = Math.max((leaves.length - 1) * leafGap, 0);
+    const horizontalOffset = Math.max((innerWidth - totalTreeWidth) / 2, 0);
+
+    const baseX = margin.left + horizontalOffset;
+    const baseY = margin.top;
+
+    const g = svg.append("g");
+
+    const canopy = g
       .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+      .selectAll("line")
+      .data(root.descendants().filter((node) => node.depth > 0))
+      .join("line")
+      .attr("x1", (d) => d.x ?? 0)
+      .attr("y1", (d) => 0)
+      .attr("x2", (d) => d.x ?? 0)
+      .attr("y2", (d) => (d.y ?? 0) - 16)
+      .attr("stroke", "rgba(255,255,255,0.03)");
 
     // -- Links --
     g.selectAll(".tree-link")
@@ -251,30 +557,28 @@ export default function SimulatePage() {
       .attr(
         "stroke",
         (d) =>
-          worstPathIds.has(d.source.data.id) &&
-          worstPathIds.has(d.target.data.id)
+          highlightedPathIds.has(d.source.data.id) &&
+          highlightedPathIds.has(d.target.data.id)
             ? "#ef4444"
             : "rgba(156, 176, 197, 0.25)",
       )
       .attr(
         "stroke-width",
         (d) =>
-          worstPathIds.has(d.source.data.id) &&
-          worstPathIds.has(d.target.data.id)
+          highlightedPathIds.has(d.source.data.id) &&
+          highlightedPathIds.has(d.target.data.id)
             ? 2.5
             : 1.2,
       )
+      .attr("stroke-linecap", "round")
       .attr(
         "d",
-        d3
-          .linkVertical<
-            d3.HierarchyLink<HierarchyDatum>,
-            d3.HierarchyPointNode<HierarchyDatum>
-          >()
+        d3.linkVertical<
+          d3.HierarchyLink<HierarchyDatum>,
+          d3.HierarchyPointNode<HierarchyDatum>
+        >()
           .x((d) => d.x ?? 0)
-          .y((d) => d.y ?? 0) as unknown as (
-          d: d3.HierarchyLink<HierarchyDatum>,
-        ) => string,
+          .y((d) => d.y ?? 0) as unknown as (d: d3.HierarchyLink<HierarchyDatum>) => string,
       );
 
     // -- Nodes --
@@ -288,56 +592,204 @@ export default function SimulatePage() {
       .attr("transform", (d) => `translate(${d.x},${d.y})`)
       .style("cursor", "pointer");
 
-    // Circle
     nodeGroups
       .append("circle")
+      .attr("class", "tree-node-halo")
+      .attr("r", (d) => Math.max(12, Math.min(10 + d.data.data.failed_count * 1.3, 24)))
+      .attr("fill", "rgba(123, 220, 198, 0.08)")
+      .attr("opacity", 0);
+
+    nodeGroups
+      .append("circle")
+      .attr("class", "tree-node-core")
       .attr("r", (d) => {
-        const failures = d.data.data.failures ?? 0;
+        const failures = d.data.data.failed_count ?? 0;
         return Math.max(5, Math.min(4 + failures * 1.5, 18));
       })
       .attr("fill", (d) => healthColor(d.data.data.H))
       .attr("stroke", (d) =>
-        worstPathIds.has(d.data.id) ? "#ef4444" : "rgba(255,255,255,0.15)",
+        highlightedPathIds.has(d.data.id) ? "#ef4444" : "rgba(255,255,255,0.15)",
       )
-      .attr("stroke-width", (d) => (worstPathIds.has(d.data.id) ? 2.5 : 1));
+      .attr("stroke-width", (d) => (highlightedPathIds.has(d.data.id) ? 2.5 : 1));
 
-    // H label
     nodeGroups
       .append("text")
-      .attr("dy", -12)
+      .attr("class", "tree-node-health")
+      .attr("dy", 26)
+      .attr("text-anchor", "middle")
+      .attr("fill", "var(--foreground)")
+      .attr("font-size", "11px")
+      .attr("font-weight", 700)
+      .text((d) => `H ${d.data.data.H.toFixed(2)}`);
+
+    nodeGroups
+      .append("text")
+      .attr("class", "tree-node-event")
+      .attr("dy", 42)
       .attr("text-anchor", "middle")
       .attr("fill", "var(--muted)")
       .attr("font-size", "10px")
-      .text((d) => d.data.data.H.toFixed(2));
+      .text((d) => d.data.data.event_summary);
 
-    // -- Tooltip on click --
-    nodeGroups.on("click", (event, d) => {
-      event.stopPropagation();
-      setTooltip({
-        x: (d.x ?? 0) + margin.left,
-        y: (d.y ?? 0) + margin.top,
-        node: d.data.data,
+    nodeGroups
+      .select("circle.tree-node-halo")
+      .attr("fill", (d) =>
+        previewTreeIds.has(d.data.id)
+          ? "rgba(156, 176, 197, 0.06)"
+          : "rgba(123, 220, 198, 0.08)",
+      )
+      .attr("opacity", (d) =>
+        previewTreeIds.has(d.data.id) ? 0.7 : 0
+      );
+
+    nodeGroups
+      .select("circle.tree-node-core")
+      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.28 : 1))
+      .attr("fill", (d) =>
+        previewTreeIds.has(d.data.id) ? "rgba(156, 176, 197, 0.65)" : healthColor(d.data.data.H)
+      );
+
+    nodeGroups
+      .select("text.tree-node-health")
+      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.45 : 1));
+
+    nodeGroups
+      .select("text.tree-node-event")
+      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.35 : 0.88));
+
+    const applyTransform = (transform: d3.ZoomTransform) => {
+      g.attr(
+        "transform",
+        `translate(${baseX},${baseY}) translate(${transform.x},${transform.y}) scale(${transform.k})`,
+      );
+    };
+
+    const centerOnNode = (
+      node: d3.HierarchyNode<HierarchyDatum>,
+      options?: { animate?: boolean },
+    ) => {
+      const scale = zoomTransformRef.current.k || 1;
+      const targetX = width / 2 - (baseX + (node.x ?? 0)) * scale;
+      const targetY = height / 2 - (baseY + (node.y ?? 0)) * scale;
+      const transform = d3.zoomIdentity.translate(targetX, targetY).scale(scale);
+      zoomTransformRef.current = transform;
+
+      if (options?.animate === false) {
+        svg.call(zoomBehavior.transform, transform);
+        return;
+      }
+
+      svg
+        .transition()
+        .duration(260)
+        .ease(d3.easeCubicOut)
+        .call(zoomBehavior.transform, transform);
+    };
+
+    nodeGroups
+      .on("mouseenter", (_event, d) => {
+        setHoveredTreeNodeId(d.data.id);
+        setTooltip({
+          x: (d.x ?? 0) + margin.left + horizontalOffset + 18,
+          y: (d.y ?? 0) + margin.top + 18,
+          node: d.data.data,
+        });
+
+        nodeGroups
+          .select<SVGCircleElement>("circle.tree-node-halo")
+          .attr("opacity", (nodeDatum) =>
+            nodeDatum.data.id === d.data.id
+              ? 1
+              : previewTreeIds.has(nodeDatum.data.id)
+                ? 0.32
+                : nodeDatum.data.id === focusTargetId
+                  ? 0.95
+                  : 0
+          );
+      })
+      .on("mouseleave", () => {
+        setHoveredTreeNodeId(null);
+        setTooltip((current) =>
+          focusTargetId && current?.node.id === focusTargetId ? current : null
+        );
+        nodeGroups
+          .select<SVGCircleElement>("circle.tree-node-halo")
+          .attr("opacity", (nodeDatum) =>
+            nodeDatum.data.id === focusTargetId
+              ? 0.95
+              : previewTreeIds.has(nodeDatum.data.id)
+                ? 0.32
+                : 0
+          );
+      })
+      .on("click", (event, d) => {
+        event.stopPropagation();
+        setFocusedNodeId(d.data.id);
+        setTooltip({
+          x: (d.x ?? 0) + margin.left + horizontalOffset + 18,
+          y: (d.y ?? 0) + margin.top + 18,
+          node: d.data.data,
+        });
+
+        const leafIndex = leafNodes.findIndex((node) => node.id === d.data.id);
+        if (leafIndex >= 0 && leafIndex < scenarios.length) {
+          setActiveScenario(leafIndex);
+        }
       });
-    });
 
-    svg.on("click", () => setTooltip(null));
+    svg.on("click", () => {
+      setHoveredTreeNodeId(null);
+      setTooltip((current) =>
+        focusTargetId && current?.node.id === focusTargetId ? current : null
+      );
+      nodeGroups.select<SVGCircleElement>("circle.tree-node-halo").attr(
+        "opacity",
+        (nodeDatum) =>
+          nodeDatum.data.id === focusTargetId
+            ? 0.95
+            : previewTreeIds.has(nodeDatum.data.id)
+              ? 0.32
+              : 0,
+      );
+    });
 
     // -- Zoom --
     const zoomBehavior = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 3])
+      .scaleExtent([0.6, 2.4])
       .on("zoom", (event) => {
-        g.attr("transform", event.transform);
+        zoomTransformRef.current = event.transform;
+        applyTransform(event.transform);
       });
 
     svg.call(zoomBehavior);
-  }, [treeNodes, worstPathIds]);
+    applyTransform(zoomTransformRef.current);
+
+    const centeredNode = root
+      .descendants()
+      .find((node) => node.data.id === focusTargetId);
+    if (centeredNode) {
+      const shouldAnimate = lastCenteredNodeRef.current !== centeredNode.data.id;
+      lastCenteredNodeRef.current = centeredNode.data.id;
+      requestAnimationFrame(() => {
+        centerOnNode(centeredNode, { animate: shouldAnimate });
+      });
+    }
+  }, [
+    childrenByNodeId,
+    focusTargetId,
+    leafNodes,
+    rootTreeNode,
+    scenarios.length,
+    setActiveScenario,
+    treeNodes,
+    visibleTreeIds,
+    previewTreeIds,
+    highlightedPathIds,
+  ]);
 
   // -- Top 3 worst scenarios --
-  const topScenarios = useMemo(
-    () => (scenarios ?? []).slice(0, 3),
-    [scenarios],
-  );
+  const topScenarios = useMemo(() => (scenarios ?? []).slice(0, 5), [scenarios]);
 
   // -- Agent stats from treeStats --
   const agentStatEntries = useMemo(() => {
@@ -504,6 +956,9 @@ export default function SimulatePage() {
           >
             State Tree
           </h3>
+          <div className="pointer-events-none absolute right-5 top-4 z-10 rounded-full border border-white/8 bg-[color:rgb(9_19_35_/_0.88)] px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            Click any branch to focus its path
+          </div>
 
           {/* Empty / loading / error states */}
           {!vizData?.state_tree && !exploring && (
@@ -570,8 +1025,9 @@ export default function SimulatePage() {
                   </span>
                 </p>
                 <p>Agent: {tooltip.node.agent || "root"}</p>
-                <p>Event: {tooltip.node.event || "initial state"}</p>
-                <p>Failures: {tooltip.node.failures}</p>
+                <p>Event: {tooltip.node.event_summary || "initial state"}</p>
+                <p>Failures: {tooltip.node.failed_count}</p>
+                <p>Depth: {tooltip.node.depth}</p>
               </div>
             </div>
           )}
@@ -672,6 +1128,182 @@ export default function SimulatePage() {
                 />
               </div>
 
+              {currentPathBriefing && (
+                <div
+                  className="rounded-2xl border p-4"
+                  style={{
+                    borderColor: "rgba(156, 176, 197, 0.12)",
+                    background: "rgba(255, 255, 255, 0.025)",
+                  }}
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p
+                        className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Current Path Briefing
+                      </p>
+                      <h4
+                        className="mt-1 text-base font-semibold"
+                        style={{ color: "var(--foreground)" }}
+                      >
+                        {currentPathBriefing.title}
+                      </h4>
+                    </div>
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em]"
+                      style={{
+                        color: severityColor(currentPathBriefing.severityLabel),
+                        background: `${severityColor(currentPathBriefing.severityLabel)}18`,
+                      }}
+                    >
+                      {currentPathBriefing.severityLabel}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 text-sm leading-6">
+                    <div>
+                      <p
+                        className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Impact
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <MiniMetric
+                          label="Health loss"
+                          value={currentPathBriefing.impact.healthLoss.toFixed(2)}
+                          tone="#ef4444"
+                        />
+                        <MiniMetric
+                          label="Last delta"
+                          value={currentPathBriefing.impact.deltaH.toFixed(2)}
+                          tone="#f59e0b"
+                        />
+                        <MiniMetric
+                          label="Failed nodes"
+                          value={String(currentPathBriefing.impact.failedCount)}
+                          tone="var(--foreground)"
+                        />
+                        <MiniMetric
+                          label="Impact score"
+                          value={currentPathBriefing.impact.estimatedImpact.toFixed(2)}
+                          tone="var(--accent)"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p
+                        className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        What happened
+                      </p>
+                      <p style={{ color: "var(--foreground)" }}>
+                        {currentPathBriefing.summary}
+                      </p>
+                      <p className="mt-2" style={{ color: "var(--muted)" }}>
+                        {currentPathBriefing.story}
+                      </p>
+                    </div>
+
+                    {currentPathBriefing.events.length > 0 && (
+                      <div>
+                        <p
+                          className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Sequence
+                        </p>
+                        <div className="space-y-2">
+                          {currentPathBriefing.events.map((event) => (
+                            <div
+                              key={`${event.step}-${event.event}`}
+                              className="rounded-xl border px-3 py-2"
+                              style={{
+                                borderColor: "rgba(156, 176, 197, 0.08)",
+                                background: "rgba(156, 176, 197, 0.04)",
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span style={{ color: "var(--foreground)" }}>
+                                  Step {event.step}: {event.event}
+                                </span>
+                                <span
+                                  className="tabular-nums text-xs"
+                                  style={{ color: "#ef4444" }}
+                                >
+                                  -{event.deltaH.toFixed(2)} H
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                                State settles at H {event.H.toFixed(2)} with {event.failures} failed nodes.
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <p
+                        className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Forward projection
+                      </p>
+                      <p style={{ color: "var(--foreground)" }}>
+                        {currentPathBriefing.forecast}
+                      </p>
+                    </div>
+
+                    {currentPathBriefing.terminalBusinessOutlook && (
+                      <div>
+                        <p
+                          className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Terminal outlook
+                        </p>
+                        <p style={{ color: "var(--foreground)" }}>
+                          {currentPathBriefing.terminalBusinessOutlook}
+                        </p>
+                      </div>
+                    )}
+
+                    {currentPathBriefing.recommendations.length > 0 && (
+                      <div>
+                        <p
+                          className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Recommended intervention
+                        </p>
+                        <ul className="space-y-2">
+                          {currentPathBriefing.recommendations.slice(0, 2).map((rec) => (
+                            <li
+                              key={`${rec.action}-${rec.reason}`}
+                              className="rounded-xl border px-3 py-2"
+                              style={{
+                                borderColor: "rgba(110, 231, 200, 0.14)",
+                                background: "rgba(110, 231, 200, 0.05)",
+                              }}
+                            >
+                              <p style={{ color: "var(--foreground)" }}>{rec.action}</p>
+                              <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                                {rec.reason}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Per-agent stats */}
               {agentStatEntries.length > 0 && (
                 <div>
@@ -717,12 +1349,24 @@ export default function SimulatePage() {
                   </p>
                   <div className="flex flex-col gap-2">
                     {topScenarios.map((s, i) => (
-                      <div
+                      <button
                         key={s.rank ?? i}
-                        className="rounded-lg border p-3"
+                        type="button"
+                        onClick={() => {
+                          setActiveScenario(i);
+                          const leaf = leafNodes[i];
+                          setFocusedNodeId(leaf?.id ?? null);
+                        }}
+                        className="w-full rounded-lg border p-3 text-left transition-all"
                         style={{
-                          borderColor: "rgba(156, 176, 197, 0.10)",
-                          background: "rgba(156, 176, 197, 0.03)",
+                          borderColor:
+                            activeScenarioIndex === i
+                              ? "rgba(110, 231, 200, 0.28)"
+                              : "rgba(156, 176, 197, 0.10)",
+                          background:
+                            activeScenarioIndex === i
+                              ? "rgba(110, 231, 200, 0.08)"
+                              : "rgba(156, 176, 197, 0.03)",
                         }}
                       >
                         <div className="flex items-center justify-between mb-1">
@@ -748,7 +1392,13 @@ export default function SimulatePage() {
                         >
                           {s.title}
                         </p>
-                      </div>
+                        <p
+                          className="mt-1 text-xs leading-relaxed"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          {s.summary}
+                        </p>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -793,6 +1443,39 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p
         className="text-lg font-bold tabular-nums"
         style={{ color: "var(--foreground)" }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function MiniMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+}) {
+  return (
+    <div
+      className="rounded-xl border px-3 py-2"
+      style={{
+        borderColor: "rgba(156, 176, 197, 0.08)",
+        background: "rgba(156, 176, 197, 0.04)",
+      }}
+    >
+      <p
+        className="text-[10px] font-semibold uppercase tracking-[0.18em]"
+        style={{ color: "var(--muted)" }}
+      >
+        {label}
+      </p>
+      <p
+        className="mt-1 text-sm font-semibold tabular-nums"
+        style={{ color: tone }}
       >
         {value}
       </p>
