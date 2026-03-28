@@ -204,7 +204,7 @@ def normalize_ai_output(
 
 def _data_dir() -> Path:
     """Return the base data directory, configurable via ``HALKANTIR_DATA_DIR``."""
-    return Path(os.environ.get("HALKANTIR_DATA_DIR", os.environ.get("NEXUS_DATA_DIR", "data")))
+    return Path(os.environ.get("HALKANTIR_DATA_DIR", "data"))
 
 
 def save_standard(session_id: str, standard: StandardFormat) -> Path:
