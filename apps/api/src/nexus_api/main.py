@@ -250,14 +250,15 @@ async def upload_files(
 @app.post("/api/google-drive/import")
 async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResponse:
     try:
+        import asyncio
+
         from nexus_api.ingestion.extractor import ingest
         from nexus_api.ingestion.google_drive import (
             GoogleDriveImportError,
             extract_folder_id,
             import_drive_folder,
         )
-
-        import asyncio
+        from nexus_api.ingestion.standard import save_standard
 
         folder_id = extract_folder_id(body.folder_id)
         drive_bundle = await asyncio.to_thread(

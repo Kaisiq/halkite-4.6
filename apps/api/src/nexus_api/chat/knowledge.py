@@ -206,7 +206,7 @@ def _build_scenarios_section(report: Any, graph: Graph) -> str:
             for step in s.path:
                 event = step.get("event")
                 if event:
-                    target_name = node_map.get(event.target, event.target)
+                    target_name = _format_event_target(event.target, node_map)
                     new_fails = [
                         node_map.get(f, f) for f in step.get("new_failures", [])
                     ]
@@ -219,6 +219,19 @@ def _build_scenarios_section(report: Any, graph: Graph) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _format_event_target(
+    target: str | list[str] | dict[str, str],
+    node_map: dict[str, str],
+) -> str:
+    if isinstance(target, str):
+        return node_map.get(target, target)
+    if isinstance(target, list):
+        return " + ".join(node_map.get(node_id, node_id) for node_id in target)
+    from_name = node_map.get(target.get("from", ""), target.get("from", ""))
+    to_name = node_map.get(target.get("to", ""), target.get("to", ""))
+    return f"{from_name} -> {to_name}"
 
 
 def _build_recommendations_section(report: Any) -> str:

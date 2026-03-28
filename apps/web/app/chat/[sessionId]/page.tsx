@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import type { Route } from "next";
+import { useParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import { useNexusStore } from "@/lib/store";
 import type { ChatMessage } from "@/lib/types";
@@ -218,7 +217,6 @@ function AnalysisStatus({
 
 export default function ChatPage() {
   const params = useParams<{ sessionId: string }>();
-  const router = useRouter();
   const sessionId = params.sessionId;
 
   const {
@@ -248,10 +246,10 @@ export default function ChatPage() {
 
   // Load chat history on mount
   useEffect(() => {
-    if (sessionId) {
+    if (sessionId && storeSessionId === sessionId) {
       loadChatHistory();
     }
-  }, [sessionId, loadChatHistory]);
+  }, [sessionId, storeSessionId, loadChatHistory]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
