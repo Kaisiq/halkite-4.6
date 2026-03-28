@@ -46,9 +46,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
   serverExternalPackages: [],
-  experimental: {
-    proxyTimeout: 300_000,
-  },
   async rewrites() {
     return [
       {
