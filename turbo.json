@@ -14,7 +14,12 @@
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]
+    },
+    "quality": {
+      "dependsOn": ["lint", "typecheck"]
+    },
+    "test": {
+      "cache": false
     }
   }
 }
-

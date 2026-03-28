@@ -10,7 +10,10 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "quality": "turbo run quality",
+    "test": "turbo run test",
+    "test:cov": "pnpm --filter @halkite/api test:cov"
   },
   "devDependencies": {
     "prettier": "3.8.1",

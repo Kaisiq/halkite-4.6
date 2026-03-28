@@ -27,6 +27,7 @@ dev = [
   "mypy>=1.15.0,<2.0.0",
   "pytest>=8.3.0,<9.0.0",
   "pytest-asyncio>=0.26.0,<1.0.0",
+  "pytest-cov>=6.0.0,<7.0.0",
   "ruff>=0.11.0,<1.0.0"
 ]
 
@@ -37,20 +38,116 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["nexus_api*"]
 
+# ==========================================================================
+# Ruff — linter + formatter
+# ==========================================================================
 [tool.ruff]
 line-length = 100
 target-version = "py314"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "N"]
+select = [
+  "E",     # pycodestyle errors
+  "W",     # pycodestyle warnings
+  "F",     # pyflakes
+  "I",     # isort (import sorting)
+  "B",     # flake8-bugbear
+  "UP",    # pyupgrade
+  "N",     # pep8-naming
+  "S",     # flake8-bandit (security)
+  "A",     # flake8-builtins (shadow builtins)
+  "C4",    # flake8-comprehensions
+  "SIM",   # flake8-simplify
+  "TCH",   # flake8-type-checking
+  "RUF",   # Ruff-specific rules
+  "PT",    # flake8-pytest-style
+  "RET",   # flake8-return
+]
+ignore = [
+  "N802",   # Function name should be lowercase — math notation (A, H)
+  "N803",   # Argument name should be lowercase — math notation (H, delta_H)
+  "N806",   # Variable in function should be lowercase — math notation (A, H)
+  "B008",   # Do not perform function call in argument defaults — FastAPI File/Form
+  "S101",   # Use of assert — allowed in tests
+  "RET504", # Unnecessary assignment before return — sometimes clearer
+  "RUF012", # Mutable class attributes — we use __slots__ instead
+  "UP007",  # Use X | Y for union types — already using from __future__
+  "TCH001", # Move import into TYPE_CHECKING — we prefer runtime imports for simplicity
+  "A002",   # Shadowing builtin `id` — used as node identifier
+  "S110",   # try-except-pass — acceptable for graceful error handling
+  "SIM105", # Use contextlib.suppress — prefer explicit try/except
+  "SIM102", # Use single if instead of nested — readability tradeoff
+  "SIM110", # Use any() instead of for-loop — readability
+  "PT019",  # Fixture without value — accepted for cleanup fixtures
+  "RUF005", # Consider iterable unpacking — stylistic
+  "RUF059", # Unused unpacked variable — common in test destructuring
 
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S106", "S105", "TCH001", "SIM300", "RUF059", "PT011"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# ==========================================================================
+# Pytest
+# ==========================================================================
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = [
+  "-v",
+  "--tb=short",
+  "--strict-markers",
+  "--strict-config",
+]
+markers = [
+  "slow: marks tests that take >2s (deselect with '-m \"not slow\"')",
+  "integration: marks tests requiring external services (AI API, etc.)",
+]
 
+# ==========================================================================
+# Coverage
+# ==========================================================================
+[tool.coverage.run]
+source = ["nexus_api"]
+branch = true
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+fail_under = 60
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.",
+  "@(abc\\.)?abstractmethod",
+  "raise NotImplementedError",
+]
+
+# ==========================================================================
+# MyPy
+# ==========================================================================
 [tool.mypy]
 python_version = "3.14"
 warn_unused_configs = true
 strict = true
 mypy_path = ["src"]
+plugins = []
+
+[[tool.mypy.overrides]]
+module = [
+  "networkx.*",
+  "scipy.*",
+  "anthropic.*",
+  "PyPDF2.*",
+  "docx.*",
+  "openpyxl.*",
+  "PIL.*",
+]
+ignore_missing_imports = true
