@@ -394,7 +394,7 @@
   },
   "dependency_weights_edges": {
     "hard_atomic": {
-      "base_prior": 0.98,
+      "base_prior": 0.95,
       "keywords": [
         "cpu affinity",
         "cpu-affinity",
@@ -492,7 +492,6 @@
         "orchestrated by",
         "orchestrated-by",
         "policy enforced by",
-        "policy-enforced by",
         "policy-enforced-by",
         "rbac authority",
         "rbac-authority",

@@ -2,7 +2,7 @@
   "version": "v3.0",
   "name": "Shizo High-Dimensional Semantic Taxonomy",
   "dimensions": {
-    "1_mission_criticality": {
+    "1_operational_criticality": {
       "id": "criticality",
       "weight": 0.2,
       "nodes": [
@@ -588,7 +588,7 @@
         }
       ]
     },
-    "5_historical_vulnerability": {
+    "5_historical_incident_impact": {
       "id": "history",
       "weight": 0.1,
       "nodes": [

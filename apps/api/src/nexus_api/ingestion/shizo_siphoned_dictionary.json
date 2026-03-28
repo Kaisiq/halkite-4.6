@@ -24,27 +24,27 @@
     {
       "siphoned": "flying blind",
       "non_siphoned": "Lack of Operational Observability / Monitoring Gap",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "flying-blind",
       "non_siphoned": "Lack of Operational Observability / Monitoring Gap",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "duct taped together",
       "non_siphoned": "High Technical Debt / Fragile Integration Layer",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "duct-taped together",
       "non_siphoned": "High Technical Debt / Fragile Integration Layer",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "duct-taped-together",
       "non_siphoned": "High Technical Debt / Fragile Integration Layer",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "house of cards",
@@ -109,12 +109,12 @@
     {
       "siphoned": "spaghetti code",
       "non_siphoned": "Unstructured Logic / High Path Complexity",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "spaghetti-code",
       "non_siphoned": "Unstructured Logic / High Path Complexity",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "skeleton crew",
@@ -129,32 +129,32 @@
     {
       "siphoned": "bottleneck from hell",
       "non_siphoned": "Systemic Operational Constraint",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "bottleneck-from-hell",
       "non_siphoned": "Systemic Operational Constraint",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "crown jewels",
       "non_siphoned": "Primary Strategic Business Asset",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "crown-jewels",
       "non_siphoned": "Primary Strategic Business Asset",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "near miss",
       "non_siphoned": "Sub-Critical Incident with Potential for Escalation",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "near-miss",
       "non_siphoned": "Sub-Critical Incident with Potential for Escalation",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "black hole",
@@ -199,22 +199,22 @@
     {
       "siphoned": "dead man's switch",
       "non_siphoned": "Passive Failure Detection Mechanism",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "dead-man's-switch",
       "non_siphoned": "Passive Failure Detection Mechanism",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "fail whale",
       "non_siphoned": "Complete Systemic Availability Collapse",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "fail-whale",
       "non_siphoned": "Complete Systemic Availability Collapse",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "death by a thousand cuts",
@@ -229,27 +229,27 @@
     {
       "siphoned": "secret sauce",
       "non_siphoned": "Proprietary Algorithmic Competitive Advantage",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "secret-sauce",
       "non_siphoned": "Proprietary Algorithmic Competitive Advantage",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "golden goose",
       "non_siphoned": "Primary Revenue Stream Generator",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "golden-goose",
       "non_siphoned": "Primary Revenue Stream Generator",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "moat",
       "non_siphoned": "Defensible Strategic Entry Barrier",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "poison pill",
@@ -274,22 +274,22 @@
     {
       "siphoned": "set and forget",
       "non_siphoned": "Unmonitored Persistent Configuration",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "set-and-forget",
       "non_siphoned": "Unmonitored Persistent Configuration",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "wild west",
       "non_siphoned": "Unregulated/Non-Compliant Operating Environment",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "wild-west",
       "non_siphoned": "Unregulated/Non-Compliant Operating Environment",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "locked in",
@@ -304,7 +304,7 @@
     {
       "siphoned": "bottlenecked",
       "non_siphoned": "Capacity Constrained / Throughput Limited",
-      "dimension": "mission_criticality"
+      "dimension": "operational_criticality"
     },
     {
       "siphoned": "under the hood",
@@ -329,22 +329,22 @@
     {
       "siphoned": "silence is golden",
       "non_siphoned": "Lack of Health-Check Reporting",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "silence-is-golden",
       "non_siphoned": "Lack of Health-Check Reporting",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "band aid",
       "non_siphoned": "Temporary Non-Robust Mitigation",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "band-aid",
       "non_siphoned": "Temporary Non-Robust Mitigation",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "bridge to nowhere",
@@ -369,12 +369,12 @@
     {
       "siphoned": "ticking time bomb",
       "non_siphoned": "Deterministic Future Failure Point",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "ticking-time-bomb",
       "non_siphoned": "Deterministic Future Failure Point",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "last man standing",
@@ -389,12 +389,12 @@
     {
       "siphoned": "black swan",
       "non_siphoned": "Exogenous High-Impact Low-Probability Event",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     },
     {
       "siphoned": "black-swan",
       "non_siphoned": "Exogenous High-Impact Low-Probability Event",
-      "dimension": "historical_vulnerability"
+      "dimension": "historical_incident_impact"
     }
   ]
 }
