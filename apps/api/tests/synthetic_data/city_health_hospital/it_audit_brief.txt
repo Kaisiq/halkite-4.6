@@ -1,0 +1,18 @@
+IT Audit Brief - March 2024
+-----------------------------
+System: Server_01 (Core)
+Status: Aging, High Risk
+Dependencies: Grid_Sub_Hospital (Direct Power)
+Downstream: PatientRecords_V2, Imaging_API_V1
+Backup: NONE
+---
+Device Inventory:
+- MRI_01 (Basement), Type: Siemens, ID: 10023, Notes: High Power Draw
+- CT_01 (Floor 1), Type: GE, ID: 10024
+- Ventilators: V_A, V_B (ER)
+---
+Staff in DB:
+101 - Dr. House
+102 - Nurse Joy
+201 - IT Admin
+(Unknown) - Dr. Strange

@@ -1,0 +1,11 @@
+WAREHOUSE LOG - 2024-03-27
+--------------------------
+WH-North | iPhone 15 | 100 in stock | HIGH_IMP
+WH-South | Samsung G | 50 in stock | MED_IMP
+WH-East | MacBook A | Preorder status | HI_IMP
+--- DUP ENTRY ---
+WH-North | iPhone 15 | 100 in stock | HIGH_IMP
+--------------------------
+UNASSIGNED | 500 units of generic chargers | LOW_IMP
+WH-South | "AirPods" | 200 in stock | ???
+END OF LOG

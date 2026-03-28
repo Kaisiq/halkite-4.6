@@ -1,0 +1,6 @@
+Monday 08:00 - Main Depot is full. Truck_001 cannot load yet. John Doe is calling me every 5 mins.
+Monday 09:30 - OceanExpress just docked in Rotterdam. Ahab says the port is a mess. 
+Monday 10:00 - Jane Smith (truck_002) has a flat tire. No spare.
+Monday 11:00 - Singapore Port is closed for 24h due to storm.
+Monday 12:00 - We need more drivers. Ahab is asking for another port for the ship. Maybe Suez? No, too risky.
+Monday 13:00 - Depot is still blocked. Truck_001 is going to wait in the parking lot.

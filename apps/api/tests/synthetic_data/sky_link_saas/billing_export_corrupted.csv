@@ -1,0 +1,11 @@
+TransactionID,Date,User,,Amount,Notes
+# Export generated on 2024-03-28 by script_v1.sh
+# DO NOT EDIT MANUALLY
+TX-1001,2024-03-01,user_123,,15.00,Stripe payout
+TX-1002,2024-03-02,user_456,,"error:500",Manual refund
+,2024-03-03,anonymous,,0.00,TESTING ONLY
+TX-1003,2024-03-05,user_789,,49.99,
+TX-1004,March 6,user_101,,20.00,Late fee
+,
+# END OF FILE
+Total rows: 4

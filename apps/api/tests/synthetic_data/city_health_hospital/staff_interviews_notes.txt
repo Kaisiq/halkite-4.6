@@ -1,0 +1,14 @@
+Dr. House (Head of Diagnostics): 
+The whole IT system is trash. If the network goes down, I cannot access any imaging from the MRI or CT. And the MRI_01 is in the basement, it is always breaking. 
+
+Nurse Joy (ER):
+The ventilators (V_A, V_B) are critical but we only have two! If we get a mass casualty, we are done. Also, the power substation for the hospital (Grid_Sub_Hospital) is old and flickering. 
+
+Dr. Strange: 
+My surgeries depend on the diagnostics team (House and Watson). If they are slow, I am slow. 
+
+Nurse Ratched: 
+We have duplicate shifts for Nurse Joy. The system says she is in two places at once. 
+
+IT Guy: 
+We have a major single point of failure. If the main server (Server_01) fails, everything from patient records to imaging is offline. House is right, it is a mess.

@@ -1,0 +1,13 @@
+Transcript of Interview with Alice (CEO, SkyLink)
+Interviewer: So, Alice, how does SkyLink actually work under the hood?
+Alice: Oh, it is a mess, honestly. We are all on AWS, obviously. Most of our stuff is in us-east-1. If that goes down, we are dead.
+Interviewer: What specifically would go down?
+Alice: The main database, for sure. Bob - our head of backend - calls it PostgresMain. Everything talks to it. We use Redis for caching too, but that is less critical.
+Interviewer: Who manages that?
+Alice: Bob, mostly. But Charlie is his backup. Although Charlie is more into the frontend stuff lately.
+Interviewer: What about billing?
+Alice: That is the BillingService. It depends on our Auth service, which is also critical. If people cannot log in, they cannot pay us. 
+Interviewer: Do you have any backups?
+Alice: We keep saying we will get GCP going as a secondary, but we have no money for it yet. 
+Interviewer: What happens if Bob leaves?
+Alice: We would be in trouble. He is the only one who knows the DB password... just kidding. But he is really the only one who knows how the whole thing fits together.

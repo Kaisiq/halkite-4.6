@@ -1,0 +1,14 @@
+From: support@quickship.com
+To: logistics@globalcart.com
+Subject: Delay in V1 API
+Hey team, we are having some issues with our v1 endpoint (api.quickship.com/v1). Please use our legacy system for now. Also, just a heads up, our backup SlowMail is also busy due to the holidays.
+
+From: billing@stripe.com
+To: finance@globalcart.com
+Subject: Account Update
+Your account is in good standing. We notice most of your transactions are via WebStore. If you ever need to switch, PayPal and Adyen are good backups.
+
+From: warehouse-east@globalcart.com
+To: headquarters@globalcart.com
+Subject: Stock Update
+MacBook Airs are all on preorder. WH-North is over capacity with iPhone 15s. We need more space or we have to stop taking deliveries from Apple. WH-South is empty but it is 500 miles away.
