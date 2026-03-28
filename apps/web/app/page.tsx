@@ -45,6 +45,8 @@ type DriveFolderNode = {
   name: string;
 };
 
+type InputSource = "files" | "drive" | null;
+
 type GoogleAccounts = {
   oauth2: {
     initTokenClient: (config: {
@@ -177,6 +179,7 @@ export default function DataInputPage() {
   const [driveFolderPath, setDriveFolderPath] = useState<DriveFolderNode[]>([
     { id: "root", name: "My Drive" },
   ]);
+  const [activeSource, setActiveSource] = useState<InputSource>(null);
   const [driveFolderBrowserLoading, setDriveFolderBrowserLoading] =
     useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -319,6 +322,12 @@ export default function DataInputPage() {
       const ext = `.${fileExtension(f.name)}`;
       return ACCEPT_TYPES.includes(ext);
     });
+    if (arr.length === 0) return;
+    setActiveSource("files");
+    setDriveDialogOpen(false);
+    setDriveFolderId("");
+    setDriveError(null);
+    useNexusStore.setState({ driveFolder: null, uploadError: null });
     setFiles((prev) => {
       const existing = new Set(prev.map((file) => file.name + file.size));
       const deduped = arr.filter(
@@ -357,7 +366,7 @@ export default function DataInputPage() {
   );
 
   const handleBuild = async () => {
-    if (files.length === 0) return;
+    if (activeSource !== "files" || files.length === 0) return;
     await uploadFiles(files, description || undefined);
   };
 
@@ -473,6 +482,9 @@ export default function DataInputPage() {
     }
 
     setDriveError(null);
+    setActiveSource("drive");
+    setFiles([]);
+    useNexusStore.setState({ driveFolder: null, uploadError: null });
     const imported = await importGoogleDriveFolder(
       driveAccessTokenRef.current,
       driveFolderId.trim(),
@@ -674,6 +686,18 @@ export default function DataInputPage() {
                   </div>
                 )}
 
+                {activeSource && (
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-[var(--foreground)]">
+                    Active source:{" "}
+                    <span className="font-semibold">
+                      {activeSource === "files"
+                        ? "manual file upload"
+                        : "Google Drive folder import"}
+                    </span>
+                    . The most recently selected source takes priority.
+                  </div>
+                )}
+
                 <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
                   <div className="flex flex-col gap-4">
                     <label className="flex flex-col gap-2">
@@ -707,9 +731,13 @@ export default function DataInputPage() {
                       type="button"
                       className="accent-button rounded-full py-5 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
                       onClick={handleBuild}
-                      disabled={files.length === 0 || uploading}
+                      disabled={
+                        files.length === 0 ||
+                        uploading ||
+                        activeSource === "drive"
+                      }
                     >
-                      {uploading ? "CALCULATING..." : "BUILD NETWORK →"}
+                      {uploading ? "CALCULATING..." : "BUILD FROM FILES →"}
                     </button>
                   </div>
                 </div>
@@ -800,7 +828,13 @@ export default function DataInputPage() {
                         <input
                           ref={driveFolderInputRef}
                           value={driveFolderId}
-                          onChange={(e) => setDriveFolderId(e.target.value)}
+                          onChange={(e) => {
+                            setDriveFolderId(e.target.value);
+                            if (e.target.value.trim()) {
+                              setActiveSource("drive");
+                              setFiles([]);
+                            }
+                          }}
                           placeholder="FOLDER_ID_OR_URL"
                           className="w-full border-0 bg-transparent font-mono text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-white/10"
                         />
@@ -950,6 +984,10 @@ export default function DataInputPage() {
                                   type="button"
                                   className="mono-label rounded-lg border border-white/5 bg-white/5 px-3 py-1.5 text-[9px] transition-colors hover:bg-white/10"
                                   onClick={() => setDriveFolderId(folder.id)}
+                                  onClickCapture={() => {
+                                    setActiveSource("drive");
+                                    setFiles([]);
+                                  }}
                                   disabled={isDriveImporting}
                                 >
                                   SELECT

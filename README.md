@@ -62,6 +62,39 @@ pnpm typecheck                         # typecheck all
 pnpm format                            # format all
 ```
 
+## Demo Video Recording
+
+The frontend includes a reproducible Playwright-based recorder for jury demos.
+
+Install the browser once:
+
+```bash
+pnpm --filter @halkantir/web demo:setup
+```
+
+Run the recorder from the repository root:
+
+```bash
+DEMO_SESSION_ID=<session-id> pnpm --filter @halkantir/web demo:record
+```
+
+`DEMO_SESSION_ID` is the backend-generated session identifier used in routes like:
+
+- `/network/<session-id>`
+- `/simulate/<session-id>`
+- `/report/<session-id>`
+
+You can get it by opening the app, creating a session through upload, and copying the id from the URL.
+
+By default the video is written to:
+
+```text
+apps/web/demo-output/halkantir-demo.webm
+```
+
+If `DEMO_SESSION_ID` is omitted, the script records the landing page only.
+For more options, see `docs/DEMO_VIDEO_WORKFLOW.md`.
+
 ## Environment
 
 Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`. App-specific templates:

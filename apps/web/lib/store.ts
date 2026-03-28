@@ -10,6 +10,7 @@ import type {
   ChatMessage,
   DriveFolderSummary,
   ExploreConfig,
+  ExploreRequestOptions,
   ExploreResponse,
   GraphData,
   GraphOperation,
@@ -51,6 +52,7 @@ export interface NexusState {
   recommendations: Recommendation[];
   treeStats: TreeStats | null;
   vizData: ExploreResponse["visualization_data"] | null;
+  resilienceProfile: ExploreResponse["resilience_profile"] | null;
 
   // Cascade
   cascadeError: string | null;
@@ -65,22 +67,24 @@ export interface NexusState {
   activeScenarioIndex: number | null;
 
   // Actions
-  setSessionId: (id: string) => void;
-  setGraph: (g: GraphData) => void;
-  uploadFiles: (files: File[], description?: string) => Promise<void>;
+  setSessionId: (_id: string) => void;
+  setGraph: (_g: GraphData) => void;
+  uploadFiles: (_files: File[], _description?: string) => Promise<void>;
   importGoogleDriveFolder: (
-    accessToken: string,
-    folderId: string,
-    description?: string,
+    _accessToken: string,
+    _folderId: string,
+    _description?: string,
   ) => Promise<boolean>;
   runAnalysis: () => Promise<void>;
-  runExploration: (config?: ExploreConfig) => Promise<void>;
-  runCascade: (event: CascadeEvent) => Promise<CascadeResponse | null>;
+  runExploration: (
+    _options?: ExploreRequestOptions | ExploreConfig,
+  ) => Promise<void>;
+  runCascade: (_event: CascadeEvent) => Promise<CascadeResponse | null>;
   resetSession: () => Promise<void>;
-  setSelectedNode: (id: string | null) => void;
-  setActiveScenario: (index: number | null) => void;
-  updateGraphOps: (ops: GraphOperation[]) => Promise<void>;
-  sendChatMessage: (message: string) => Promise<void>;
+  setSelectedNode: (_id: string | null) => void;
+  setActiveScenario: (_index: number | null) => void;
+  updateGraphOps: (_ops: GraphOperation[]) => Promise<void>;
+  sendChatMessage: (_message: string) => Promise<void>;
   loadChatHistory: () => Promise<void>;
   clearChat: () => Promise<void>;
 }
@@ -112,6 +116,7 @@ const INITIAL_EXPLORE = {
   recommendations: [] as Recommendation[],
   treeStats: null as TreeStats | null,
   vizData: null as ExploreResponse["visualization_data"] | null,
+  resilienceProfile: null as ExploreResponse["resilience_profile"] | null,
 };
 
 // ---------------------------------------------------------------------------
@@ -296,6 +301,7 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
         recommendations: res.recommendations,
         treeStats: res.tree_stats,
         vizData: res.visualization_data,
+        resilienceProfile: res.resilience_profile ?? null,
       });
     } catch (err: unknown) {
       set({

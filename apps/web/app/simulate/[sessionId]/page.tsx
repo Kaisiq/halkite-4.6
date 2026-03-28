@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Route } from "next";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
 import { useNexusStore } from "@/lib/store";
-import type { ExploreConfig, Scenario } from "@/lib/types";
+import type {
+  ExploreConfig,
+  ExploreMonteCarloConfig,
+  Scenario,
+} from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Agent definitions
@@ -54,7 +57,75 @@ const AGENTS: AgentDef[] = [
     type: "recovery_maximizer",
     description: "Maximizes total recovery cost",
   },
+  {
+    label: "Full Spectrum Sweep",
+    type: "monte_carlo",
+    description: "Samples random people, system, client, and supplier shocks",
+  },
 ];
+
+const SCENARIO_PROFILES = [
+  {
+    id: "balanced",
+    label: "Balanced Sweep",
+    description: "Covers people incidents, outages, degradation, and broken links.",
+    mc: {
+      failure_model: "uniform",
+      kill_prob: 0.34,
+      damage_prob: 0.46,
+      damage_magnitude_min: 0.2,
+      damage_magnitude_max: 0.75,
+      branching_factor: 10,
+      max_depth: 5,
+      n_resilience_samples: 800,
+    } satisfies ExploreMonteCarloConfig,
+  },
+  {
+    id: "human",
+    label: "Human Shock",
+    description: "Biases toward worker and leadership disruption across the graph.",
+    mc: {
+      failure_model: "weighted_theta",
+      kill_prob: 0.45,
+      damage_prob: 0.4,
+      damage_magnitude_min: 0.25,
+      damage_magnitude_max: 0.7,
+      branching_factor: 8,
+      max_depth: 4,
+      n_resilience_samples: 600,
+    } satisfies ExploreMonteCarloConfig,
+  },
+  {
+    id: "infra",
+    label: "Infra Stress",
+    description: "Pushes intermittent system degradation and hard technical outages.",
+    mc: {
+      failure_model: "weighted_theta",
+      kill_prob: 0.28,
+      damage_prob: 0.58,
+      damage_magnitude_min: 0.35,
+      damage_magnitude_max: 0.85,
+      branching_factor: 12,
+      max_depth: 5,
+      n_resilience_samples: 900,
+    } satisfies ExploreMonteCarloConfig,
+  },
+  {
+    id: "supply",
+    label: "Supply Break",
+    description: "Emphasizes severed dependencies and unreliable counterparties.",
+    mc: {
+      failure_model: "uniform",
+      kill_prob: 0.22,
+      damage_prob: 0.33,
+      damage_magnitude_min: 0.2,
+      damage_magnitude_max: 0.65,
+      branching_factor: 11,
+      max_depth: 5,
+      n_resilience_samples: 750,
+    } satisfies ExploreMonteCarloConfig,
+  },
+] as const;
 
 // ---------------------------------------------------------------------------
 // D3 tree-node datum
@@ -65,6 +136,7 @@ interface TreeNode {
   H: number;
   delta_H: number;
   agent: string;
+  event_key: string;
   event_summary: string;
   failed_count: number;
   depth: number;
@@ -103,21 +175,165 @@ function healthColor(H: number): string {
   return "var(--danger)";
 }
 
+function normalizeLayer(layer: string | undefined): string {
+  return (layer ?? "").trim().toLowerCase();
+}
+
+function isPeopleLayer(layer: string | undefined): boolean {
+  const normalized = normalizeLayer(layer);
+  return (
+    normalized.includes("people") ||
+    normalized.includes("human") ||
+    normalized.includes("employee") ||
+    normalized.includes("team") ||
+    normalized.includes("staff")
+  );
+}
+
+function inferNodeLabel(nodeId: string, graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]>): string {
+  return graph.nodes.find((node) => node.id === nodeId)?.name ?? nodeId;
+}
+
+function inferIncidentLabel(
+  action: string,
+  targetLabel: string,
+  layer?: string,
+  magnitude?: number,
+): string {
+  const normalizedLayer = normalizeLayer(layer);
+  const impactText =
+    typeof magnitude === "number"
+      ? ` (${Math.round(magnitude * 100)}% degradation)`
+      : "";
+
+  if (action === "cut_edge") {
+    return `Dependency between ${targetLabel} is severed`;
+  }
+
+  if (isPeopleLayer(normalizedLayer)) {
+    if (action === "kill") return `${targetLabel} becomes unavailable`;
+    return `${targetLabel} is impaired or operating erratically${impactText}`;
+  }
+
+  if (
+    normalizedLayer.includes("system") ||
+    normalizedLayer.includes("server") ||
+    normalizedLayer.includes("infra") ||
+    normalizedLayer.includes("technology") ||
+    normalizedLayer.includes("application") ||
+    normalizedLayer.includes("platform") ||
+    normalizedLayer.includes("it")
+  ) {
+    if (action === "kill") return `${targetLabel} crashes or goes offline`;
+    return `${targetLabel} degrades intermittently${impactText}`;
+  }
+
+  if (
+    normalizedLayer.includes("supplier") ||
+    normalizedLayer.includes("vendor") ||
+    normalizedLayer.includes("partner") ||
+    normalizedLayer.includes("procurement")
+  ) {
+    if (action === "kill") return `${targetLabel} fails to deliver`;
+    return `${targetLabel} becomes unreliable${impactText}`;
+  }
+
+  if (
+    normalizedLayer.includes("client") ||
+    normalizedLayer.includes("customer") ||
+    normalizedLayer.includes("sales") ||
+    normalizedLayer.includes("account")
+  ) {
+    if (action === "kill") return `${targetLabel} relationship breaks down`;
+    return `${targetLabel} demand or engagement becomes unstable${impactText}`;
+  }
+
+  if (action === "kill") return `${targetLabel} fails suddenly`;
+  return `${targetLabel} degrades${impactText}`;
+}
+
+function formatScenarioEvent(
+  event:
+    | {
+        target: string | { from: string; to: string };
+        action: string;
+        magnitude: number;
+      }
+    | null
+    | undefined,
+  graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]> | null,
+  options?: { includeMagnitude?: boolean },
+): string {
+  if (!event) return "Initial state";
+  if (!graph) return `${event.action} ${event.target}`;
+  const includeMagnitude = options?.includeMagnitude ?? true;
+
+  if (event.action === "cut_edge") {
+    const target =
+      typeof event.target === "string" ? null : event.target;
+    const fromLabel = target?.from
+      ? inferNodeLabel(target.from, graph)
+      : String(event.target);
+    const toLabel = target?.to
+      ? inferNodeLabel(target.to, graph)
+      : String(event.target);
+    return inferIncidentLabel("cut_edge", `${fromLabel} and ${toLabel}`);
+  }
+
+  const targetId = typeof event.target === "string" ? event.target : "";
+  const node = graph.nodes.find((candidate) => candidate.id === targetId);
+  const targetLabel = node?.name ?? targetId;
+  return inferIncidentLabel(
+    event.action,
+    targetLabel,
+    node?.layer,
+    includeMagnitude ? event.magnitude : undefined,
+  );
+}
+
+function formatTreeEventSummary(
+  summary: string | undefined,
+  graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]> | null,
+): string {
+  if (!summary || summary === "root") return "Initial state";
+  const match = summary.match(/^(kill|damage|cut_edge)\s+(.+)$/);
+  if (!match || !graph) return summary;
+
+  const [, action, rawTarget] = match;
+  if (action === "cut_edge") {
+    const edgeMatch = rawTarget.match(/from['"]?:?\s*['"]([^'"]+)['"].*to['"]?:?\s*['"]([^'"]+)['"]/);
+    if (!edgeMatch) return summary;
+    const fromLabel = inferNodeLabel(edgeMatch[1], graph);
+    const toLabel = inferNodeLabel(edgeMatch[2], graph);
+    return inferIncidentLabel("cut_edge", `${fromLabel} and ${toLabel}`);
+  }
+
+  const node = graph.nodes.find((candidate) => candidate.id === rawTarget);
+  const targetLabel = node?.name ?? rawTarget;
+  return inferIncidentLabel(action, targetLabel, node?.layer);
+}
+
+function extractNarrativeText(narrative: Scenario["narrative"]): string {
+  if (!narrative) return "";
+  if (typeof narrative === "string") return narrative;
+  if (typeof narrative.narrative === "string") return narrative.narrative;
+  return "";
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function SimulatePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const router = useRouter();
 
   // -- Store slices --
   const exploring = useNexusStore((s) => s.exploring);
   const graph = useNexusStore((s) => s.graph);
   const scenarios = useNexusStore((s) => s.scenarios);
-  const recommendations = useNexusStore((s) => s.recommendations);
   const treeStats = useNexusStore((s) => s.treeStats);
   const vizData = useNexusStore((s) => s.vizData);
+  const resilienceProfile = useNexusStore((s) => s.resilienceProfile);
   const exploreError = useNexusStore((s) => s.exploreError);
   const runExploration = useNexusStore((s) => s.runExploration);
   const activeScenarioIndex = useNexusStore((s) => s.activeScenarioIndex);
@@ -129,6 +345,9 @@ export default function SimulatePage() {
   );
   const [depth, setDepth] = useState(5);
   const [treeLimit, setTreeLimit] = useState(5000);
+  const [scenarioProfileId, setScenarioProfileId] = useState<
+    (typeof SCENARIO_PROFILES)[number]["id"]
+  >("balanced");
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -170,8 +389,14 @@ export default function SimulatePage() {
       max_tree_nodes: treeLimit,
       agents: Array.from(enabledAgents),
     };
-    runExploration(config);
-  }, [depth, treeLimit, enabledAgents, runExploration]);
+    const selectedProfile = SCENARIO_PROFILES.find(
+      (profile) => profile.id === scenarioProfileId,
+    );
+    runExploration({
+      config,
+      mc: enabledAgents.has("monte_carlo") ? selectedProfile?.mc : undefined,
+    });
+  }, [depth, treeLimit, enabledAgents, runExploration, scenarioProfileId]);
 
   // -- Build D3 hierarchy from vizData --
   const treeData = useMemo(() => {
@@ -193,7 +418,8 @@ export default function SimulatePage() {
       H: node.H,
       depth: node.depth,
       agent: node.agent,
-      event_summary: node.event_summary ?? "root",
+      event_key: formatTreeEventSummary(node.event_summary, graph),
+      event_summary: formatTreeEventSummary(node.event_summary, graph),
       failed_count: node.failed_count ?? 0,
       parent_id: parentByNodeId.get(node.id) ?? null,
       delta_H: 0,
@@ -209,11 +435,14 @@ export default function SimulatePage() {
       nodes: provisional,
       edges,
     };
-  }, [vizData]);
+  }, [graph, vizData]);
 
   const treeNodes = treeData?.nodes ?? null;
   const rootTreeNode = useMemo(
-    () => treeNodes?.find((node) => node.parent_id === null) ?? null,
+    () =>
+      treeNodes?.find((node) => node.depth === 0) ??
+      treeNodes?.find((node) => node.parent_id === null) ??
+      null,
     [treeNodes],
   );
   const treeNodeMap = useMemo(
@@ -242,13 +471,37 @@ export default function SimulatePage() {
   }, [childrenByNodeId, treeNodes]);
 
   const scenarioFocusNode = useMemo(() => {
-    if (activeScenarioIndex === null || !leafNodes[activeScenarioIndex])
-      return null;
-    return leafNodes[activeScenarioIndex];
-  }, [activeScenarioIndex, leafNodes]);
+    if (activeScenarioIndex === null || !rootTreeNode) return null;
+
+    const scenario = scenarios[activeScenarioIndex];
+    if (!scenario) return null;
+
+    let current = rootTreeNode;
+    for (const step of scenario.path) {
+      const eventKey = formatScenarioEvent(step.event, graph, {
+        includeMagnitude: false,
+      });
+      const nextCandidates = (childrenByNodeId.get(current.id) ?? []).filter(
+        (node) => node.event_key === eventKey,
+      );
+      if (nextCandidates.length === 0) return current;
+      current = nextCandidates.reduce((best, candidate) =>
+        Math.abs(candidate.H - step.H_after) < Math.abs(best.H - step.H_after)
+          ? candidate
+          : best,
+      );
+    }
+
+    return current;
+  }, [activeScenarioIndex, childrenByNodeId, graph, rootTreeNode, scenarios]);
 
   const focusTargetId =
     focusedNodeId ?? scenarioFocusNode?.id ?? rootTreeNode?.id ?? null;
+
+  const focusedTreeNode = useMemo(
+    () => (focusTargetId ? treeNodeMap.get(focusTargetId) ?? null : null),
+    [focusTargetId, treeNodeMap],
+  );
 
   const ancestorIds = useMemo(() => {
     if (!focusTargetId || !treeNodeMap.size) return new Set<string>();
@@ -262,97 +515,6 @@ export default function SimulatePage() {
     }
     return ids;
   }, [focusTargetId, treeNodeMap]);
-
-  const revealedPathIds = useMemo(() => {
-    const ids = new Set<string>(ancestorIds);
-    if (rootTreeNode) {
-      ids.add(rootTreeNode.id);
-    }
-    return ids;
-  }, [ancestorIds, rootTreeNode]);
-
-  const visibleTreeIds = useMemo(() => {
-    if (!treeNodes?.length || !rootTreeNode) return new Set<string>();
-
-    const ids = new Set<string>();
-    const seedIds = new Set<string>([
-      ...revealedPathIds,
-      focusTargetId ?? rootTreeNode.id,
-    ]);
-
-    for (const seedId of seedIds) {
-      const queue: Array<{ id: string; distance: number }> = [
-        { id: seedId, distance: 0 },
-      ];
-
-      while (queue.length > 0) {
-        const item = queue.shift()!;
-        if (ids.has(item.id) && item.distance > 0) continue;
-        ids.add(item.id);
-        if (item.distance >= 1) continue;
-
-        for (const child of childrenByNodeId.get(item.id) ?? []) {
-          queue.push({ id: child.id, distance: item.distance + 1 });
-        }
-      }
-    }
-
-    for (const id of ancestorIds) {
-      ids.add(id);
-      for (const child of childrenByNodeId.get(id) ?? []) {
-        ids.add(child.id);
-      }
-    }
-
-    return ids;
-  }, [
-    ancestorIds,
-    childrenByNodeId,
-    focusTargetId,
-    revealedPathIds,
-    rootTreeNode,
-    treeNodes,
-  ]);
-
-  const previewTreeIds = useMemo(() => {
-    if (!rootTreeNode) return new Set<string>();
-    const preview = new Set<string>();
-    const seedIds = new Set<string>([
-      ...revealedPathIds,
-      focusTargetId ?? rootTreeNode.id,
-    ]);
-
-    for (const seedId of seedIds) {
-      const queue: Array<{ id: string; distance: number }> = [
-        { id: seedId, distance: 0 },
-      ];
-
-      while (queue.length > 0) {
-        const item = queue.shift()!;
-        if (item.distance <= 1) {
-          for (const child of childrenByNodeId.get(item.id) ?? []) {
-            queue.push({ id: child.id, distance: item.distance + 1 });
-          }
-          continue;
-        }
-        if (!visibleTreeIds.has(item.id)) {
-          preview.add(item.id);
-        }
-        if (item.distance >= 3) continue;
-        for (const child of childrenByNodeId.get(item.id) ?? []) {
-          queue.push({ id: child.id, distance: item.distance + 1 });
-        }
-      }
-    }
-
-    return preview;
-  }, [
-    childrenByNodeId,
-    focusTargetId,
-    revealedPathIds,
-    rootTreeNode,
-    visibleTreeIds,
-  ]);
 
   // -- Compute highlighted path ids for the current focus target --
   const highlightedPathIds = useMemo<Set<string>>(() => {
@@ -416,13 +578,24 @@ export default function SimulatePage() {
       selectedScenario ? 1 - selectedScenario.health_remaining : 0,
     );
 
-    const events = focusedPathNodes.slice(1).map((node, index) => ({
-      step: index + 1,
-      event: node.event_summary,
-      deltaH: node.delta_H,
-      H: node.H,
-      failures: node.failed_count,
-    }));
+    const pathSource =
+      selectedScenario?.path.length === focusedPathNodes.length - 1
+        ? selectedScenario.path.map((step, index) => ({
+            step: index + 1,
+            event: formatScenarioEvent(step.event, graph),
+            deltaH: step.H_before - step.H_after,
+            H: step.H_after,
+            failures: step.new_failures.length,
+          }))
+        : focusedPathNodes.slice(1).map((node, index) => ({
+            step: index + 1,
+            event: node.event_summary,
+            deltaH: node.delta_H,
+            H: node.H,
+            failures: node.failed_count,
+          }));
+
+    const events = pathSource;
 
     const summary =
       selectedScenario?.summary ??
@@ -431,7 +604,7 @@ export default function SimulatePage() {
         : "The system is still at the initial state root.");
 
     const story =
-      selectedScenario?.narrative ||
+      extractNarrativeText(selectedScenario?.narrative ?? null) ||
       (events.length > 0
         ? `The branch compounds through ${events.length} event${events.length === 1 ? "" : "s"}, with each step reducing resilience and widening the failure set around the focused path.`
         : "No event has been applied yet. The tree is waiting for the first branch selection.");
@@ -507,7 +680,7 @@ export default function SimulatePage() {
 
     svg.attr("width", width).attr("height", height);
 
-    // Build d3 hierarchy from filtered list
+    // Build the full tree hierarchy from backend state-tree nodes.
     const rootNode = rootTreeNode;
     if (!rootNode) return;
 
@@ -519,18 +692,17 @@ export default function SimulatePage() {
 
     const childrenMap = new Map<string, TreeNode[]>();
     for (const n of treeNodes) {
-      if (!visibleTreeIds.has(n.id)) continue;
-      if (n.parent_id) {
-        const arr = childrenMap.get(n.parent_id) || [];
-        arr.push(n);
-        childrenMap.set(n.parent_id, arr);
-      }
+      if (!n.parent_id) continue;
+      const arr = childrenMap.get(n.parent_id) || [];
+      arr.push(n);
+      childrenMap.set(n.parent_id, arr);
+    }
+    for (const arr of childrenMap.values()) {
+      arr.sort((a, b) => a.H - b.H);
     }
 
     function buildHierarchy(node: TreeNode): HierarchyDatum {
-      const kids = (childrenMap.get(node.id) || []).filter((child) =>
-        visibleTreeIds.has(child.id),
-      );
+      const kids = childrenMap.get(node.id) || [];
       return {
         id: node.id,
         data: node,
@@ -540,53 +712,21 @@ export default function SimulatePage() {
 
     const rootHierarchy = buildHierarchy(rootNode);
     const root = d3.hierarchy<HierarchyDatum>(rootHierarchy);
+    const treeLayout = d3
+      .tree<HierarchyDatum>()
+      .nodeSize([Math.max(88, Math.min(128, width / 10)), 150]);
+    treeLayout(root);
 
-    // Tree layout
-    const margin = { top: 76, right: 72, bottom: 160, left: 72 };
-    const innerHeight = height - margin.top - margin.bottom;
-    const innerWidth = width - margin.left - margin.right;
-    const leaves = root.leaves();
-    const leafGap = Math.max(
-      92,
-      Math.min(160, innerWidth / Math.max(leaves.length, 1)),
-    );
-    const depthGap = Math.max(
-      116,
-      Math.min(180, innerHeight / Math.max(root.height + 1, 2)),
-    );
-
-    leaves.forEach((leaf, index) => {
-      leaf.x = index * leafGap;
-    });
-
-    root.eachAfter((node) => {
-      if (!node.children || node.children.length === 0) return;
-      const first = node.children[0];
-      const last = node.children[node.children.length - 1];
-      node.x = ((first.x ?? 0) + (last.x ?? 0)) / 2;
-    });
-
-    root.each((node) => {
-      node.y = node.depth * depthGap;
-    });
-
-    const totalTreeWidth = Math.max((leaves.length - 1) * leafGap, 0);
-    const horizontalOffset = Math.max((innerWidth - totalTreeWidth) / 2, 0);
-
-    const baseX = margin.left + horizontalOffset;
-    const baseY = margin.top;
+    const xExtent = d3.extent(root.descendants(), (node) => node.x ?? 0);
+    const yExtent = d3.extent(root.descendants(), (node) => node.y ?? 0);
+    const minX = xExtent[0] ?? 0;
+    const maxX = xExtent[1] ?? 0;
+    const minY = yExtent[0] ?? 0;
+    const maxY = yExtent[1] ?? 0;
+    const contentWidth = Math.max(1, maxX - minX);
+    const contentHeight = Math.max(1, maxY - minY);
 
     const g = svg.append("g");
-
-    g.append("g")
-      .selectAll("line")
-      .data(root.descendants().filter((node) => node.depth > 0))
-      .join("line")
-      .attr("x1", (d) => d.x ?? 0)
-      .attr("y1", () => 0)
-      .attr("x2", (d) => d.x ?? 0)
-      .attr("y2", (d) => (d.y ?? 0) - 16)
-      .attr("stroke", "rgba(255,255,255,0.03)");
 
     // -- Links --
     g.selectAll(".tree-link")
@@ -676,37 +816,24 @@ export default function SimulatePage() {
       .attr("font-size", "10px")
       .text((d) => d.data.data.event_summary);
 
-    nodeGroups
-      .select("circle.tree-node-halo")
-      .attr("fill", (d) =>
-        previewTreeIds.has(d.data.id)
-          ? "rgba(156, 176, 197, 0.06)"
-          : "rgba(123, 220, 198, 0.08)",
-      )
-      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.7 : 0));
-
-    nodeGroups
-      .select("circle.tree-node-core")
-      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.28 : 1))
-      .attr("fill", (d) =>
-        previewTreeIds.has(d.data.id)
-          ? "rgba(156, 176, 197, 0.65)"
-          : healthColor(d.data.data.H),
-      );
-
-    nodeGroups
-      .select("text.tree-node-health")
-      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.45 : 1));
-
-    nodeGroups
-      .select("text.tree-node-event")
-      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.35 : 0.88));
-
     const applyTransform = (transform: d3.ZoomTransform) => {
-      g.attr(
-        "transform",
-        `translate(${baseX},${baseY}) translate(${transform.x},${transform.y}) scale(${transform.k})`,
+      g.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+    };
+
+    const fitTree = () => {
+      const scale = Math.max(
+        0.55,
+        Math.min(
+          1,
+          Math.min(
+            (width - 220) / Math.max(contentWidth, 1),
+            (height - 220) / Math.max(contentHeight, 1),
+          ),
+        ),
       );
+      return d3.zoomIdentity
+        .translate(width / 2 - ((minX + maxX) / 2) * scale, 96 - minY * scale)
+        .scale(scale);
     };
 
     const centerOnNode = (
@@ -714,8 +841,8 @@ export default function SimulatePage() {
       options?: { animate?: boolean },
     ) => {
       const scale = zoomTransformRef.current.k || 1;
-      const targetX = width / 2 - (baseX + (node.x ?? 0)) * scale;
-      const targetY = height / 2 - (baseY + (node.y ?? 0)) * scale;
+      const targetX = width / 2 - (node.x ?? 0) * scale;
+      const targetY = height / 2 - (node.y ?? 0) * scale;
       const transform = d3.zoomIdentity
         .translate(targetX, targetY)
         .scale(scale);
@@ -737,8 +864,12 @@ export default function SimulatePage() {
       .on("mouseenter", (_event, d) => {
         setHoveredTreeNodeId(d.data.id);
         setTooltip({
-          x: (d.x ?? 0) + margin.left + horizontalOffset + 18,
-          y: (d.y ?? 0) + margin.top + 18,
+          x: (d.x ?? 0) * (zoomTransformRef.current.k || 1) +
+            zoomTransformRef.current.x +
+            18,
+          y: (d.y ?? 0) * (zoomTransformRef.current.k || 1) +
+            zoomTransformRef.current.y +
+            18,
           node: d.data.data,
         });
 
@@ -747,10 +878,10 @@ export default function SimulatePage() {
           .attr("opacity", (nodeDatum) =>
             nodeDatum.data.id === d.data.id
               ? 1
-              : previewTreeIds.has(nodeDatum.data.id)
-                ? 0.32
-                : nodeDatum.data.id === focusTargetId
-                  ? 0.95
+              : nodeDatum.data.id === focusTargetId
+                ? 0.95
+                : ancestorIds.has(nodeDatum.data.id)
+                  ? 0.22
                   : 0,
           );
       })
@@ -764,8 +895,8 @@ export default function SimulatePage() {
           .attr("opacity", (nodeDatum) =>
             nodeDatum.data.id === focusTargetId
               ? 0.95
-              : previewTreeIds.has(nodeDatum.data.id)
-                ? 0.32
+              : ancestorIds.has(nodeDatum.data.id)
+                ? 0.22
                 : 0,
           );
       })
@@ -773,14 +904,39 @@ export default function SimulatePage() {
         event.stopPropagation();
         setFocusedNodeId(d.data.id);
         setTooltip({
-          x: (d.x ?? 0) + margin.left + horizontalOffset + 18,
-          y: (d.y ?? 0) + margin.top + 18,
+          x: (d.x ?? 0) * (zoomTransformRef.current.k || 1) +
+            zoomTransformRef.current.x +
+            18,
+          y: (d.y ?? 0) * (zoomTransformRef.current.k || 1) +
+            zoomTransformRef.current.y +
+            18,
           node: d.data.data,
         });
 
-        const leafIndex = leafNodes.findIndex((node) => node.id === d.data.id);
-        if (leafIndex >= 0 && leafIndex < scenarios.length) {
-          setActiveScenario(leafIndex);
+        const matchingScenarioIndex = scenarios.findIndex((scenario, index) => {
+          if (index === activeScenarioIndex && scenarioFocusNode?.id === d.data.id)
+            return true;
+          let current = rootTreeNode;
+          if (!current) return false;
+          for (const step of scenario.path) {
+            const key = formatScenarioEvent(step.event, graph, {
+              includeMagnitude: false,
+            });
+            const nextCandidates = (childrenByNodeId.get(current.id) ?? []).filter(
+              (node) => node.event_key === key,
+            );
+            if (!nextCandidates.length) break;
+            current = nextCandidates.reduce((best, candidate) =>
+              Math.abs(candidate.H - step.H_after) <
+              Math.abs(best.H - step.H_after)
+                ? candidate
+                : best,
+            );
+          }
+          return current.id === d.data.id;
+        });
+        if (matchingScenarioIndex >= 0) {
+          setActiveScenario(matchingScenarioIndex);
         }
       });
 
@@ -794,8 +950,8 @@ export default function SimulatePage() {
         .attr("opacity", (nodeDatum) =>
           nodeDatum.data.id === focusTargetId
             ? 0.95
-            : previewTreeIds.has(nodeDatum.data.id)
-              ? 0.32
+            : ancestorIds.has(nodeDatum.data.id)
+              ? 0.22
               : 0,
         );
     });
@@ -810,12 +966,17 @@ export default function SimulatePage() {
       });
 
     svg.call(zoomBehavior);
-    applyTransform(zoomTransformRef.current);
+    const shouldRefit =
+      lastCenteredNodeRef.current === null ||
+      (focusTargetId ?? rootNode.id) === rootNode.id;
+    const startingTransform = shouldRefit ? fitTree() : zoomTransformRef.current;
+    zoomTransformRef.current = startingTransform;
+    svg.call(zoomBehavior.transform, startingTransform);
 
     const centeredNode = root
       .descendants()
       .find((node) => node.data.id === focusTargetId);
-    if (centeredNode) {
+    if (centeredNode && focusTargetId && focusTargetId !== rootNode.id) {
       const shouldAnimate =
         lastCenteredNodeRef.current !== centeredNode.data.id;
       lastCenteredNodeRef.current = centeredNode.data.id;
@@ -826,14 +987,15 @@ export default function SimulatePage() {
   }, [
     childrenByNodeId,
     focusTargetId,
-    leafNodes,
     rootTreeNode,
-    scenarios.length,
+    scenarios,
     setActiveScenario,
     treeNodes,
-    visibleTreeIds,
-    previewTreeIds,
     highlightedPathIds,
+    ancestorIds,
+    activeScenarioIndex,
+    graph,
+    scenarioFocusNode?.id,
   ]);
 
   // -- Top 5 worst scenarios --
@@ -841,6 +1003,8 @@ export default function SimulatePage() {
     () => (scenarios ?? []).slice(0, 5),
     [scenarios],
   );
+  const totalTreeNodes = treeNodes?.length ?? 0;
+  const totalTreeLeaves = leafNodes.length;
 
   // -- Agent stats from treeStats --
   const agentStatEntries = useMemo(() => {
@@ -888,6 +1052,7 @@ export default function SimulatePage() {
                           ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
                           : "border-white/5 bg-white/[0.02] text-[var(--muted)] hover:bg-white/[0.04]"
                       }`}
+                      title={agent.description}
                     >
                       <div className={`h-1.5 w-1.5 rounded-full transition-all ${active ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" : "bg-white/10"}`} />
                       {agent.label}
@@ -895,6 +1060,48 @@ export default function SimulatePage() {
                   );
                 })}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="mono-label text-[9px] opacity-40">
+                  WHAT_IF_SWEEP_PROFILE
+                </div>
+                <span className="mono-label text-[8px] opacity-30">
+                  {enabledAgents.has("monte_carlo")
+                    ? "FULL_SPECTRUM_SWEEP_ENABLED"
+                    : "FULL_SPECTRUM_SWEEP_DISABLED"}
+                </span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {SCENARIO_PROFILES.map((profile) => {
+                  const active = scenarioProfileId === profile.id;
+                  const disabled = !enabledAgents.has("monte_carlo");
+                  return (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      onClick={() => setScenarioProfileId(profile.id)}
+                      disabled={disabled}
+                      className={`rounded-2xl border p-4 text-left transition-all ${
+                        active
+                          ? "border-[var(--accent)]/35 bg-[var(--accent)]/10"
+                          : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                      } ${disabled ? "opacity-40" : ""}`}
+                    >
+                      <div className="mono-label text-[8px] text-[var(--accent-soft)]">
+                        {profile.label}
+                      </div>
+                      <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">
+                        {profile.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="max-w-3xl text-xs leading-relaxed text-[var(--muted)]">
+                The full-spectrum sweep adds non-deterministic branches on top of the strategic agents so the tree explores routine human mistakes, intermittent technical degradation, supplier failures, and broken dependencies across all mapped nodes.
+              </p>
             </div>
 
             {/* Sliders row */}
@@ -976,10 +1183,42 @@ export default function SimulatePage() {
           <div className="pointer-events-none absolute right-8 top-8 z-10 rounded-full border border-white/5 bg-black/40 px-5 py-2 backdrop-blur-md">
             <span className="mono-label text-[9px] opacity-60">INTERACTION: CLICK_BRANCH_TO_FOCUS</span>
           </div>
+          {treeStats && totalTreeNodes > 0 && (
+            <div className="absolute bottom-8 left-8 z-10 flex max-w-[420px] items-end gap-3">
+              <div className="rounded-[24px] border border-white/5 bg-black/45 px-5 py-4 backdrop-blur-xl">
+                <div className="mono-label text-[8px] opacity-40">TREE_SCOPE</div>
+                <div className="mt-2 flex items-center gap-4">
+                  <span className="font-mono text-xs text-[var(--foreground)]">
+                    {String(totalTreeNodes).padStart(2, "0")}_NODES
+                  </span>
+                  <span className="font-mono text-xs text-[var(--foreground)]">
+                    {String(totalTreeLeaves).padStart(2, "0")}_LEAVES
+                  </span>
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
+                  {focusedTreeNode && focusedTreeNode.depth > 0
+                    ? `Focused on ${focusedTreeNode.event_summary}. Path depth ${focusedTreeNode.depth}, H ${focusedTreeNode.H.toFixed(2)}.`
+                    : "Showing the full explored tree. Select any branch to inspect its path and downstream states."}
+                </p>
+              </div>
+              {focusedTreeNode && focusedTreeNode.id !== rootTreeNode?.id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusedNodeId(rootTreeNode?.id ?? null);
+                    setTooltip(null);
+                  }}
+                  className="rounded-full border border-white/10 bg-black/45 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--foreground)] backdrop-blur-xl transition hover:bg-white/[0.06]"
+                >
+                  Reset Focus
+                </button>
+              )}
+            </div>
+          )}
 
 
           {/* Empty / loading / error states */}
-          {!vizData?.state_tree && !exploring && (
+          {!treeNodes?.length && !exploring && (
             <div className="flex items-center justify-center h-full">
               <p
                 className="text-sm text-center max-w-xs"
@@ -1011,7 +1250,7 @@ export default function SimulatePage() {
             ref={svgRef}
             className="w-full h-full"
             style={{
-              display: vizData?.state_tree && !exploring ? "block" : "none",
+              display: treeNodes?.length && !exploring ? "block" : "none",
             }}
           />
 
@@ -1131,6 +1370,29 @@ export default function SimulatePage() {
                 />
                 <StatCard label="UNIQUE_SCENARIOS" value={String(scenarios.length).padStart(2, '0')} />
               </div>
+
+              {resilienceProfile && (
+                <div className="grid grid-cols-2 gap-4">
+                  <MiniMetric
+                    label="MEAN_RANDOM_HEALTH"
+                    value={
+                      resilienceProfile.mean_H !== undefined
+                        ? resilienceProfile.mean_H.toFixed(2)
+                        : "--"
+                    }
+                    tone="var(--foreground)"
+                  />
+                  <MiniMetric
+                    label="CATASTROPHIC_PROB"
+                    value={
+                      resilienceProfile.p_catastrophic !== undefined
+                        ? `${Math.round(resilienceProfile.p_catastrophic * 100)}%`
+                        : "--"
+                    }
+                    tone="var(--danger)"
+                  />
+                </div>
+              )}
 
               {currentPathBriefing && (
                 <div className="flex flex-col gap-6">
@@ -1286,9 +1548,40 @@ export default function SimulatePage() {
                         key={s.rank ?? i}
                         type="button"
                         onClick={() => {
-                          setActiveScenario(i);
-                          const leaf = leafNodes[i];
-                          setFocusedNodeId(leaf?.id ?? null);
+                          const absoluteScenarioIndex = scenarios.findIndex(
+                            (scenario) => scenario.rank === s.rank,
+                          );
+                          const scenarioIndex =
+                            absoluteScenarioIndex >= 0
+                              ? absoluteScenarioIndex
+                              : i;
+                          setActiveScenario(scenarioIndex);
+                          const focusNode =
+                            scenarioIndex === activeScenarioIndex
+                              ? scenarioFocusNode
+                              : (() => {
+                                  let current: TreeNode | null = rootTreeNode;
+                                  const scenario = scenarios[scenarioIndex];
+                                  if (!current || !scenario) return null;
+                                  for (const step of scenario.path) {
+                                    const key = formatScenarioEvent(step.event, graph, {
+                                      includeMagnitude: false,
+                                    });
+                                    const nextCandidates: TreeNode[] = (
+                                      childrenByNodeId.get(current.id) ?? []
+                                    ).filter((node) => node.event_key === key);
+                                    if (!nextCandidates.length) break;
+                                    current = nextCandidates.reduce(
+                                      (best: TreeNode, candidate: TreeNode) =>
+                                        Math.abs(candidate.H - step.H_after) <
+                                        Math.abs(best.H - step.H_after)
+                                          ? candidate
+                                          : best,
+                                    );
+                                  }
+                                  return current;
+                                })();
+                          setFocusedNodeId(focusNode?.id ?? null);
                         }}
                         className={`group flex items-center justify-between rounded-2xl border p-4 text-left transition-all ${
                           activeScenarioIndex === i
@@ -1307,9 +1600,14 @@ export default function SimulatePage() {
                           >
                             {s.severity_label}
                           </span>
-                          <span className="text-xs font-bold tracking-tight text-[var(--foreground)] uppercase">
-                            SCENARIO_{String(i + 1).padStart(2, '0')}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="block truncate text-xs font-bold tracking-tight text-[var(--foreground)] uppercase">
+                              {s.title || `SCENARIO_${String(i + 1).padStart(2, '0')}`}
+                            </span>
+                            <span className="block truncate pt-1 text-[10px] text-[var(--muted)]">
+                              {s.summary || "Explored cascade path across the mapped organization."}
+                            </span>
+                          </div>
                         </div>
                         <span
                           className="font-mono text-[11px] font-bold"

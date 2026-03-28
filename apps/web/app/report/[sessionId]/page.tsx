@@ -76,6 +76,22 @@ function RecTypeBadge({ type }: { type: string }) {
   );
 }
 
+function formatEventTarget(target: ScenarioPath["event"] extends infer E
+  ? E extends { target: infer T }
+    ? T
+    : never
+  : never): string {
+  if (!target) return "";
+  if (typeof target === "string") return target;
+  return `${target.from} -> ${target.to}`;
+}
+
+function extractNarrativeText(narrative: Scenario["narrative"]): string {
+  if (!narrative) return "";
+  if (typeof narrative === "string") return narrative;
+  return narrative.narrative ?? "";
+}
+
 // ---------------------------------------------------------------------------
 // Scenario card
 // ---------------------------------------------------------------------------
@@ -205,7 +221,7 @@ function ScenarioCard({
                         </span>
                         {step.event && (
                           <span className="text-[11px] font-bold text-[var(--foreground)] uppercase tracking-tight">
-                            {step.event.action} {step.event.target}
+                            {step.event.action} {formatEventTarget(step.event.target)}
                           </span>
                         )}
                       </div>
@@ -235,13 +251,13 @@ function ScenarioCard({
           )}
 
           {/* Narrative */}
-          {scenario.narrative && (
+          {extractNarrativeText(scenario.narrative) && (
             <div className="bracket-box rounded-2xl border-white/5 bg-white/[0.02] p-6">
               <div className="mb-4 mono-label text-[9px] opacity-40">
                 INTELLIGENCE_SUMMARY
               </div>
               <p className="text-sm leading-relaxed text-[var(--muted-strong)]">
-                {scenario.narrative}
+                {extractNarrativeText(scenario.narrative)}
               </p>
             </div>
           )}

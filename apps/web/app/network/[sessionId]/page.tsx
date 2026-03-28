@@ -52,25 +52,22 @@ function impactColor(impact: number, failed: boolean): string {
 }
 
 interface OrbitNode extends GraphNode {
-  x3: number;
-  y3: number;
-  z3: number;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
   impact: number;
 }
 
 interface OrbitLink {
-  source: OrbitNode;
-  target: OrbitNode;
+  source: string | OrbitNode;
+  target: string | OrbitNode;
+  fromId: string;
+  toId: string;
   weight: number;
   crossLayer: boolean;
-}
-
-interface ProjectedPoint {
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-  opacity: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +161,19 @@ export default function NetworkPage({ params }: PageProps) {
       .join("feMergeNode")
       .attr("in", (d) => d);
 
+    defs
+      .append("marker")
+      .attr("id", "networkArrow")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 18)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-4L10,0L0,4")
+      .attr("fill", "rgba(138, 166, 205, 0.42)");
+
     const g = svg.append("g");
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
@@ -171,8 +181,6 @@ export default function NetworkPage({ params }: PageProps) {
       .on("zoom", (event) => g.attr("transform", event.transform));
     svg.call(zoom);
 
-    const sphereRadius = Math.min(width, height) * 0.3;
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
     const impactMap = new Map(
       (vulnerabilityReport?.node_rankings ?? []).map((entry) => [
         entry.node_id,
@@ -184,20 +192,12 @@ export default function NetworkPage({ params }: PageProps) {
       1,
     );
 
-    const orbitNodes: OrbitNode[] = graph.nodes.map((node, index) => {
-      const total = Math.max(graph.nodes.length - 1, 1);
-      const y = 1 - (index / total) * 2;
-      const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y));
-      const theta = goldenAngle * index;
-
-      return {
-        ...node,
-        x3: Math.cos(theta) * radiusAtY,
-        y3: y,
-        z3: Math.sin(theta) * radiusAtY,
-        impact: (impactMap.get(node.id) ?? node.theta) / impactMax,
-      };
-    });
+    const orbitNodes: OrbitNode[] = graph.nodes.map((node) => ({
+      ...node,
+      x: width / 2 + (Math.random() - 0.5) * 160,
+      y: height / 2 + (Math.random() - 0.5) * 120,
+      impact: (impactMap.get(node.id) ?? node.theta) / impactMax,
+    }));
 
     const nodeMap = new Map(orbitNodes.map((node) => [node.id, node]));
     const orbitLinks: OrbitLink[] = graph.edges
@@ -206,25 +206,26 @@ export default function NetworkPage({ params }: PageProps) {
         const source = nodeMap.get(edge.from)!;
         const target = nodeMap.get(edge.to)!;
         return {
-          source,
-          target,
+          source: source.id,
+          target: target.id,
+          fromId: source.id,
+          toId: target.id,
           weight: edge.weight,
           crossLayer: source.layer !== target.layer,
         };
       });
-
-    const projected = new Map<string, ProjectedPoint>();
 
     const edgeSel = g
       .append("g")
       .selectAll("line")
       .data(orbitLinks)
       .join("line")
-      .attr("stroke-linecap", "round");
+      .attr("stroke-linecap", "round")
+      .attr("marker-end", "url(#networkArrow)");
 
     const nodeSel = g
       .append("g")
-      .selectAll("g")
+      .selectAll<SVGGElement, OrbitNode>("g")
       .data(orbitNodes)
       .join("g")
       .attr("class", "node")
@@ -264,97 +265,83 @@ export default function NetworkPage({ params }: PageProps) {
         setSelectedNode(selectedNodeRef.current === d.id ? null : d.id);
       });
 
-    let angleY = 0;
-    let angleX = -0.22;
-    let frameId = 0;
+    const simulation = d3
+      .forceSimulation(orbitNodes)
+      .force(
+        "link",
+        d3
+          .forceLink<OrbitNode, OrbitLink>(orbitLinks)
+          .id((node) => node.id)
+          .distance((link) => 90 + (1 - link.weight) * 140)
+          .strength((link) => 0.24 + link.weight * 0.5),
+      )
+      .force("charge", d3.forceManyBody<OrbitNode>().strength(-340))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force(
+        "collision",
+        d3.forceCollide<OrbitNode>().radius((node) => 16 + node.theta * 20),
+      )
+      .force("x", d3.forceX<OrbitNode>(width / 2).strength(0.03))
+      .force("y", d3.forceY<OrbitNode>(height / 2).strength(0.03));
 
-    const project = (node: OrbitNode) => {
-      const cosY = Math.cos(angleY);
-      const sinY = Math.sin(angleY);
-      const cosX = Math.cos(angleX);
-      const sinX = Math.sin(angleX);
+    const drag = d3
+      .drag<SVGGElement, OrbitNode>()
+      .on("start", (event, node) => {
+        if (!event.active) simulation.alphaTarget(0.22).restart();
+        node.fx = node.x ?? 0;
+        node.fy = node.y ?? 0;
+      })
+      .on("drag", (event, node) => {
+        node.fx = event.x;
+        node.fy = event.y;
+      })
+      .on("end", (event, node) => {
+        if (!event.active) simulation.alphaTarget(0);
+        node.fx = null;
+        node.fy = null;
+      });
 
-      const x1 = node.x3 * cosY + node.z3 * sinY;
-      const z1 = -node.x3 * sinY + node.z3 * cosY;
-      const y1 = node.y3 * cosX - z1 * sinX;
-      const z2 = node.y3 * sinX + z1 * cosX;
-      const perspective = 2.8;
-      const scale = perspective / (perspective - z2 * 1.35);
-
-      return {
-        x: width / 2 + x1 * sphereRadius * scale,
-        y: height / 2 + y1 * sphereRadius * scale,
-        z: z2,
-        scale,
-        opacity: 0.28 + ((z2 + 1) / 2) * 0.72,
-      };
-    };
+    nodeSel.call(drag);
 
     const render = () => {
       const hovered = hoveredNodeRef.current;
-      angleY += hovered ? 0.0012 : 0.0018;
-
-      for (const node of orbitNodes) {
-        projected.set(node.id, project(node));
-      }
-
       const hidden = hiddenLayersRef.current;
       const selected = selectedNodeRef.current;
 
       edgeSel
-        .attr("x1", (link) => projected.get(link.source.id)?.x ?? 0)
-        .attr("y1", (link) => projected.get(link.source.id)?.y ?? 0)
-        .attr("x2", (link) => projected.get(link.target.id)?.x ?? 0)
-        .attr("y2", (link) => projected.get(link.target.id)?.y ?? 0)
+        .attr("x1", (link) => ((link.source as OrbitNode).x ?? 0))
+        .attr("y1", (link) => ((link.source as OrbitNode).y ?? 0))
+        .attr("x2", (link) => ((link.target as OrbitNode).x ?? 0))
+        .attr("y2", (link) => ((link.target as OrbitNode).y ?? 0))
         .attr("display", (link) =>
-          hidden.has(link.source.layer) || hidden.has(link.target.layer)
+          hidden.has((link.source as OrbitNode).layer) ||
+          hidden.has((link.target as OrbitNode).layer)
             ? "none"
             : "inline",
         )
         .attr("stroke", (link) => {
-          const connected =
-            hovered &&
-            (link.source.id === hovered || link.target.id === hovered);
-          const selectedLink =
-            selected &&
-            (link.source.id === selected || link.target.id === selected);
+          const connected = hovered && (link.fromId === hovered || link.toId === hovered);
+          const selectedLink = selected && (link.fromId === selected || link.toId === selected);
           if (connected) return "rgba(123, 220, 198, 0.92)";
           if (selectedLink) return "rgba(245, 199, 109, 0.78)";
           return link.crossLayer
             ? "rgba(138, 166, 205, 0.28)"
             : "rgba(120, 141, 173, 0.18)";
         })
-        .attr("stroke-opacity", (link) => {
-          const src = projected.get(link.source.id);
-          const tgt = projected.get(link.target.id);
-          const depth = ((src?.opacity ?? 0.3) + (tgt?.opacity ?? 0.3)) / 2;
-          return depth;
-        })
+        .attr("stroke-opacity", (link) =>
+          hovered && (link.fromId === hovered || link.toId === hovered)
+            ? 1
+            : selected && (link.fromId === selected || link.toId === selected)
+              ? 0.92
+              : 0.72,
+        )
         .attr("stroke-width", (link) => Math.max(1, link.weight * 2.6))
         .attr("stroke-dasharray", (link) => (link.crossLayer ? "5 7" : "none"));
 
-      edgeSel.sort((a, b) => {
-        const az =
-          ((projected.get(a.source.id)?.z ?? 0) +
-            (projected.get(a.target.id)?.z ?? 0)) /
-          2;
-        const bz =
-          ((projected.get(b.source.id)?.z ?? 0) +
-            (projected.get(b.target.id)?.z ?? 0)) /
-          2;
-        return az - bz;
-      });
-
       nodeSel
         .attr("display", (node) => (hidden.has(node.layer) ? "none" : "inline"))
-        .attr("transform", (node) => {
-          const point = projected.get(node.id)!;
-          return `translate(${point.x},${point.y})`;
-        })
-        .sort(
-          (a, b) =>
-            (projected.get(a.id)?.z ?? 0) - (projected.get(b.id)?.z ?? 0),
-        );
+        .attr("transform", (node) => `translate(${node.x ?? 0},${node.y ?? 0})`)
+        .sort((a, b) => (a.impact ?? 0) - (b.impact ?? 0));
 
       nodeSel
         .select("circle.node-halo")
@@ -372,11 +359,9 @@ export default function NetworkPage({ params }: PageProps) {
 
       nodeSel
         .select("circle.node-core")
+        .attr("r", (node) => 8 + node.theta * 10)
         .attr("fill", (node) => impactColor(node.impact, node.phi))
-        .attr("fill-opacity", (node) => {
-          const point = projected.get(node.id)!;
-          return Math.min(1, point.opacity * (node.phi ? 1 : 0.94));
-        })
+        .attr("fill-opacity", (node) => (node.phi ? 1 : 0.94))
         .attr("stroke", (node) => {
           if (node.phi) return "var(--danger)";
           if (hovered === node.id) return "rgba(255,255,255,0.86)";
@@ -389,18 +374,19 @@ export default function NetworkPage({ params }: PageProps) {
 
       nodeSel
         .select("text.node-label")
-        .attr("y", -16)
+        .attr("y", (node) => -(18 + node.theta * 9))
         .attr("opacity", (node) =>
-          hovered === node.id || selected === node.id ? 1 : 0,
+          hovered === node.id || selected === node.id || node.theta > 0.72
+            ? 1
+            : 0,
         );
-
-      frameId = window.requestAnimationFrame(render);
     };
 
-    frameId = window.requestAnimationFrame(render);
+    simulation.on("tick", render);
+    render();
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      simulation.stop();
       svg.selectAll("*").remove();
     };
   }, [graph, setSelectedNode, vulnerabilityReport]);
@@ -478,9 +464,9 @@ export default function NetworkPage({ params }: PageProps) {
                 RESILIENCE_FIELD_INDEX
               </p>
               <p className="text-sm font-medium text-[var(--foreground)] leading-tight">
-                Node radius reflects dependency weight.
+                Node radius reflects theta and modeled impact.
                 <br />
-                Color mapping indicates health loss impact.
+                Edge thickness shows dependency weight between nodes.
               </p>
               <div className="mt-4 flex items-center justify-between gap-4">
                 <span className="mono-label text-[8px]">STABLE</span>

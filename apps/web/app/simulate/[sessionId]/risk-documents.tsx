@@ -1140,9 +1140,14 @@ function readMetaString(
 }
 
 function describeEventTarget(
-  target: string,
+  target: string | { from: string; to: string },
   nodeById: Map<string, GraphNode>,
 ): string {
+  if (typeof target !== "string") {
+    const from = nodeById.get(target.from)?.name ?? startCase(target.from);
+    const to = nodeById.get(target.to)?.name ?? startCase(target.to);
+    return `${from} -> ${to}`;
+  }
   return nodeById.get(target)?.name ?? startCase(target);
 }
 
