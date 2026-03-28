@@ -23,6 +23,7 @@ src/nexus_api/engine/state_tree.py
 src/nexus_api/engine/weakpoint.py
 src/nexus_api/ingestion/__init__.py
 src/nexus_api/ingestion/extractor.py
+src/nexus_api/ingestion/google_drive.py
 src/nexus_api/ingestion/parser.py
 src/nexus_api/models/__init__.py
 src/nexus_api/models/events.py
@@ -33,6 +34,7 @@ src/nexus_api/routes/__init__.py
 tests/test_agents.py
 tests/test_api.py
 tests/test_cascade.py
+tests/test_google_drive_import.py
 tests/test_graph.py
 tests/test_results.py
 tests/test_state_tree.py

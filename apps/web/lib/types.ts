@@ -50,6 +50,17 @@ export interface UploadResponse {
   follow_up_questions: string[];
 }
 
+export interface DriveFolderSummary {
+  id: string;
+  name: string;
+  file_count: number;
+  files_skipped: number;
+}
+
+export interface DriveImportResponse extends UploadResponse {
+  drive_folder: DriveFolderSummary;
+}
+
 // ---- Graph update ---------------------------------------------------------
 
 export interface GraphOperation {

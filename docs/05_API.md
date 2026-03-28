@@ -48,6 +48,40 @@ Errors:
     500: AI graph extraction failed
 ```
 
+### POST /api/google-drive/import
+
+Import a Google Drive folder for data ingestion (Module 1).
+
+```
+Request:
+{
+    "access_token": "google_oauth_access_token",
+    "folder_id": "drive_folder_id_or_url",
+    "description": "optional free-text context"
+}
+
+Response:
+{
+    "session_id": "uuid",
+    "files_parsed": [...],
+    "graph": Graph,
+    "r_unit": "days",
+    "confidence": 0.72,
+    "gaps": [...],
+    "follow_up_questions": [...],
+    "drive_folder": {
+        "id": "folder_id",
+        "name": "Operations Source",
+        "file_count": 24,
+        "files_skipped": 3
+    }
+}
+
+Errors:
+    400: Invalid folder id, Drive access failure, or no supported files found
+    500: AI graph extraction failed
+```
+
 ### POST /api/graph/update
 
 Manually update the graph (add/remove/edit nodes and edges).

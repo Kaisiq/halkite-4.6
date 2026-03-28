@@ -21,6 +21,34 @@ const ACCEPT_TYPES = [
 ];
 
 const ACCEPT_STRING = ACCEPT_TYPES.join(",");
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+
+type GoogleTokenResponse = {
+  access_token: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleTokenClient = {
+  requestAccessToken: (options?: { prompt?: string }) => void;
+};
+
+type GoogleAccounts = {
+  oauth2: {
+    initTokenClient: (config: {
+      client_id: string;
+      scope: string;
+      callback: (response: GoogleTokenResponse) => void;
+    }) => GoogleTokenClient;
+  };
+};
+
+type GoogleWindow = Window & {
+  google?: {
+    accounts?: GoogleAccounts;
+  };
+};
 
 const PIPELINE_STEPS = [
   {
@@ -102,6 +130,7 @@ export default function DataInputPage() {
   const router = useRouter();
   const {
     uploadFiles,
+    importGoogleDriveFolder,
     uploading,
     uploadError,
     uploadProgress,
@@ -109,18 +138,61 @@ export default function DataInputPage() {
     gaps,
     followUpQuestions,
     confidence,
+    driveFolder,
   } = useNexusStore();
 
   const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const [dragging, setDragging] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
+  const [driveDialogOpen, setDriveDialogOpen] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState("");
+  const [driveError, setDriveError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const driveTokenClientRef = useRef<GoogleTokenClient | null>(null);
+  const driveAccessTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
     router.push(`/network/${sessionId}` as Route);
   }, [router, sessionId]);
+
+  const loadGoogleIdentity = useCallback(async (): Promise<void> => {
+    if (typeof window === "undefined") {
+      throw new Error("Google Drive auth is only available in the browser.");
+    }
+
+    const googleWindow = window as GoogleWindow;
+    if (googleWindow.google?.accounts?.oauth2) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>(
+        'script[data-google-identity="true"]',
+      );
+
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener(
+          "error",
+          () => reject(new Error("Failed to load Google Identity Services.")),
+          { once: true },
+        );
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleIdentity = "true";
+      script.onload = () => resolve();
+      script.onerror = () =>
+        reject(new Error("Failed to load Google Identity Services."));
+      document.head.appendChild(script);
+    });
+  }, []);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming).filter((f) => {
@@ -173,6 +245,75 @@ export default function DataInputPage() {
       router.push(`/network/${sessionId}` as Route);
     }
   };
+
+  const handleConnectGoogleDrive = useCallback(async () => {
+    setDriveError(null);
+
+    if (!GOOGLE_CLIENT_ID) {
+      setDriveError(
+        "Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID. Configure Google OAuth before enabling Drive import.",
+      );
+      return;
+    }
+
+    try {
+      await loadGoogleIdentity();
+      const googleWindow = window as GoogleWindow;
+      const accounts = googleWindow.google?.accounts;
+      if (!accounts?.oauth2) {
+        throw new Error("Google Identity Services did not initialize.");
+      }
+
+      const accessToken = await new Promise<string>((resolve, reject) => {
+        driveTokenClientRef.current = accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: GOOGLE_SCOPE,
+          callback: (response) => {
+            if (response.error) {
+              reject(
+                new Error(response.error_description || response.error),
+              );
+              return;
+            }
+            if (!response.access_token) {
+              reject(new Error("Google Drive access token was not returned."));
+              return;
+            }
+            resolve(response.access_token);
+          },
+        });
+
+        driveTokenClientRef.current.requestAccessToken({ prompt: "consent" });
+      });
+
+      driveAccessTokenRef.current = accessToken;
+      setDriveDialogOpen(true);
+    } catch (error) {
+      setDriveError(
+        error instanceof Error ? error.message : "Google Drive auth failed.",
+      );
+    }
+  }, [loadGoogleIdentity]);
+
+  const handleImportGoogleDrive = useCallback(async () => {
+    if (!driveAccessTokenRef.current) {
+      setDriveError("Authorize Google Drive before importing a folder.");
+      return;
+    }
+
+    if (!driveFolderId.trim()) {
+      setDriveError("Paste a Google Drive folder link or folder id.");
+      return;
+    }
+
+    setDriveError(null);
+    await importGoogleDriveFolder(
+      driveAccessTokenRef.current,
+      driveFolderId.trim(),
+      description || undefined,
+    );
+    setDriveDialogOpen(false);
+  }, [description, driveFolderId, importGoogleDriveFolder]);
 
   return (
     <main className="app-shell px-4 py-5 sm:px-6 lg:px-8">
@@ -389,6 +530,14 @@ export default function DataInputPage() {
                   <div className="flex flex-col gap-3 xl:min-w-[240px]">
                     <button
                       type="button"
+                      className="ghost-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleConnectGoogleDrive}
+                      disabled={uploading}
+                    >
+                      Connect Google Drive
+                    </button>
+                    <button
+                      type="button"
                       className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={handleBuild}
                       disabled={files.length === 0 || uploading}
@@ -402,6 +551,23 @@ export default function DataInputPage() {
                     </p>
                   </div>
                 </div>
+
+                {driveFolder && (
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-[var(--foreground)]">
+                    Imported Drive folder <span className="font-semibold">{driveFolder.name}</span>
+                    {" "}
+                    with {driveFolder.file_count} files
+                    {driveFolder.files_skipped > 0
+                      ? ` (${driveFolder.files_skipped} skipped)`
+                      : ""}.
+                  </div>
+                )}
+
+                {driveError && (
+                  <div className="rounded-[24px] border border-[color:rgb(212_107_70_/_0.3)] bg-[color:rgb(212_107_70_/_0.08)] px-5 py-4 text-sm text-[color:rgb(255_202_186)]">
+                    {driveError}
+                  </div>
+                )}
 
                 {uploadError && (
                   <div className="rounded-[24px] border border-[color:rgb(212_107_70_/_0.3)] bg-[color:rgb(212_107_70_/_0.08)] px-5 py-4 text-sm text-[color:rgb(255_202_186)]">
@@ -430,6 +596,60 @@ export default function DataInputPage() {
                 )}
               </div>
             </section>
+
+            {driveDialogOpen && (
+              <section className="control-surface rounded-[28px] p-6">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="eyebrow mb-2">Google Drive import</div>
+                    <h3 className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
+                      Point NEXUS at a Drive folder.
+                    </h3>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                      Paste a shared folder URL or raw folder id. The backend will crawl
+                      subfolders, export Google Docs formats into parseable files, and
+                      merge anything remotely relevant into one graph extraction pass.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+                    onClick={() => setDriveDialogOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
+                  <label className="field-shell block rounded-[26px] p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+                      Folder URL or id
+                    </div>
+                    <input
+                      value={driveFolderId}
+                      onChange={(e) => setDriveFolderId(e.target.value)}
+                      placeholder="https://drive.google.com/drive/folders/... or raw folder id"
+                      className="w-full border-0 bg-transparent text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[color:rgb(161_177_196_/_0.36)]"
+                    />
+                  </label>
+
+                  <div className="flex flex-col gap-3 xl:min-w-[240px]">
+                    <button
+                      type="button"
+                      className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleImportGoogleDrive}
+                      disabled={uploading}
+                    >
+                      {uploading ? "Importing Folder" : "Import Folder"}
+                    </button>
+                    <p className="text-xs leading-5 text-[var(--muted)]">
+                      Requires a browser-authorized Google account with read access
+                      to the selected folder.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {showFollowUp && (
               <section className="control-surface rounded-[28px] p-6">

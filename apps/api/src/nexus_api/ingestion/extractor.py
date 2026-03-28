@@ -31,11 +31,15 @@ _MODEL = "gemini-2.5-flash"
 _SYSTEM_PROMPT = """\
 You are a network analyst. You will receive the contents of documents from \
 an organization. Your job is to extract ALL entities and ALL dependencies \
-between them, and construct a network graph.
+between them, and construct a network graph. Merge evidence across every \
+file into one unified model, even when a relationship is only weakly \
+implied. If material is remotely relevant to operational dependencies, \
+include it with conservative weights instead of omitting it.
 
 OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
 
 {
+  "company": "Organization Name",
   "layers": ["People", "Technology", "Supply", ...],
   "nodes": [
     {
@@ -56,7 +60,8 @@ OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
     }
   ],
   "r_unit": "days",
-  "confidence": <float 0-1>
+  "confidence": <float 0-1>,
+  "known_risks": ["Short risk statement", "..."]
 }
 
 RULES FOR NODE VALUES:

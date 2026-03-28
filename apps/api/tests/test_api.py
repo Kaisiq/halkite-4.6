@@ -27,6 +27,15 @@ def _base_url() -> str:
     return "http://testserver"
 
 
+def test_api_bootstrap_requires_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    from nexus_api import main as api_main
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="Missing required API environment variables"):
+        api_main._validate_required_env()
+
+
 def _create_session_with_graph() -> str:
     """Create a session with a small graph injected directly into the store.
 
@@ -207,6 +216,23 @@ class TestGraphUpdateEndpoint:
         graph_data = data["graph"]
         node_ids = [n["id"] for n in graph_data["nodes"]]
         assert "intern" in node_ids
+
+
+class TestGoogleDriveImportEndpoint:
+    async def test_google_drive_import_invalid_folder_id(self) -> None:
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            resp = await client.post(
+                "/api/google-drive/import",
+                json={
+                    "access_token": "token",
+                    "folder_id": "not a valid folder identifier",
+                    "description": "",
+                },
+            )
+
+        assert resp.status_code == 400
+        data = resp.json()
+        assert data["code"] == "GOOGLE_DRIVE_ERROR"
 
 
 # ======================================================================

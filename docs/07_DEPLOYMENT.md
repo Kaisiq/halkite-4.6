@@ -42,10 +42,15 @@ NEXUS API Container (FastAPI, port 8000)
 - `API_PORT`: bind port inside the container. Default `8000`.
 - `LOG_LEVEL`: Uvicorn log level. Default `info`. Uppercase values are normalized in the container.
 
+The API now fails during startup if any required environment variable is missing.
+
 ### Web
 
 - `API_INTERNAL_BASE_URL`: internal backend URL used by Next.js rewrites. Default `http://api:8000`.
 - `NEXT_PUBLIC_API_BASE_URL`: optional explicit browser-side API base URL. Leave empty for same-origin deployment.
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: required when Google Drive folder import is enabled in the browser.
+
+The web app now fails during startup if any required public environment variable is missing.
 
 ### Published Ports
 

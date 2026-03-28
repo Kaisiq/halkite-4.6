@@ -9,6 +9,7 @@ import type {
   ApiError,
   CascadeEvent,
   CascadeResponse,
+  DriveImportResponse,
   ExploreConfig,
   ExploreResponse,
   GraphData,
@@ -74,6 +75,22 @@ export async function uploadFiles(
   const { data } = await client.post<UploadResponse>("/api/upload", form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+  return data;
+}
+
+export async function importGoogleDriveFolder(
+  accessToken: string,
+  folderId: string,
+  description?: string,
+): Promise<DriveImportResponse> {
+  const { data } = await client.post<DriveImportResponse>(
+    "/api/google-drive/import",
+    {
+      access_token: accessToken,
+      folder_id: folderId,
+      description: description ?? "",
+    },
+  );
   return data;
 }
 

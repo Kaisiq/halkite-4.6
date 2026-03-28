@@ -56,8 +56,10 @@ API calls: fetch or axios
 
 **Interactions:**
 - Drag-drop or click-to-upload files
+- "Connect Google Drive" button for folder import via Google OAuth
 - Optional text description textarea
 - "Build Network" button → calls POST /api/upload
+- Drive folder import → calls POST /api/google-drive/import
 - Loading state with progress messages
 - On success → navigate to Screen 2
 - If follow_up_questions returned → show as quick prompts before proceeding

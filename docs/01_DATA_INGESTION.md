@@ -19,13 +19,20 @@ Data:        .json, .xml
 
 Optionally, the user can also type a free-text description of their organization.
 
+The user may also authorize a Google Drive folder. In that case, the system:
+
+1. Recursively lists files in the selected folder and subfolders
+2. Downloads supported binary files directly
+3. Exports Google Docs / Sheets / Slides into parseable formats
+4. Merges the resulting contents into the same ingestion context as uploads
+
 ---
 
 ## Processing Pipeline
 
 ```
 Step 1: PARSE FILES
-    For each uploaded file:
+    For each uploaded file or Drive file:
         Extract raw text content
         Store as: {filename, type, content}
     

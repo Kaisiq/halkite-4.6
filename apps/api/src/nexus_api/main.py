@@ -13,6 +13,8 @@ from pydantic import BaseModel
 
 from nexus_api.session import SessionNotFoundError, store
 
+_REQUIRED_ENV_VARS = ("GEMINI_API_KEY",)
+
 
 def _load_env_files() -> None:
     """Load simple KEY=VALUE pairs from repo env files into os.environ.
@@ -45,7 +47,21 @@ def _load_env_files() -> None:
                 os.environ.setdefault(key, value)
 
 
+def _validate_required_env() -> None:
+    """Fail fast when required runtime configuration is missing."""
+    missing = [key for key in _REQUIRED_ENV_VARS if not os.environ.get(key, "").strip()]
+    if not missing:
+        return
+
+    missing_list = ", ".join(missing)
+    raise RuntimeError(
+        "Missing required API environment variables: "
+        f"{missing_list}. Set them before starting the API."
+    )
+
+
 _load_env_files()
+_validate_required_env()
 
 app = FastAPI(
     title="NEXUS API",
@@ -99,6 +115,12 @@ class ExploreRequest(BaseModel):
 
 class ResetRequest(BaseModel):
     session_id: str
+
+
+class GoogleDriveImportRequest(BaseModel):
+    access_token: str
+    folder_id: str
+    description: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +214,43 @@ async def upload_files(
     except Exception as e:
         traceback.print_exc()
         return error_response("AI_ERROR", f"Graph extraction failed: {e}", 500)
+
+
+@app.post("/api/google-drive/import")
+async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResponse:
+    try:
+        from nexus_api.ingestion.extractor import ingest
+        from nexus_api.ingestion.google_drive import (
+            GoogleDriveImportError,
+            extract_folder_id,
+            import_drive_folder,
+        )
+
+        folder_id = extract_folder_id(body.folder_id)
+        drive_bundle = import_drive_folder(body.access_token, folder_id)
+        result = await ingest(drive_bundle.files, body.description)
+
+        session = store.create()
+        session.graph = result.graph
+        session.r_unit = result.r_unit
+
+        return JSONResponse(
+            {
+                "session_id": session.session_id,
+                "files_parsed": result.files_parsed,
+                "graph": _serialize_graph(result.graph),
+                "r_unit": result.r_unit,
+                "confidence": result.confidence,
+                "gaps": result.gaps,
+                "follow_up_questions": result.follow_up_questions,
+                "drive_folder": drive_bundle.folder.to_dict(),
+            }
+        )
+    except GoogleDriveImportError as exc:
+        return error_response("GOOGLE_DRIVE_ERROR", str(exc), 400)
+    except Exception as exc:
+        traceback.print_exc()
+        return error_response("AI_ERROR", f"Graph extraction failed: {exc}", 500)
 
 
 # ---------------------------------------------------------------------------
