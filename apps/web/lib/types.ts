@@ -257,6 +257,22 @@ export interface ReportResponse {
   visualization_data: unknown;
 }
 
+// ---- Chat -----------------------------------------------------------------
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  history_length: number;
+}
+
+export interface ChatHistoryResponse {
+  messages: ChatMessage[];
+}
+
 // ---- API error envelope ---------------------------------------------------
 
 export interface ApiError {

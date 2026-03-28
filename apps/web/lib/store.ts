@@ -7,6 +7,7 @@ import * as api from "./api";
 import type {
   CascadeEvent,
   CascadeResponse,
+  ChatMessage,
   DriveFolderSummary,
   ExploreConfig,
   ExploreResponse,
@@ -54,6 +55,11 @@ export interface NexusState {
   // Cascade
   cascadeError: string | null;
 
+  // Chat
+  chatMessages: ChatMessage[];
+  chatSending: boolean;
+  chatError: string | null;
+
   // UI state
   selectedNodeId: string | null;
   activeScenarioIndex: number | null;
@@ -74,6 +80,9 @@ export interface NexusState {
   setSelectedNode: (id: string | null) => void;
   setActiveScenario: (index: number | null) => void;
   updateGraphOps: (ops: GraphOperation[]) => Promise<void>;
+  sendChatMessage: (message: string) => Promise<void>;
+  loadChatHistory: () => Promise<void>;
+  clearChat: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +136,11 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
 
   // -- Cascade ---------------------------------------------------------------
   cascadeError: null,
+
+  // -- Chat -----------------------------------------------------------------
+  chatMessages: [],
+  chatSending: false,
+  chatError: null,
 
   // -- UI --------------------------------------------------------------------
   selectedNodeId: null,
@@ -379,6 +393,68 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       }
     } catch (err: unknown) {
       set({ uploadError: api.extractErrorMessage(err) });
+    }
+  },
+
+  /**
+   * Send a message to the C-level executive chat advisor.
+   */
+  sendChatMessage: async (message) => {
+    const { sessionId } = get();
+    if (!sessionId) return;
+
+    const userMsg: ChatMessage = { role: "user", content: message };
+    set((state) => ({
+      chatMessages: [...state.chatMessages, userMsg],
+      chatSending: true,
+      chatError: null,
+    }));
+
+    try {
+      const res = await api.sendChatMessage(sessionId, message);
+      const assistantMsg: ChatMessage = {
+        role: "assistant",
+        content: res.reply,
+      };
+      set((state) => ({
+        chatMessages: [...state.chatMessages, assistantMsg],
+        chatSending: false,
+      }));
+    } catch (err: unknown) {
+      set({
+        chatSending: false,
+        chatError: api.extractErrorMessage(err),
+      });
+    }
+  },
+
+  /**
+   * Load chat history from the server.
+   */
+  loadChatHistory: async () => {
+    const { sessionId } = get();
+    if (!sessionId) return;
+
+    try {
+      const res = await api.getChatHistory(sessionId);
+      set({ chatMessages: res.messages });
+    } catch {
+      // Non-critical — start fresh
+    }
+  },
+
+  /**
+   * Clear all chat history.
+   */
+  clearChat: async () => {
+    const { sessionId } = get();
+    if (!sessionId) return;
+
+    try {
+      await api.clearChatHistory(sessionId);
+      set({ chatMessages: [], chatError: null });
+    } catch {
+      // Best effort
     }
   },
 }));

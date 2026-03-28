@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import time
 import traceback
@@ -12,6 +13,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from nexus_api.session import SessionNotFoundError, store
+
+logger = logging.getLogger(__name__)
 
 _REQUIRED_ENV_VARS = ("GEMINI_API_KEY",)
 
@@ -128,6 +131,11 @@ class GoogleDriveImportRequest(BaseModel):
 
 class ReingestRequest(BaseModel):
     session_id: str
+
+
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str
 
 
 # ---------------------------------------------------------------------------
@@ -857,6 +865,207 @@ async def get_report(session_id: str) -> JSONResponse:
     if report.resilience_profile is not None:
         response_data["resilience_profile"] = report.resilience_profile
     return JSONResponse(response_data)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/chat
+# ---------------------------------------------------------------------------
+
+@app.post("/api/chat")
+async def chat(body: ChatRequest) -> JSONResponse:
+    session = store.require(body.session_id)
+    if session.graph is None:
+        return error_response("GRAPH_EMPTY", "No graph built yet.", 400)
+
+    from google import genai
+    from google.genai import types
+
+    from nexus_api.chat.knowledge import EXECUTIVE_SYSTEM_PROMPT, build_knowledge_context
+    from nexus_api.session import ChatMessage
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return error_response("AI_ERROR", "GEMINI_API_KEY not configured", 500)
+
+    # Build knowledge context from current session state
+    knowledge = build_knowledge_context(
+        graph=session.graph,
+        vulnerability_report=session.vulnerability_report,
+        final_report=session.final_report,
+        r_unit=session.r_unit,
+    )
+
+    system_prompt = f"{EXECUTIVE_SYSTEM_PROMPT}\n\n---\n\n{knowledge}"
+
+    # Build conversation history for multi-turn context
+    contents: list[types.Content] = []
+    for msg in session.chat_history[-20:]:  # Keep last 20 messages for context
+        contents.append(
+            types.Content(
+                role="user" if msg.role == "user" else "model",
+                parts=[types.Part.from_text(text=msg.content)],
+            )
+        )
+
+    # Add current user message
+    contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=body.message)],
+        )
+    )
+
+    try:
+        client = genai.Client(api_key=api_key)
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.3,
+                max_output_tokens=2048,
+            ),
+        )
+
+        reply = response.text or ""
+
+        # Store conversation in session history
+        session.chat_history.append(ChatMessage("user", body.message))
+        session.chat_history.append(ChatMessage("assistant", reply))
+
+        return JSONResponse(
+            {
+                "reply": reply,
+                "history_length": len(session.chat_history),
+            }
+        )
+
+    except Exception as exc:
+        logger.error("Chat generation failed: %s", exc)
+        return error_response("AI_ERROR", f"Chat failed: {exc}", 500)
+
+
+@app.get("/api/chat/history/{session_id}")
+async def chat_history(session_id: str) -> JSONResponse:
+    session = store.require(session_id)
+    return JSONResponse(
+        {
+            "messages": [msg.to_dict() for msg in session.chat_history],
+        }
+    )
+
+
+@app.delete("/api/chat/history/{session_id}")
+async def clear_chat_history(session_id: str) -> JSONResponse:
+    session = store.require(session_id)
+    session.chat_history.clear()
+    return JSONResponse({"status": "cleared"})
+
+
+# ---------------------------------------------------------------------------
+# WebSocket /ws/chat/{session_id} - streaming chat
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/ws/chat/{session_id}")
+async def ws_chat(websocket: WebSocket, session_id: str) -> None:
+    await websocket.accept()
+    session = store.get(session_id)
+    if session is None:
+        await websocket.send_json({"type": "error", "message": "Session not found"})
+        await websocket.close()
+        return
+    if session.graph is None:
+        await websocket.send_json({"type": "error", "message": "No graph built"})
+        await websocket.close()
+        return
+
+    from google import genai
+    from google.genai import types
+
+    from nexus_api.chat.knowledge import EXECUTIVE_SYSTEM_PROMPT, build_knowledge_context
+    from nexus_api.session import ChatMessage
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        await websocket.send_json({"type": "error", "message": "GEMINI_API_KEY not set"})
+        await websocket.close()
+        return
+
+    knowledge = build_knowledge_context(
+        graph=session.graph,
+        vulnerability_report=session.vulnerability_report,
+        final_report=session.final_report,
+        r_unit=session.r_unit,
+    )
+    system_prompt = f"{EXECUTIVE_SYSTEM_PROMPT}\n\n---\n\n{knowledge}"
+
+    client = genai.Client(api_key=api_key)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            user_message = data.get("message", "")
+            if not user_message:
+                continue
+
+            # Build history contents
+            contents: list[types.Content] = []
+            for msg in session.chat_history[-20:]:
+                contents.append(
+                    types.Content(
+                        role="user" if msg.role == "user" else "model",
+                        parts=[types.Part.from_text(text=msg.content)],
+                    )
+                )
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=user_message)],
+                )
+            )
+
+            try:
+                stream = client.aio.models.generate_content_stream(
+                    model="gemini-2.5-flash",
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.3,
+                        max_output_tokens=2048,
+                    ),
+                )
+
+                full_reply = ""
+                async for chunk in stream:
+                    text = chunk.text or ""
+                    if text:
+                        full_reply += text
+                        await websocket.send_json(
+                            {"type": "chunk", "content": text}
+                        )
+
+                # Store in history
+                session.chat_history.append(ChatMessage("user", user_message))
+                session.chat_history.append(ChatMessage("assistant", full_reply))
+
+                await websocket.send_json({"type": "done", "full_reply": full_reply})
+
+            except Exception as exc:
+                logger.error("Chat stream error: %s", exc)
+                await websocket.send_json(
+                    {"type": "error", "message": f"AI error: {exc}"}
+                )
+
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
