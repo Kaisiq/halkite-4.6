@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Network", path: (id: string) => `/network/${id}` as Route },
   { label: "Simulate", path: (id: string) => `/simulate/${id}` as Route },
   { label: "Report", path: (id: string) => `/report/${id}` as Route },
+  { label: "Chat", path: (id: string) => `/chat/${id}` as Route },
 ] as const;
 
 export default function NavBar({ sessionId }: NavBarProps) {

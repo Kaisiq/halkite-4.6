@@ -9,6 +9,8 @@ import type {
   ApiError,
   CascadeEvent,
   CascadeResponse,
+  ChatHistoryResponse,
+  ChatResponse,
   DriveImportResponse,
   ExploreConfig,
   ExploreResponse,
@@ -185,4 +187,49 @@ export async function getReport(sessionId: string): Promise<ReportResponse> {
     `/api/report/${encodeURIComponent(sessionId)}`,
   );
   return data;
+}
+
+/**
+ * Send a chat message to the C-level executive advisor.
+ * POST /api/chat
+ */
+export async function sendChatMessage(
+  sessionId: string,
+  message: string,
+): Promise<ChatResponse> {
+  const { data } = await client.post<ChatResponse>("/api/chat", {
+    session_id: sessionId,
+    message,
+  });
+  return data;
+}
+
+/**
+ * Get chat history for a session.
+ * GET /api/chat/history/{sessionId}
+ */
+export async function getChatHistory(
+  sessionId: string,
+): Promise<ChatHistoryResponse> {
+  const { data } = await client.get<ChatHistoryResponse>(
+    `/api/chat/history/${encodeURIComponent(sessionId)}`,
+  );
+  return data;
+}
+
+/**
+ * Clear chat history for a session.
+ * DELETE /api/chat/history/{sessionId}
+ */
+export async function clearChatHistory(sessionId: string): Promise<void> {
+  await client.delete(`/api/chat/history/${encodeURIComponent(sessionId)}`);
+}
+
+/**
+ * Get the WebSocket URL for streaming chat.
+ */
+export function getChatWsUrl(sessionId: string): string {
+  const base = BASE_URL || window.location.origin;
+  const wsBase = base.replace(/^http/, "ws");
+  return `${wsBase}/ws/chat/${encodeURIComponent(sessionId)}`;
 }

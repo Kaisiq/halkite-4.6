@@ -5,6 +5,16 @@ from datetime import UTC, datetime
 from typing import Any
 
 
+class ChatMessage:
+    def __init__(self, role: str, content: str) -> None:
+        self.role = role
+        self.content = content
+        self.timestamp: datetime = datetime.now(UTC)
+
+    def to_dict(self) -> dict[str, str]:
+        return {"role": self.role, "content": self.content}
+
+
 class Session:
     def __init__(self, session_id: str | None = None) -> None:
         self.session_id: str = session_id or uuid.uuid4().hex
@@ -13,6 +23,7 @@ class Session:
         self.state_tree: Any | None = None
         self.final_report: Any | None = None
         self.r_unit: str = "days"
+        self.chat_history: list[ChatMessage] = []
         self.created_at: datetime = datetime.now(UTC)
 
 
