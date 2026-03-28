@@ -16,7 +16,7 @@ docs/     Authoritative product and architecture docs
 
 - Node.js 22 via `.nvmrc`
 - `pnpm` workspace for frontend and shared JS tooling
-- Python 3.12 via `.python-version`
+- Python 3.14 via `.python-version`
 - FastAPI backend metadata in `apps/api/pyproject.toml`
 - Turbo for cross-workspace task orchestration
 - ESLint, TypeScript, Tailwind, Prettier, Ruff, MyPy, Pytest
@@ -33,7 +33,7 @@ pnpm install
 Backend:
 
 ```bash
-python3.12 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python -m ensurepip --upgrade
 python -m pip install --upgrade pip
@@ -48,4 +48,3 @@ Copy `.env.example` to `.env` and fill in secrets as needed. App-specific templa
 - `apps/api/.env.example`
 
 No feature code has been added yet. This commit only establishes workspace structure, tool metadata, and agent instructions.
-

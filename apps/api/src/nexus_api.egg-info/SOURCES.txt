@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+src/nexus_api.egg-info/PKG-INFO
+src/nexus_api.egg-info/SOURCES.txt
+src/nexus_api.egg-info/dependency_links.txt
+src/nexus_api.egg-info/requires.txt
+src/nexus_api.egg-info/top_level.txt
