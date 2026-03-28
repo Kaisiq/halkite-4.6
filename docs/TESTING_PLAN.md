@@ -404,7 +404,7 @@ Open http://localhost:3000 in a browser.
 
 ## Phase 7 — Security Review Checklist
 
-- [ ] No hardcoded API keys in source (grep for `sk-`, `ANTHROPIC_API_KEY=`)
+- [ ] No hardcoded API keys in source (grep for `sk-`, `GEMINI_API_KEY=`)
 - [ ] `.env` files are in `.gitignore`
 - [ ] CORS is configured (currently `allow_origins=["*"]` — acceptable for hackathon)
 - [ ] File uploads are bounded (FastAPI default limits apply)

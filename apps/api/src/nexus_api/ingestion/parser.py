@@ -67,7 +67,7 @@ class ParsedFile:
         Normalised short type string (``"pdf"``, ``"xlsx"``, ``"jpg"``, ...).
     content : str
         Extracted text content.  For images this is a placeholder noting that
-        the image will be sent to Claude Vision.  If parsing failed, this
+        the image will be sent to Gemini vision.  If parsing failed, this
         contains an error description.
     raw_bytes : bytes | None
         Raw image bytes (only populated for image types).  ``None`` for all
@@ -255,11 +255,11 @@ def _parse_text(data: bytes) -> str:
 
 
 def _store_image(filename: str, data: bytes) -> ParsedFile:
-    """Store image bytes for later Claude Vision API call."""
+    """Store image bytes for later Gemini API call."""
     return ParsedFile(
         filename=filename,
         file_type=_TYPE_MAP.get(_suffix(filename), "image"),
-        content=f"[Image: {filename} — {len(data)} bytes, will be processed via Claude Vision]",
+        content=f"[Image: {filename} — {len(data)} bytes, will be processed via Gemini vision]",
         raw_bytes=data,
     )
 

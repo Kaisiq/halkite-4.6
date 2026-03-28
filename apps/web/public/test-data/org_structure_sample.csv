@@ -1,0 +1,25 @@
+Name,Role,Department,Reports_To
+Maya Chen,Chief Executive Officer,Executive,
+Jonas Petrov,Chief Operating Officer,Executive,Maya Chen
+Elena Markov,Chief Technology Officer,Executive,Maya Chen
+Rina Foster,Chief Financial Officer,Executive,Maya Chen
+David Kline,VP Engineering,Engineering,Elena Markov
+Sara Ivanova,Platform Engineering Manager,Engineering,David Kline
+Nikolai Stoyanov,Senior Backend Engineer,Engineering,Sara Ivanova
+Priya Nair,Senior Frontend Engineer,Engineering,Sara Ivanova
+Tom Alvarez,SRE Lead,Engineering,David Kline
+Lena Georgieva,Infrastructure Engineer,Engineering,Tom Alvarez
+Marcus Reed,Head of Product,Product,Elena Markov
+Iva Dimitrova,Product Manager,Product,Marcus Reed
+Daniel Brooks,UX Designer,Product,Marcus Reed
+Olivia Hart,Head of Sales,Sales,Jonas Petrov
+Peter Kolev,Enterprise Account Executive,Sales,Olivia Hart
+Nadia Ivancheva,Sales Operations Manager,Sales,Olivia Hart
+Grace Miller,Head of Customer Success,Customer Success,Jonas Petrov
+Stefan Iliev,Customer Success Manager,Customer Success,Grace Miller
+Hana Lee,Finance Manager,Finance,Rina Foster
+Victor Marin,Procurement Specialist,Finance,Hana Lee
+Amelia Grant,People Operations Lead,People,Jonas Petrov
+Kiril Bozhinov,Talent Partner,People,Amelia Grant
+Sofia Turner,Compliance Officer,Legal,Rina Foster
+Noah Bennett,Office and Facilities Manager,Operations,Jonas Petrov

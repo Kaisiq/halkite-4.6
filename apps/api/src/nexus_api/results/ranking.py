@@ -1005,25 +1005,26 @@ async def generate_narrative(
     scenario: Scenario,
     graph: Graph,
 ) -> dict[str, Any]:
-    """Call the Claude API to generate a human-readable narrative for a
+    """Call the Gemini API to generate a human-readable narrative for a
     single scenario.
 
-    Requires the ``ANTHROPIC_API_KEY`` environment variable to be set.
+    Requires the ``GEMINI_API_KEY`` environment variable to be set.
 
     Returns the parsed JSON response from the model containing ``title``,
     ``severity_label``, ``summary``, ``narrative``, ``timeline``,
     ``business_impact``, and ``recommendations``.
     """
-    import anthropic
+    from google import genai
+    from google.genai import types
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         logger.warning(
-            "ANTHROPIC_API_KEY not set -- returning empty narrative"
+            "GEMINI_API_KEY not set -- returning empty narrative"
         )
         return {}
 
-    client = anthropic.AsyncAnthropic(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     scenario_json = _build_scenario_json(scenario)
     graph_context = _build_graph_context(graph)
@@ -1034,19 +1035,18 @@ async def generate_narrative(
     )
 
     try:
-        response = await client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            system=_NARRATIVE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=_NARRATIVE_SYSTEM_PROMPT,
+                temperature=0.2,
+                max_output_tokens=2048,
+                response_mime_type="application/json",
+            ),
         )
 
-        # Extract the text content from the response.
-        text = ""
-        for block in response.content:
-            if hasattr(block, "text"):
-                text = block.text
-                break
+        text = response.text or ""
 
         # Parse the JSON from the response.
         # The model may wrap the JSON in markdown code fences.

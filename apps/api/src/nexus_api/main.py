@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import time
 import traceback
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
@@ -10,6 +12,40 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from nexus_api.session import SessionNotFoundError, store
+
+
+def _load_env_files() -> None:
+    """Load simple KEY=VALUE pairs from repo env files into os.environ.
+
+    Precedence is:
+    1. Existing process environment
+    2. `apps/api/.env`
+    3. repo root `.env`
+    """
+    api_dir = Path(__file__).resolve().parents[2]
+    root_dir = Path(__file__).resolve().parents[4]
+    env_files = [
+        root_dir / ".env",
+        api_dir / ".env",
+    ]
+
+    for env_file in env_files:
+        if not env_file.exists():
+            continue
+
+        for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip("'").strip('"')
+            if key:
+                os.environ.setdefault(key, value)
+
+
+_load_env_files()
 
 app = FastAPI(
     title="NEXUS API",

@@ -1,21 +1,21 @@
 """Module 1, Steps 2-5 -- AI Graph Extraction & Validation.
 
-Takes parsed file contents, sends them to the Anthropic Claude API with a
-structured system prompt, and constructs a validated ``Graph`` object.
+Takes parsed file contents, sends them to the Gemini API with a structured
+system prompt, and constructs a validated ``Graph`` object.
 
 References: docs/01_DATA_INGESTION.md, docs/01A_GRAPH_MODEL.md
 """
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
 import re
 from typing import Any
 
-import anthropic
+from google import genai
+from google.genai import types
 
 from nexus_api.ingestion.parser import ParsedFile
 from nexus_api.models.graph import Edge, Graph, Node
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-_MODEL = "claude-sonnet-4-20250514"
+_MODEL = "gemini-2.5-flash"
 
 _SYSTEM_PROMPT = """\
 You are a network analyst. You will receive the contents of documents from \
@@ -243,52 +243,48 @@ def _image_media_type(filename: str) -> str:
 def _build_user_content(
     context: str,
     image_data: list[tuple[str, bytes]] | None = None,
-) -> list[dict[str, Any]]:
-    """Assemble the ``content`` blocks for the Claude API user message.
+) -> list[str | types.Part]:
+    """Assemble the content payload for the Gemini user message.
 
-    Text context is always included.  If *image_data* is provided, each image
-    is added as a ``type: "image"`` content block so that Claude Vision can
-    extract entities from diagrams and org charts.
+    Text context is always included. If *image_data* is provided, each image
+    is added as an inline bytes part so Gemini can extract entities from
+    diagrams and org charts.
     """
-    blocks: list[dict[str, Any]] = []
+    blocks: list[str | types.Part] = []
 
-    # Image blocks first (Claude processes them before the text)
+    # Image blocks first so the model sees the visual context before the
+    # aggregate text prompt.
     if image_data:
         for filename, raw in image_data:
-            b64 = base64.standard_b64encode(raw).decode("ascii")
-            blocks.append({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": _image_media_type(filename),
-                    "data": b64,
-                },
-            })
-            blocks.append({
-                "type": "text",
-                "text": (
+            blocks.append(
+                types.Part.from_bytes(
+                    data=raw,
+                    mime_type=_image_media_type(filename),
+                )
+            )
+            blocks.append(
+                (
                     f"The image above is from file '{filename}'. "
                     "Extract all entities and relationships visible in this "
                     "image (org chart, diagram, whiteboard, etc.)."
-                ),
-            })
+                )
+            )
 
     # Main text context block
-    blocks.append({
-        "type": "text",
-        "text": (
+    blocks.append(
+        (
             "Analyze the following documents and extract a complete "
             "dependency graph:\n\n" + context
-        ),
-    })
+        )
+    )
 
     return blocks
 
 
 def _extract_json_from_response(text: str) -> dict[str, Any]:
-    """Robustly extract a JSON object from Claude's response text.
+    """Robustly extract a JSON object from the model response text.
 
-    Claude may wrap the JSON in markdown fences or include preamble text
+    The model may wrap the JSON in markdown fences or include preamble text
     despite the system prompt instructions.  This function handles those
     cases gracefully.
     """
@@ -331,11 +327,29 @@ def _extract_json_from_response(text: str) -> dict[str, Any]:
     )
 
 
+def _response_text(response: types.GenerateContentResponse) -> str:
+    """Extract plain text from a Gemini response."""
+    text = getattr(response, "text", None)
+    if text:
+        return text
+
+    parts: list[str] = []
+    for candidate in response.candidates or []:
+        content = getattr(candidate, "content", None)
+        if not content:
+            continue
+        for part in content.parts or []:
+            part_text = getattr(part, "text", None)
+            if part_text:
+                parts.append(part_text)
+    return "".join(parts)
+
+
 async def extract_graph(
     context: str,
     image_data: list[tuple[str, bytes]] | None = None,
 ) -> dict[str, Any]:
-    """Call the Claude API to extract a network graph from the context.
+    """Call the Gemini API to extract a network graph from the context.
 
     Parameters
     ----------
@@ -343,7 +357,7 @@ async def extract_graph(
         Concatenated text context from :func:`build_context`.
     image_data:
         Optional list of ``(filename, raw_bytes)`` for images to be sent
-        via Claude Vision.
+        to Gemini as inline image parts.
 
     Returns
     -------
@@ -355,31 +369,28 @@ async def extract_graph(
     ------
     ValueError
         If the AI response cannot be parsed as valid JSON.
-    anthropic.APIError
+    Exception
         If the API call itself fails.
     """
-    api_key = os.environ["ANTHROPIC_API_KEY"]
-    client = anthropic.AsyncAnthropic(api_key=api_key)
+    api_key = os.environ["GEMINI_API_KEY"]
+    client = genai.Client(api_key=api_key)
 
     user_content = _build_user_content(context, image_data)
 
-    message = await client.messages.create(
+    response = await client.aio.models.generate_content(
         model=_MODEL,
-        max_tokens=8192,
-        system=_SYSTEM_PROMPT,
-        messages=[
-            {"role": "user", "content": user_content},
-        ],
+        contents=user_content,
+        config=types.GenerateContentConfig(
+            system_instruction=_SYSTEM_PROMPT,
+            temperature=0,
+            max_output_tokens=8192,
+            response_mime_type="application/json",
+        ),
     )
 
-    # Extract text from the response
-    response_text = ""
-    for block in message.content:
-        if hasattr(block, "text"):
-            response_text += block.text
-
+    response_text = _response_text(response)
     if not response_text.strip():
-        raise ValueError("Claude returned an empty response")
+        raise ValueError("Gemini returned an empty response")
 
     return _extract_json_from_response(response_text)
 
@@ -630,7 +641,7 @@ async def ingest(
 
     1. Parse all uploaded files.
     2. Concatenate context.
-    3. Call Claude for graph extraction.
+    3. Call Gemini for graph extraction.
     4. Build and validate the graph.
     5. Detect gaps and generate follow-up questions.
     6. Return :class:`IngestResult`.

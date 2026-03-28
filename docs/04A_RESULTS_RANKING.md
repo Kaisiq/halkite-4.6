@@ -105,7 +105,7 @@ function deduplicate(scenarios):
 
 ## Step 3: AI Narrative Generation
 
-For each top scenario, send the mathematical results to Claude to generate a human-readable narrative:
+For each top scenario, send the mathematical results to Gemini to generate a human-readable narrative:
 
 ```
 AI PROMPT:

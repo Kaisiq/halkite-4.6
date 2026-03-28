@@ -62,7 +62,7 @@ The AI never touches the numbers. It builds the graph from user data, generates 
 |-----------|-----------|
 | Math Engine | Python 3.11+, NetworkX, NumPy, SciPy |
 | Backend API | FastAPI |
-| AI Agent | Claude API (Sonnet 4) |
+| AI Agent | Gemini API |
 | Frontend | React + D3.js (force-directed graph) + Recharts |
 | State Tree Storage | In-memory (Python dict/tree) |
 | File Parsing | PyPDF2, python-docx, openpyxl, Pillow |

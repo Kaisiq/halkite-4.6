@@ -11,7 +11,7 @@ FastAPI backend that connects all modules. Exposes endpoints for the frontend to
 ```
 Framework: FastAPI
 Server: Uvicorn
-Dependencies: networkx, numpy, scipy, anthropic, python-multipart
+Dependencies: networkx, numpy, scipy, google-genai, python-multipart
 Port: 8000
 ```
 
@@ -269,7 +269,7 @@ Error codes:
     ANALYSIS_NOT_RUN:    /explore called before /analyze
     INVALID_EVENT:       event references non-existent node
     INVALID_GRAPH:       graph fails validation
-    AI_ERROR:            Claude API call failed
+    AI_ERROR:            Gemini API call failed
     COMPUTATION_TIMEOUT: analysis took too long
 ```
 
