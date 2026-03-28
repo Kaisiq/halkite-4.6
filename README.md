@@ -47,4 +47,21 @@ Copy `.env.example` to `.env` and fill in secrets as needed. App-specific templa
 - `apps/web/.env.local.example`
 - `apps/api/.env.example`
 
-No feature code has been added yet. This commit only establishes workspace structure, tool metadata, and agent instructions.
+## Docker Deployment
+
+For an on-prem delivery, the repo now includes:
+
+- `apps/api/Dockerfile`
+- `apps/web/Dockerfile`
+- `docker-compose.yml`
+- `docs/07_DEPLOYMENT.md`
+
+Standard flow:
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+The frontend is served on port `3000` by default and proxies backend requests
+to the API container internally, so clients can use a single public entrypoint.
