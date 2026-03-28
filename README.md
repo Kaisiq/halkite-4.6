@@ -1,67 +1,86 @@
-# Halkite 4.6
+# Achilles
 
-Infrastructure scaffold for NEXUS, prepared for both Codex and Claude-driven development.
+**Prevent the predictable. Then move faster.**
+
+Achilles is an organizational stress-testing platform. Upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists — and Achilles maps your dependencies, finds your blind spots, and simulates worst-case failure scenarios before they happen.
+
+**AI generates. Math computes. AI explains.** — AI never touches the numbers.
+
+## How It Works
+
+1. **Upload** — drag-and-drop documents (PDF, DOCX, XLSX, CSV, images, JSON)
+2. **Graph** — AI reads your data and builds a dependency network across people, technology, supply chain, operations, and more
+3. **Analyze** — deterministic graph algorithms identify bridge nodes, fragile clusters, compound failure points, and layer vulnerabilities
+4. **Simulate** — five adversarial agents run thousands of attack simulations against your network
+5. **Report** — ranked worst-case scenarios with narratives, cascade breakdowns, and actionable recommendations
+
+## Quick Start
+
+```bash
+./bin/setup          # install all dependencies
+./bin/dev            # start API (port 8000) + frontend (port 3000)
+```
+
+Then open http://localhost:3000 and upload a file. A demo dataset is available at `demo/mclimate.json`.
 
 ## Repo Layout
 
 ```text
 apps/
-  api/    Python + FastAPI backend
-  web/    Next.js frontend
-docs/     Authoritative product and architecture docs
-.claude/  Claude context mirror of the docs
+  api/    Python 3.14 + FastAPI backend (graph engine, analysis, simulation)
+  web/    Next.js 16 + React 19 frontend (D3 visualization, dashboards)
+docs/     Product specs, architecture, business plan
+demo/     Sample datasets for showcase
 ```
 
-## Tooling Baseline
+## Architecture
 
-- Node.js 22 via `.nvmrc`
-- `pnpm` workspace for frontend and shared JS tooling
-- Python 3.14 via `.python-version`
-- FastAPI backend metadata in `apps/api/pyproject.toml`
-- Turbo for cross-workspace task orchestration
-- ESLint, TypeScript, Tailwind, Prettier, Ruff, MyPy, Pytest
+Monorepo managed by **pnpm workspaces** + **Turbo**:
 
-## First Run
+| App | Stack | Purpose |
+|-----|-------|---------|
+| `apps/api` | Python 3.14, FastAPI, NetworkX, NumPy | Ingestion, graph engine, cascade simulation, adversarial agents, ranking |
+| `apps/web` | Next.js 16, React 19, D3.js, Zustand, Tailwind | Upload, network graph visualization, simulation controls, report |
 
-Frontend:
+### Module Pipeline
 
-```bash
-nvm use
-pnpm install
+```
+Upload → [1] Data Ingestion (AI) → [2] Weakpoint Analysis (Math) → [3] Agent Briefing → [4] State Tree Exploration (Math) → Report (AI narrative)
 ```
 
-Backend:
+See `docs/00_ARCHITECTURE.md` for full details and `docs/BUSINESS_PLAN.md` for the pitch kit.
+
+## Commands
 
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m ensurepip --upgrade
-python -m pip install --upgrade pip
-python -m pip install -e ./apps/api[dev]
+./bin/dev                              # run both apps
+pnpm --filter @halkite/api dev         # API only
+pnpm --filter @halkite/web dev         # frontend only
+pnpm build                             # build all
+pnpm lint                              # lint all
+pnpm typecheck                         # typecheck all
+pnpm format                            # format all
 ```
 
 ## Environment
 
-Copy `.env.example` to `.env` and fill in secrets as needed. App-specific templates also exist in:
+Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`. App-specific templates:
 
 - `apps/web/.env.local.example`
 - `apps/api/.env.example`
 
 ## Docker Deployment
 
-For an on-prem delivery, the repo now includes:
+For on-prem delivery:
 
 - `apps/api/Dockerfile`
 - `apps/web/Dockerfile`
 - `docker-compose.yml`
 - `docs/07_DEPLOYMENT.md`
 
-Standard flow:
-
 ```bash
 cp .env.example .env
 docker compose up --build -d
 ```
 
-The frontend is served on port `3000` by default and proxies backend requests
-to the API container internally, so clients can use a single public entrypoint.
+The frontend is served on port `3000` and proxies backend requests to the API container internally.

@@ -1,10 +1,10 @@
-# NEXUS — Universal Network Survival Analyzer
+# Achilles — Organizational Stress-Testing Platform
 
 ## Architecture Overview
 
 ### What It Is
 
-NEXUS is a system that takes any organization's data, constructs a dependency network, mathematically identifies weakpoints, and runs intelligent adversarial simulations to find the worst-case failure scenarios — all backed by exact computation, not AI guessing.
+Achilles is an organizational stress-testing platform that takes any organization's data, constructs a dependency network, mathematically identifies weakpoints, and runs adversarial simulations to find the worst-case failure scenarios — all backed by exact computation, not AI guessing.
 
 ### Core Principle
 
@@ -60,9 +60,9 @@ The AI never touches the numbers. It builds the graph from user data, generates 
 
 | Component | Technology |
 |-----------|-----------|
-| Math Engine | Python 3.11+, NetworkX, NumPy, SciPy |
+| Math Engine | Python 3.14, NetworkX, NumPy, SciPy |
 | Backend API | FastAPI |
-| AI Agent | Gemini API |
+| AI Agent | Claude API (Anthropic) |
 | Frontend | React + D3.js (force-directed graph) + Recharts |
 | State Tree Storage | In-memory (Python dict/tree) |
 | File Parsing | PyPDF2, python-docx, openpyxl, Pillow |

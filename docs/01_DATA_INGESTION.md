@@ -34,8 +34,8 @@ Step 2: CONCATENATE CONTEXT
     a single context block
 
 Step 3: AI GRAPH EXTRACTION
-    Send context to Gemini with structured instructions
-    Gemini outputs: JSON matching Graph schema from Module 1A
+    Send context to Claude with structured instructions
+    Claude outputs: JSON matching Graph schema from Module 1A
 
 Step 4: VALIDATE
     Run all validation rules from Module 1A
@@ -53,7 +53,7 @@ Step 5: RETURN GRAPH
 ```
 Library: PyPDF2 or pdfplumber
 Extract: all text pages
-If scanned/image PDF: use Gemini vision to read
+If scanned/image PDF: use Claude vision to read
 ```
 
 ### DOCX
@@ -73,8 +73,8 @@ Format as structured tables in text
 
 ### Images
 ```
-Library: Pillow + Gemini API
-Send image to Gemini with prompt:
+Library: Pillow + Claude API
+Send image to Claude with prompt:
 "Extract all entities and relationships visible in this 
 image (org chart, diagram, whiteboard, etc.)"
 ```
@@ -83,7 +83,7 @@ image (org chart, diagram, whiteboard, etc.)"
 
 ## AI Graph Extraction Prompt
 
-This is the system prompt sent to Gemini for graph construction:
+This is the system prompt sent to Claude for graph construction:
 
 ```
 You are a network analyst. You will receive the contents of 

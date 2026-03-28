@@ -2,7 +2,7 @@
 
 ## Core direction
 
-NEXUS should look like a strategic resilience simulator, not a BI dashboard and not a SOC clone.
+Achilles should look like a strategic resilience simulator, not a BI dashboard and not a SOC clone.
 
 The visual language should combine:
 
@@ -125,7 +125,7 @@ Motion must communicate computation and causality.
 
 ## Design sentence
 
-NEXUS should look like a live resilience command system that discovers, explains, and ranks catastrophic organizational failure paths.
+Achilles should look like a live resilience command system that discovers, explains, and ranks catastrophic organizational failure paths.
 
 ## Sources
 
