@@ -66,7 +66,7 @@ export interface NexusState {
     accessToken: string,
     folderId: string,
     description?: string,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   runAnalysis: () => Promise<void>;
   runExploration: (config?: ExploreConfig) => Promise<void>;
   runCascade: (event: CascadeEvent) => Promise<CascadeResponse | null>;
@@ -227,12 +227,14 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
         followUpQuestions: res.follow_up_questions,
         driveFolder: res.drive_folder,
       });
+      return true;
     } catch (err: unknown) {
       set({
         uploading: false,
         uploadProgress: null,
         uploadError: api.extractErrorMessage(err),
       });
+      return false;
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);

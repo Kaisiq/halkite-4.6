@@ -69,6 +69,11 @@ Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`. App-specific tem
 - `apps/web/.env.local.example`
 - `apps/api/.env.example`
 
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` is only needed if you want Google Drive folder import in the web app.
+For Google Drive import, use a Google OAuth "Web application" client and add
+the exact frontend origin to Authorized JavaScript origins, such as
+`http://localhost:3000`.
+
 ## Docker Deployment
 
 For on-prem delivery:
