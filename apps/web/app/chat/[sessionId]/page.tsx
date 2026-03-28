@@ -7,7 +7,7 @@ import { useNexusStore } from "@/lib/store";
 import type { ChatMessage } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Suggested questions for C-level executives
+// Suggested questions
 // ---------------------------------------------------------------------------
 
 const SUGGESTED_QUESTIONS = [
@@ -22,7 +22,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Markdown-lite renderer (bold, bullets, headings)
+// Markdown-lite renderer
 // ---------------------------------------------------------------------------
 
 function renderMarkdown(text: string): React.ReactNode[] {
@@ -30,15 +30,11 @@ function renderMarkdown(text: string): React.ReactNode[] {
   const elements: React.ReactNode[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    const line = lines[i];
 
-    // Headings
     if (line.startsWith("### ")) {
       elements.push(
-        <h4
-          key={i}
-          className="mt-3 mb-1.5 text-sm font-bold tracking-wide text-[var(--accent-soft)]"
-        >
+        <h4 key={i} className="mt-3 mb-1.5 text-sm font-semibold">
           {formatInline(line.slice(4))}
         </h4>,
       );
@@ -46,22 +42,18 @@ function renderMarkdown(text: string): React.ReactNode[] {
     }
     if (line.startsWith("## ")) {
       elements.push(
-        <h3
-          key={i}
-          className="mt-4 mb-2 text-base font-bold text-[var(--foreground)]"
-        >
+        <h3 key={i} className="mt-4 mb-2 text-base font-semibold">
           {formatInline(line.slice(3))}
         </h3>,
       );
       continue;
     }
 
-    // Bullet points
     if (line.match(/^[-*] /)) {
       elements.push(
         <div key={i} className="flex gap-2 py-0.5 pl-1">
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-soft)] opacity-60" />
-          <span className="text-sm leading-relaxed text-[var(--muted-strong)]">
+          <span className="mt-2 h-1 w-1 shrink-0 bg-[var(--text-light)]" />
+          <span className="text-sm leading-relaxed text-[var(--text-secondary)]">
             {formatInline(line.slice(2))}
           </span>
         </div>,
@@ -69,15 +61,14 @@ function renderMarkdown(text: string): React.ReactNode[] {
       continue;
     }
 
-    // Numbered list
     const numMatch = line.match(/^(\d+)\.\s/);
     if (numMatch) {
       elements.push(
         <div key={i} className="flex gap-2 py-0.5 pl-1">
-          <span className="mt-0.5 min-w-[1.25rem] text-right text-xs font-bold text-[var(--accent-soft)] opacity-80">
+          <span className="mt-0.5 min-w-[1.25rem] text-right text-xs font-medium text-[var(--text-muted)]">
             {numMatch[1]}.
           </span>
-          <span className="text-sm leading-relaxed text-[var(--muted-strong)]">
+          <span className="text-sm leading-relaxed text-[var(--text-secondary)]">
             {formatInline(line.slice(numMatch[0].length))}
           </span>
         </div>,
@@ -85,15 +76,13 @@ function renderMarkdown(text: string): React.ReactNode[] {
       continue;
     }
 
-    // Empty line
     if (!line.trim()) {
       elements.push(<div key={i} className="h-2" />);
       continue;
     }
 
-    // Regular paragraph
     elements.push(
-      <p key={i} className="text-sm leading-relaxed text-[var(--muted-strong)]">
+      <p key={i} className="text-sm leading-relaxed text-[var(--text-secondary)]">
         {formatInline(line)}
       </p>,
     );
@@ -103,12 +92,11 @@ function renderMarkdown(text: string): React.ReactNode[] {
 }
 
 function formatInline(text: string): React.ReactNode[] {
-  // Handle **bold** patterns
   const parts = text.split(/(\*\*[^*]+\*\*)/);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={i} className="font-semibold text-[var(--foreground)]">
+        <strong key={i} className="font-semibold text-[var(--text)]">
           {part.slice(2, -2)}
         </strong>
       );
@@ -118,7 +106,7 @@ function formatInline(text: string): React.ReactNode[] {
 }
 
 // ---------------------------------------------------------------------------
-// Message bubble component
+// Message bubble
 // ---------------------------------------------------------------------------
 
 function MessageBubble({ message }: { message: ChatMessage }) {
@@ -129,10 +117,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       className={`flex ${isUser ? "justify-end" : "justify-start"} fade-rise`}
     >
       <div
-        className={`max-w-[85%] rounded-2xl px-5 py-3.5 ${
+        className={`max-w-[85%] px-5 py-3.5 ${
           isUser
-            ? "bg-[var(--accent)]/12 border border-[var(--accent)]/20 text-[var(--foreground)]"
-            : "control-surface rounded-tl-sm"
+            ? "bg-[var(--bg-dark)] text-white"
+            : "border border-[var(--border)] bg-white"
         }`}
       >
         {isUser ? (
@@ -152,12 +140,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 function TypingIndicator() {
   return (
     <div className="flex justify-start fade-rise">
-      <div className="control-surface flex items-center gap-1.5 rounded-2xl rounded-tl-sm px-5 py-4">
-        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-soft)] opacity-60 [animation-delay:0ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-soft)] opacity-60 [animation-delay:150ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-soft)] opacity-60 [animation-delay:300ms]" />
-        <span className="ml-2 text-xs text-[var(--muted)]">
-          Analyzing data...
+      <div className="flex items-center gap-1.5 border border-[var(--border)] bg-white px-5 py-4">
+        <span className="h-1.5 w-1.5 animate-bounce bg-[var(--text-light)] [animation-delay:0ms]" />
+        <span className="h-1.5 w-1.5 animate-bounce bg-[var(--text-light)] [animation-delay:150ms]" />
+        <span className="h-1.5 w-1.5 animate-bounce bg-[var(--text-light)] [animation-delay:300ms]" />
+        <span className="ml-2 text-xs text-[var(--text-muted)]">
+          Analyzing...
         </span>
       </div>
     </div>
@@ -165,7 +153,7 @@ function TypingIndicator() {
 }
 
 // ---------------------------------------------------------------------------
-// Analysis status banner
+// Analysis status
 // ---------------------------------------------------------------------------
 
 function AnalysisStatus({
@@ -184,18 +172,16 @@ function AnalysisStatus({
   ];
 
   return (
-    <div className="control-surface mx-auto max-w-2xl rounded-xl px-5 py-3">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
-        Available Data
-      </div>
-      <div className="flex flex-wrap gap-3">
+    <div className="mx-auto max-w-2xl border border-[var(--border)] px-5 py-3">
+      <p className="mono-label text-[9px] mb-2">Available Data</p>
+      <div className="flex flex-wrap gap-4">
         {items.map(({ label, done }) => (
           <div key={label} className="flex items-center gap-1.5">
             <span
-              className={`h-2 w-2 rounded-full ${done ? "bg-[var(--healthy)]" : "bg-[var(--muted)] opacity-40"}`}
+              className={`h-1.5 w-1.5 ${done ? "bg-[var(--text)]" : "bg-[var(--border-strong)]"}`}
             />
             <span
-              className={`text-xs ${done ? "text-[var(--muted-strong)]" : "text-[var(--muted)] opacity-60"}`}
+              className={`text-xs ${done ? "text-[var(--text)]" : "text-[var(--text-light)]"}`}
             >
               {label}
             </span>
@@ -203,7 +189,7 @@ function AnalysisStatus({
         ))}
       </div>
       {!hasAnalysis && (
-        <p className="mt-2 text-xs text-[var(--warn)] opacity-80">
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
           Run the analysis pipeline for richer, data-driven answers.
         </p>
       )}
@@ -237,26 +223,22 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sync session id to store if navigated directly
   useEffect(() => {
     if (sessionId && storeSessionId !== sessionId) {
       setSessionId(sessionId);
     }
   }, [sessionId, storeSessionId, setSessionId]);
 
-  // Load chat history on mount
   useEffect(() => {
     if (sessionId && storeSessionId === sessionId) {
       loadChatHistory();
     }
   }, [sessionId, storeSessionId, loadChatHistory]);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, chatSending]);
 
-  // Auto-resize textarea
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(e.target.value);
@@ -297,29 +279,28 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="app-shell flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-white">
       <NavBar sessionId={sessionId} />
 
       <div className="flex flex-1 flex-col">
         {/* Header */}
-        <div className="border-b border-white/5 px-6 py-5">
+        <div className="border-b border-[var(--border)] px-6 py-5">
           <div className="mx-auto flex max-w-4xl items-center justify-between">
             <div>
-              <div className="eyebrow mb-1">Executive Intelligence</div>
-              <h1 className="display-face text-2xl font-semibold tracking-wide text-[var(--foreground)]">
-                C-Level Briefing Chat
+              <p className="mono-label text-[9px] mb-1">Executive Intelligence</p>
+              <h1 className="display-face text-2xl font-normal tracking-tight">
+                Briefing Chat
               </h1>
-              <p className="mt-1 text-sm text-[var(--muted)]">
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Ask questions about your organization&apos;s resilience data.
-                Get concise, data-driven answers.
               </p>
             </div>
             {chatMessages.length > 0 && (
               <button
                 onClick={clearChat}
-                className="ghost-button rounded-lg px-3 py-2 text-xs"
+                className="border border-[var(--border)] px-3 py-2 text-xs transition-colors hover:bg-[var(--bg-alt)]"
               >
-                Clear Chat
+                Clear
               </button>
             )}
           </div>
@@ -334,32 +315,30 @@ export default function ChatPage() {
           />
         </div>
 
-        {/* Messages area */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 custom-scrollbar">
           <div className="mx-auto max-w-4xl space-y-4 py-4">
             {chatMessages.length === 0 && !chatSending && (
-              <div className="py-12">
+              <div className="py-16">
                 <div className="text-center">
-                  <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/8">
-                    <svg
-                      className="h-8 w-8 text-[var(--accent-soft)]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
-                      />
-                    </svg>
-                  </div>
-                  <h2 className="display-face mb-2 text-lg font-semibold text-[var(--foreground)]">
+                  <svg
+                    className="mx-auto mb-6 h-10 w-10 text-[var(--text-light)]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
+                    />
+                  </svg>
+                  <h2 className="mb-2 text-lg font-medium">
                     Ask anything about your organization
                   </h2>
-                  <p className="mb-8 text-sm text-[var(--muted)]">
-                    Get instant answers backed by your stress-test analysis data
+                  <p className="mb-10 text-sm text-[var(--text-muted)]">
+                    Get instant answers backed by your stress-test data
                   </p>
                 </div>
 
@@ -368,7 +347,7 @@ export default function ChatPage() {
                     <button
                       key={q}
                       onClick={() => handleSuggestion(q)}
-                      className="ghost-button rounded-xl px-4 py-3 text-left text-sm text-[var(--muted-strong)] transition-all hover:text-[var(--foreground)]"
+                      className="border border-[var(--border)] px-4 py-3 text-left text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text)] hover:text-[var(--text)]"
                     >
                       {q}
                     </button>
@@ -384,7 +363,7 @@ export default function ChatPage() {
             {chatSending && <TypingIndicator />}
 
             {chatError && (
-              <div className="mx-auto max-w-2xl rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+              <div className="mx-auto max-w-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-[var(--danger)]">
                 {chatError}
               </div>
             )}
@@ -393,27 +372,25 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Input area */}
-        <div className="border-t border-white/5 px-6 py-4">
+        {/* Input */}
+        <div className="border-t border-[var(--border)] px-6 py-4">
           <div className="mx-auto flex max-w-4xl items-end gap-3">
-            <div className="field-shell flex-1 rounded-xl">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about your organization's resilience..."
-                rows={1}
-                className="w-full resize-none bg-transparent px-4 py-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none"
-              />
-            </div>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your organization's resilience..."
+              rows={1}
+              className="flex-1 resize-none border border-[var(--border)] bg-transparent px-4 py-3 text-sm outline-none transition-colors placeholder:text-[var(--text-light)] focus:border-[var(--text)]"
+            />
             <button
               onClick={handleSend}
               disabled={!input.trim() || chatSending}
-              className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl transition-all ${
+              className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center transition-colors ${
                 input.trim() && !chatSending
-                  ? "accent-button"
-                  : "cursor-not-allowed border border-white/10 bg-white/5 text-[var(--muted)] opacity-50"
+                  ? "border border-[var(--text)] bg-[var(--text)] text-white hover:bg-[var(--text-secondary)]"
+                  : "cursor-not-allowed border border-[var(--border)] text-[var(--text-light)]"
               }`}
             >
               <svg
@@ -431,9 +408,8 @@ export default function ChatPage() {
               </svg>
             </button>
           </div>
-          <p className="mx-auto mt-2 max-w-4xl text-center text-[0.65rem] text-[var(--muted)] opacity-60">
-            Responses are generated from your analysis data. AI explains the
-            math -- it never changes the numbers.
+          <p className="mx-auto mt-2 max-w-4xl text-center text-[10px] text-[var(--text-light)]">
+            AI explains the math -- it never changes the numbers.
           </p>
         </div>
       </div>

@@ -157,21 +157,21 @@ function severityColor(label: string): string {
     case "CRITICAL":
       return "var(--danger)";
     case "HIGH":
-      return "var(--warn)";
+      return "#555";
     case "MEDIUM":
-      return "oklch(0.85 0.12 95)";
+      return "#888";
     default:
-      return "var(--accent)";
+      return "var(--text-muted)";
   }
 }
 
 // ---------------------------------------------------------------------------
-// Health color scale (green -> yellow -> red)
+// Health color scale (grayscale: dark -> medium -> light)
 // ---------------------------------------------------------------------------
 
 function healthColor(H: number): string {
-  if (H > 0.7) return "var(--healthy)";
-  if (H > 0.3) return "var(--warn)";
+  if (H > 0.7) return "#222";
+  if (H > 0.3) return "#888";
   return "var(--danger)";
 }
 
@@ -738,7 +738,7 @@ export default function SimulatePage() {
         highlightedPathIds.has(d.source.data.id) &&
         highlightedPathIds.has(d.target.data.id)
           ? "var(--danger)"
-          : "rgba(156, 176, 197, 0.25)",
+          : "rgba(0, 0, 0, 0.12)",
       )
       .attr("stroke-width", (d) =>
         highlightedPathIds.has(d.source.data.id) &&
@@ -777,7 +777,7 @@ export default function SimulatePage() {
       .attr("r", (d) =>
         Math.max(12, Math.min(10 + d.data.data.failed_count * 1.3, 24)),
       )
-      .attr("fill", "rgba(123, 220, 198, 0.08)")
+      .attr("fill", "rgba(0, 0, 0, 0.04)")
       .attr("opacity", 0);
 
     nodeGroups
@@ -791,7 +791,7 @@ export default function SimulatePage() {
       .attr("stroke", (d) =>
         highlightedPathIds.has(d.data.id)
           ? "var(--danger)"
-          : "rgba(255,255,255,0.15)",
+          : "rgba(0, 0, 0, 0.15)",
       )
       .attr("stroke-width", (d) =>
         highlightedPathIds.has(d.data.id) ? 2.5 : 1,
@@ -802,7 +802,7 @@ export default function SimulatePage() {
       .attr("class", "tree-node-health")
       .attr("dy", 26)
       .attr("text-anchor", "middle")
-      .attr("fill", "var(--foreground)")
+      .attr("fill", "var(--text)")
       .attr("font-size", "11px")
       .attr("font-weight", 700)
       .text((d) => `H ${d.data.data.H.toFixed(2)}`);
@@ -812,7 +812,7 @@ export default function SimulatePage() {
       .attr("class", "tree-node-event")
       .attr("dy", 42)
       .attr("text-anchor", "middle")
-      .attr("fill", "var(--muted)")
+      .attr("fill", "var(--text-muted)")
       .attr("font-size", "10px")
       .text((d) => d.data.data.event_summary);
 
@@ -1018,18 +1018,18 @@ export default function SimulatePage() {
 
   return (
     <div
-      className="app-shell flex min-h-screen flex-col"
+      className="flex min-h-screen flex-col bg-white"
     >
       {/* ---- Navigation ---- */}
       <NavBar sessionId={sessionId} />
 
       {/* ---- Agent Controls ---- */}
       <section
-        className="mx-8 mt-8 rounded-[40px] border border-white/5 bg-black/20 p-8 backdrop-blur-xl"
+        className="mx-8 mt-8 border border-[var(--border)] bg-white p-8"
       >
         <div className="flex items-center gap-3 mb-8">
-          <div className="h-1 w-6 bg-[var(--accent)]" />
-          <h2 className="mono-label text-[10px] text-[var(--accent-soft)]">
+          <div className="h-1 w-6 bg-[var(--text)]" />
+          <h2 className="mono-label text-[10px] text-[var(--text-secondary)]">
             ADVERSARIAL_SIMULATION_CONTROLS
           </h2>
         </div>
@@ -1038,7 +1038,7 @@ export default function SimulatePage() {
           <div className="flex flex-col gap-8">
             {/* Agents row */}
             <div className="flex flex-col gap-4">
-              <div className="mono-label text-[9px] opacity-40">ACTIVE_AGENTS</div>
+              <div className="mono-label text-[9px] text-[var(--text-muted)]">ACTIVE_AGENTS</div>
               <div className="flex flex-wrap gap-3">
                 {AGENTS.map((agent) => {
                   const active = enabledAgents.has(agent.type);
@@ -1047,14 +1047,14 @@ export default function SimulatePage() {
                       key={agent.type}
                       type="button"
                       onClick={() => toggleAgent(agent.type)}
-                      className={`flex items-center gap-3 rounded-2xl border px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${
+                      className={`flex items-center gap-3 border px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${
                         active
-                          ? "border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]"
-                          : "border-white/5 bg-white/[0.02] text-[var(--muted)] hover:bg-white/[0.04]"
+                          ? "border-[var(--text)] bg-[var(--text)] text-white"
+                          : "border-[var(--border)] bg-white text-[var(--text-muted)] hover:bg-[var(--bg-alt)]"
                       }`}
                       title={agent.description}
                     >
-                      <div className={`h-1.5 w-1.5 rounded-full transition-all ${active ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" : "bg-white/10"}`} />
+                      <div className={`h-1.5 w-1.5 transition-all ${active ? "bg-white" : "bg-[var(--border)]"}`} />
                       {agent.label}
                     </button>
                   );
@@ -1064,10 +1064,10 @@ export default function SimulatePage() {
 
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between gap-4">
-                <div className="mono-label text-[9px] opacity-40">
+                <div className="mono-label text-[9px] text-[var(--text-muted)]">
                   WHAT_IF_SWEEP_PROFILE
                 </div>
-                <span className="mono-label text-[8px] opacity-30">
+                <span className="mono-label text-[8px] text-[var(--text-light)]">
                   {enabledAgents.has("monte_carlo")
                     ? "FULL_SPECTRUM_SWEEP_ENABLED"
                     : "FULL_SPECTRUM_SWEEP_DISABLED"}
@@ -1083,23 +1083,23 @@ export default function SimulatePage() {
                       type="button"
                       onClick={() => setScenarioProfileId(profile.id)}
                       disabled={disabled}
-                      className={`rounded-2xl border p-4 text-left transition-all ${
+                      className={`border p-4 text-left transition-all ${
                         active
-                          ? "border-[var(--accent)]/35 bg-[var(--accent)]/10"
-                          : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                          ? "border-[var(--text)] bg-[var(--bg-alt)]"
+                          : "border-[var(--border)] bg-white hover:bg-[var(--bg-alt)]"
                       } ${disabled ? "opacity-40" : ""}`}
                     >
-                      <div className="mono-label text-[8px] text-[var(--accent-soft)]">
+                      <div className="mono-label text-[8px] text-[var(--text-secondary)]">
                         {profile.label}
                       </div>
-                      <p className="mt-2 text-[11px] leading-relaxed text-[var(--muted)]">
+                      <p className="mt-2 text-[11px] leading-relaxed text-[var(--text-muted)]">
                         {profile.description}
                       </p>
                     </button>
                   );
                 })}
               </div>
-              <p className="max-w-3xl text-xs leading-relaxed text-[var(--muted)]">
+              <p className="max-w-3xl text-xs leading-relaxed text-[var(--text-muted)]">
                 The full-spectrum sweep adds non-deterministic branches on top of the strategic agents so the tree explores routine human mistakes, intermittent technical degradation, supplier failures, and broken dependencies across all mapped nodes.
               </p>
             </div>
@@ -1109,20 +1109,20 @@ export default function SimulatePage() {
               {/* Depth slider */}
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <label className="mono-label text-[9px] opacity-40">
+                  <label className="mono-label text-[9px] text-[var(--text-muted)]">
                     EXPLORATION_DEPTH
                   </label>
-                  <span className="font-mono text-xl font-bold text-[var(--foreground)]">{depth.toString().padStart(2, '0')}</span>
+                  <span className="font-mono text-xl font-bold text-[var(--text)]">{depth.toString().padStart(2, '0')}</span>
                 </div>
                 <div className="relative flex items-center h-6">
-                  <div className="absolute h-[1px] w-full bg-white/5" />
+                  <div className="absolute h-[1px] w-full bg-[var(--border)]" />
                   <input
                     type="range"
                     min={1}
                     max={10}
                     value={depth}
                     onChange={(e) => setDepth(Number(e.target.value))}
-                    className="absolute w-full appearance-none bg-transparent accent-[var(--accent)] cursor-pointer [&::-webkit-slider-runnable-track]:h-[1px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:shadow-[0_0_12px_var(--accent)]"
+                    className="absolute w-full appearance-none bg-transparent accent-[var(--text)] cursor-pointer [&::-webkit-slider-runnable-track]:h-[1px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:bg-[var(--text)]"
                   />
                 </div>
               </div>
@@ -1130,15 +1130,15 @@ export default function SimulatePage() {
               {/* Tree limit slider */}
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <label className="mono-label text-[9px] opacity-40">
+                  <label className="mono-label text-[9px] text-[var(--text-muted)]">
                     NODE_COMPUTE_LIMIT
                   </label>
-                  <span className="font-mono text-xl font-bold text-[var(--foreground)]">
+                  <span className="font-mono text-xl font-bold text-[var(--text)]">
                     {(treeLimit / 1000).toFixed(1)}K
                   </span>
                 </div>
                 <div className="relative flex items-center h-6">
-                  <div className="absolute h-[1px] w-full bg-white/5" />
+                  <div className="absolute h-[1px] w-full bg-[var(--border)]" />
                   <input
                     type="range"
                     min={100}
@@ -1146,7 +1146,7 @@ export default function SimulatePage() {
                     step={100}
                     value={treeLimit}
                     onChange={(e) => setTreeLimit(Number(e.target.value))}
-                    className="absolute w-full appearance-none bg-transparent accent-[var(--accent)] cursor-pointer [&::-webkit-slider-runnable-track]:h-[1px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--accent)] [&::-webkit-slider-thumb]:shadow-[0_0_12px_var(--accent)]"
+                    className="absolute w-full appearance-none bg-transparent accent-[var(--text)] cursor-pointer [&::-webkit-slider-runnable-track]:h-[1px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:bg-[var(--text)]"
                   />
                 </div>
               </div>
@@ -1158,9 +1158,9 @@ export default function SimulatePage() {
               type="button"
               onClick={handleRun}
               disabled={exploring || enabledAgents.size === 0}
-              className="accent-button min-w-[240px] rounded-full py-6 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
+              className="min-w-[240px] border border-[var(--text)] bg-[var(--text)] text-white py-6 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
             >
-              {exploring ? "COMPUTING..." : "RUN EXPLORATION →"}
+              {exploring ? "COMPUTING..." : "RUN EXPLORATION ->"}
             </button>
           </div>
         </div>
@@ -1171,31 +1171,31 @@ export default function SimulatePage() {
         {/* -- Left: State Tree Visualization -- */}
         <section
           ref={containerRef}
-          className="relative flex-1 rounded-[48px] border border-white/5 bg-black/20 backdrop-blur-md overflow-hidden"
-          style={{ minHeight: 480 }}
+          className="relative flex-1 border border-[var(--border)] overflow-hidden"
+          style={{ minHeight: 480, background: "#fafafa" }}
         >
           <div className="absolute top-8 left-8 z-10 flex flex-col gap-2">
             <div className="flex items-center gap-3">
-              <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-              <div className="mono-label text-[10px] text-[var(--accent-soft)]">STATE_TREE_TOPOLOGY</div>
+              <div className="h-1.5 w-1.5 bg-[var(--text)]" />
+              <div className="mono-label text-[10px] text-[var(--text-secondary)]">STATE_TREE_TOPOLOGY</div>
             </div>
           </div>
-          <div className="pointer-events-none absolute right-8 top-8 z-10 rounded-full border border-white/5 bg-black/40 px-5 py-2 backdrop-blur-md">
-            <span className="mono-label text-[9px] opacity-60">INTERACTION: CLICK_BRANCH_TO_FOCUS</span>
+          <div className="pointer-events-none absolute right-8 top-8 z-10 border border-[var(--border)] bg-white px-5 py-2">
+            <span className="mono-label text-[9px] text-[var(--text-light)]">INTERACTION: CLICK_BRANCH_TO_FOCUS</span>
           </div>
           {treeStats && totalTreeNodes > 0 && (
             <div className="absolute bottom-8 left-8 z-10 flex max-w-[420px] items-end gap-3">
-              <div className="rounded-[24px] border border-white/5 bg-black/45 px-5 py-4 backdrop-blur-xl">
-                <div className="mono-label text-[8px] opacity-40">TREE_SCOPE</div>
+              <div className="border border-[var(--border)] bg-white px-5 py-4">
+                <div className="mono-label text-[8px] text-[var(--text-muted)]">TREE_SCOPE</div>
                 <div className="mt-2 flex items-center gap-4">
-                  <span className="font-mono text-xs text-[var(--foreground)]">
+                  <span className="font-mono text-xs text-[var(--text)]">
                     {String(totalTreeNodes).padStart(2, "0")}_NODES
                   </span>
-                  <span className="font-mono text-xs text-[var(--foreground)]">
+                  <span className="font-mono text-xs text-[var(--text)]">
                     {String(totalTreeLeaves).padStart(2, "0")}_LEAVES
                   </span>
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
+                <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
                   {focusedTreeNode && focusedTreeNode.depth > 0
                     ? `Focused on ${focusedTreeNode.event_summary}. Path depth ${focusedTreeNode.depth}, H ${focusedTreeNode.H.toFixed(2)}.`
                     : "Showing the full explored tree. Select any branch to inspect its path and downstream states."}
@@ -1208,7 +1208,7 @@ export default function SimulatePage() {
                     setFocusedNodeId(rootTreeNode?.id ?? null);
                     setTooltip(null);
                   }}
-                  className="rounded-full border border-white/10 bg-black/45 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--foreground)] backdrop-blur-xl transition hover:bg-white/[0.06]"
+                  className="border border-[var(--border)] bg-white px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text)] transition hover:bg-[var(--bg-alt)]"
                 >
                   Reset Focus
                 </button>
@@ -1221,8 +1221,7 @@ export default function SimulatePage() {
           {!treeNodes?.length && !exploring && (
             <div className="flex items-center justify-center h-full">
               <p
-                className="text-sm text-center max-w-xs"
-                style={{ color: "var(--muted)" }}
+                className="text-sm text-center max-w-xs text-[var(--text-muted)]"
               >
                 Run an exploration to generate the state tree visualization.
               </p>
@@ -1233,13 +1232,13 @@ export default function SimulatePage() {
             <div className="flex flex-col items-center justify-center h-full gap-3">
               {/* Spinner */}
               <div
-                className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+                className="w-8 h-8 border-2 border-t-transparent animate-spin"
                 style={{
-                  borderColor: "var(--accent)",
+                  borderColor: "var(--text)",
                   borderTopColor: "transparent",
                 }}
               />
-              <p className="text-sm" style={{ color: "var(--muted)" }}>
+              <p className="text-sm text-[var(--text-muted)]">
                 Building state tree...
               </p>
             </div>
@@ -1257,29 +1256,28 @@ export default function SimulatePage() {
           {/* Tooltip */}
           {tooltip && (
             <div
-              className="absolute z-20 rounded-lg border p-3 text-xs pointer-events-none"
+              className="absolute z-20 border p-3 text-xs pointer-events-none"
               style={{
                 left: tooltip.x,
                 top: tooltip.y + 20,
-                background: "rgba(9, 19, 35, 0.95)",
-                borderColor: "rgba(156, 176, 197, 0.2)",
-                backdropFilter: "blur(12px)",
+                background: "white",
+                borderColor: "var(--border)",
                 minWidth: 180,
               }}
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span
                   className="font-semibold"
-                  style={{ color: "var(--foreground)" }}
+                  style={{ color: "var(--text)" }}
                 >
                   H = {tooltip.node.H.toFixed(3)}
                 </span>
                 <span
-                  className="inline-block w-2 h-2 rounded-full"
+                  className="inline-block w-2 h-2"
                   style={{ background: healthColor(tooltip.node.H) }}
                 />
               </div>
-              <div style={{ color: "var(--muted)" }}>
+              <div style={{ color: "var(--text-muted)" }}>
                 <p>
                   Delta H:{" "}
                   <span style={{ color: "var(--danger)" }}>
@@ -1297,10 +1295,10 @@ export default function SimulatePage() {
 
         {/* -- Right: Progress / Results Panel -- */}
         <aside
-          className="flex-[4] min-w-[340px] max-w-[480px] rounded-[48px] border border-white/5 bg-black/20 p-8 flex flex-col gap-8 overflow-y-auto backdrop-blur-md"
+          className="flex-[4] min-w-[340px] max-w-[480px] border border-[var(--border)] bg-white p-8 flex flex-col gap-8 overflow-y-auto"
         >
           <div className="flex items-center gap-3">
-            <div className="h-1 w-4 bg-[var(--accent)]" />
+            <div className="h-1 w-4 bg-[var(--text)]" />
             <h3 className="mono-label text-[10px]">
               {exploring ? "MONITORING_THREAD..." : treeStats ? "SIMULATION_RESULTS" : "SYSTEM_LOG"}
             </h3>
@@ -1309,19 +1307,19 @@ export default function SimulatePage() {
           {/* -- Before exploration -- */}
           {!exploring && !treeStats && !exploreError && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm leading-relaxed text-[var(--muted)]">
+              <p className="text-sm leading-relaxed text-[var(--text-muted)]">
                 Initialize the adversarial engine to discover high-consequence
                 failure paths across the organizational topology.
               </p>
-              <div className="h-px w-full bg-white/5" />
-              <div className="mono-label text-[9px] opacity-40">WAITING_FOR_TRIGGER...</div>
+              <div className="h-px w-full bg-[var(--border)]" />
+              <div className="mono-label text-[9px] text-[var(--text-light)]">WAITING_FOR_TRIGGER...</div>
             </div>
           )}
 
           {/* -- Error state -- */}
           {exploreError && (
             <div
-              className="bracket-box rounded-2xl border-[var(--danger)]/20 bg-[var(--danger)]/5 p-4 text-xs text-[var(--danger)]"
+              className="border border-[var(--danger)] bg-white p-4 text-xs text-[var(--danger)]"
             >
               <div className="mono-label text-[8px] mb-1">CRITICAL_EXCEPTION</div>
               {exploreError}
@@ -1333,9 +1331,9 @@ export default function SimulatePage() {
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-4">
                 <div
-                  className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin border-[var(--accent)]"
+                  className="w-6 h-6 border-2 border-t-transparent animate-spin border-[var(--text)]"
                 />
-                <span className="mono-label text-[10px] text-[var(--accent-soft)]">
+                <span className="mono-label text-[10px] text-[var(--text-secondary)]">
                   PARALLEL_STATE_SEARCH_ACTIVE
                 </span>
               </div>
@@ -1343,7 +1341,7 @@ export default function SimulatePage() {
                 {[...Array(3)].map((_, i) => (
                   <div
                     key={i}
-                    className="h-1.5 rounded-full animate-pulse bg-white/5"
+                    className="h-1.5 animate-pulse bg-[var(--border)]"
                     style={{ width: `${80 - i * 15}%` }}
                   />
                 ))}
@@ -1380,7 +1378,7 @@ export default function SimulatePage() {
                         ? resilienceProfile.mean_H.toFixed(2)
                         : "--"
                     }
-                    tone="var(--foreground)"
+                    tone="var(--text)"
                   />
                   <MiniMetric
                     label="CATASTROPHIC_PROB"
@@ -1397,29 +1395,29 @@ export default function SimulatePage() {
               {currentPathBriefing && (
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center gap-3">
-                    <div className="h-px flex-1 bg-white/5" />
-                    <span className="mono-label text-[9px] opacity-40">SELECTED_PATH_DIAGNOSTICS</span>
-                    <div className="h-px flex-1 bg-white/5" />
+                    <div className="h-px flex-1 bg-[var(--border)]" />
+                    <span className="mono-label text-[9px] text-[var(--text-light)]">SELECTED_PATH_DIAGNOSTICS</span>
+                    <div className="h-px flex-1 bg-[var(--border)]" />
                   </div>
 
                   <div
-                    className="bracket-box flex flex-col gap-6 rounded-[32px] border-white/5 bg-white/[0.02]"
+                    className="flex flex-col gap-6 border border-[var(--border)] bg-white p-6"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex flex-col gap-1">
                         <div
-                          className="mono-label text-[9px] text-[var(--accent-soft)]"
+                          className="mono-label text-[9px] text-[var(--text-secondary)]"
                         >
                           CASE_STUDY
                         </div>
                         <h4
-                          className="display-face text-xl font-bold tracking-tight text-[var(--foreground)] uppercase"
+                          className="text-xl font-bold tracking-tight text-[var(--text)] uppercase"
                         >
                           {currentPathBriefing.title}
                         </h4>
                       </div>
                       <span
-                        className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest"
+                        className="px-3 py-1 text-[9px] font-bold uppercase tracking-widest"
                         style={{
                           color: severityColor(currentPathBriefing.severityLabel),
                           background: `${severityColor(currentPathBriefing.severityLabel)}18`,
@@ -1439,32 +1437,32 @@ export default function SimulatePage() {
                       <MiniMetric
                         label="CASCADE_COUNT"
                         value={String(currentPathBriefing.impact.failedCount).padStart(2, '0')}
-                        tone="var(--foreground)"
+                        tone="var(--text)"
                       />
                     </div>
 
                     <div className="flex flex-col gap-4">
-                      <div className="mono-label text-[9px] opacity-40">EVENT_NARRATIVE</div>
-                      <p className="text-sm leading-relaxed text-[var(--muted-strong)]">
+                      <div className="mono-label text-[9px] text-[var(--text-muted)]">EVENT_NARRATIVE</div>
+                      <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
                         {currentPathBriefing.summary}
                       </p>
-                      <p className="text-xs leading-relaxed text-[var(--muted)] opacity-70">
+                      <p className="text-xs leading-relaxed text-[var(--text-muted)]">
                         {currentPathBriefing.story}
                       </p>
                     </div>
 
                     {currentPathBriefing.events.length > 0 && (
                       <div className="flex flex-col gap-4">
-                        <div className="mono-label text-[9px] opacity-40">PROPAGATION_SEQUENCE</div>
+                        <div className="mono-label text-[9px] text-[var(--text-muted)]">PROPAGATION_SEQUENCE</div>
                         <div className="flex flex-col gap-2">
                           {currentPathBriefing.events.map((event) => (
                             <div
                               key={`${event.step}-${event.event}`}
-                              className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.02] p-3"
+                              className="flex items-center justify-between gap-4 border border-[var(--border)] bg-white p-3"
                             >
                               <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="mono-label !text-[8px] opacity-40">STEP_{String(event.step).padStart(2, '0')}</span>
-                                <span className="truncate text-[11px] font-bold text-[var(--foreground)] uppercase tracking-tight">
+                                <span className="mono-label !text-[8px] text-[var(--text-light)]">STEP_{String(event.step).padStart(2, '0')}</span>
+                                <span className="truncate text-[11px] font-bold text-[var(--text)] uppercase tracking-tight">
                                   {event.event}
                                 </span>
                               </div>
@@ -1481,20 +1479,20 @@ export default function SimulatePage() {
 
                     {currentPathBriefing.recommendations.length > 0 && (
                       <div className="flex flex-col gap-4">
-                        <div className="mono-label text-[9px] opacity-40">COUNTERMEASURE_ADVISORY</div>
+                        <div className="mono-label text-[9px] text-[var(--text-muted)]">COUNTERMEASURE_ADVISORY</div>
                         <div className="flex flex-col gap-3">
                           {currentPathBriefing.recommendations
                             .slice(0, 2)
                             .map((rec) => (
                               <div
                                 key={`${rec.action}-${rec.reason}`}
-                                className="bracket-box rounded-2xl border-[var(--accent)]/20 bg-[var(--accent)]/5 p-4"
+                                className="border border-[var(--border)] bg-[var(--bg-alt)] p-4"
                               >
-                                <p className="text-[11px] font-bold text-[var(--foreground)] uppercase tracking-tight">
+                                <p className="text-[11px] font-bold text-[var(--text)] uppercase tracking-tight">
                                   {rec.action}
                                 </p>
                                 <p
-                                  className="mt-2 text-[10px] leading-relaxed text-[var(--muted)]"
+                                  className="mt-2 text-[10px] leading-relaxed text-[var(--text-muted)]"
                                 >
                                   {rec.reason}
                                 </p>
@@ -1510,22 +1508,22 @@ export default function SimulatePage() {
               {/* Per-agent stats */}
               {agentStatEntries.length > 0 && (
                 <div className="flex flex-col gap-4">
-                  <div className="mono-label text-[9px] opacity-40">AGENT_DIAGNOSTICS</div>
+                  <div className="mono-label text-[9px] text-[var(--text-muted)]">AGENT_DIAGNOSTICS</div>
                   <div className="flex flex-col gap-2">
                     {agentStatEntries.map(([name, stats]) => (
                       <div
                         key={name}
-                        className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3"
+                        className="flex items-center justify-between border border-[var(--border)] bg-white px-4 py-3"
                       >
                         <span
-                          className="mono-label text-[9px] font-bold text-[var(--muted-strong)]"
+                          className="mono-label text-[9px] font-bold text-[var(--text-secondary)]"
                         >
                           {formatAgentName(name).toUpperCase()}
                         </span>
                         <div
                           className="flex gap-4 font-mono text-[9px]"
                         >
-                          <span className="opacity-40">{stats.nodes_explored}_NODES</span>
+                          <span className="text-[var(--text-light)]">{stats.nodes_explored}_NODES</span>
                           <span
                             style={{ color: healthColor(stats.worst_H_found) }}
                           >
@@ -1541,7 +1539,7 @@ export default function SimulatePage() {
               {/* Top 5 worst scenarios */}
               {topScenarios.length > 0 && (
                 <div className="flex flex-col gap-4">
-                  <div className="mono-label text-[9px] opacity-40">CRITICAL_VECTORS</div>
+                  <div className="mono-label text-[9px] text-[var(--text-muted)]">CRITICAL_VECTORS</div>
                   <div className="flex flex-col gap-2">
                     {topScenarios.map((s, i) => (
                       <button
@@ -1583,15 +1581,15 @@ export default function SimulatePage() {
                                 })();
                           setFocusedNodeId(focusNode?.id ?? null);
                         }}
-                        className={`group flex items-center justify-between rounded-2xl border p-4 text-left transition-all ${
+                        className={`group flex items-center justify-between border p-4 text-left transition-all ${
                           activeScenarioIndex === i
-                            ? "border-[var(--danger)]/40 bg-[var(--danger)]/10"
-                            : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                            ? "border-[var(--text)] bg-[var(--bg-alt)]"
+                            : "border-[var(--border)] bg-white hover:bg-[var(--bg-alt)]"
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <span
-                            className="mono-label text-[8px] font-bold uppercase border px-1.5 py-0.5 rounded"
+                            className="mono-label text-[8px] font-bold uppercase border px-1.5 py-0.5"
                             style={{
                               color: severityColor(s.severity_label),
                               borderColor: `${severityColor(s.severity_label)}33`,
@@ -1601,10 +1599,10 @@ export default function SimulatePage() {
                             {s.severity_label}
                           </span>
                           <div className="min-w-0">
-                            <span className="block truncate text-xs font-bold tracking-tight text-[var(--foreground)] uppercase">
+                            <span className="block truncate text-xs font-bold tracking-tight text-[var(--text)] uppercase">
                               {s.title || `SCENARIO_${String(i + 1).padStart(2, '0')}`}
                             </span>
-                            <span className="block truncate pt-1 text-[10px] text-[var(--muted)]">
+                            <span className="block truncate pt-1 text-[10px] text-[var(--text-muted)]">
                               {s.summary || "Explored cascade path across the mapped organization."}
                             </span>
                           </div>
@@ -1640,7 +1638,7 @@ function MiniMetric({
   return (
     <div className="flex flex-col gap-1">
       <p
-        className="mono-label !text-[8px] opacity-40"
+        className="mono-label !text-[8px] text-[var(--text-light)]"
       >
         {label}
       </p>
@@ -1666,10 +1664,10 @@ function StatCard({
 }) {
   return (
     <div
-      className="bracket-box flex flex-col gap-2 rounded-2xl border-white/5 bg-white/[0.02] p-4"
+      className="flex flex-col gap-2 border border-[var(--border)] bg-white p-4"
     >
       <p
-        className="mono-label !text-[8px] opacity-40"
+        className="mono-label !text-[8px] text-[var(--text-light)]"
       >
         {label}
       </p>

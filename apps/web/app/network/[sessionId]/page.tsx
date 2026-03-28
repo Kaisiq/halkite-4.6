@@ -46,9 +46,11 @@ function layerColor(layer: string): string {
 }
 
 function impactColor(impact: number, failed: boolean): string {
-  if (failed) return "var(--danger)";
+  if (failed) return "#b91c1c";
   const normalized = Math.max(0, Math.min(1, impact));
-  return `color-mix(in oklch, var(--danger) ${Math.round(normalized * 100)}%, var(--muted-strong))`;
+  if (normalized > 0.7) return "#b91c1c";
+  if (normalized > 0.4) return "#666666";
+  return "#999999";
 }
 
 interface OrbitNode extends GraphNode {
@@ -97,12 +99,10 @@ export default function NetworkPage({ params }: PageProps) {
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  // Seed session id into store on mount
   useEffect(() => {
     setSessionId(sessionId);
   }, [sessionId, setSessionId]);
 
-  // Fetch graph if not already loaded
   useEffect(() => {
     if (graph) return;
     getGraph(sessionId)
@@ -112,8 +112,6 @@ export default function NetworkPage({ params }: PageProps) {
 
   // ---- D3 ----
   const svgRef = useRef<SVGSVGElement | null>(null);
-
-  // Keep a ref to hiddenLayers so D3 callbacks can read latest value
   const hiddenLayersRef = useRef(hiddenLayers);
   const selectedNodeRef = useRef(selectedNodeId);
   const hoveredNodeRef = useRef(hoveredNodeId);
@@ -141,25 +139,8 @@ export default function NetworkPage({ params }: PageProps) {
     const height = container.clientHeight;
 
     svg.attr("width", width).attr("height", height);
-    const defs = svg.append("defs");
-    const glow = defs
-      .append("filter")
-      .attr("id", "nodeGlow")
-      .attr("x", "-120%")
-      .attr("y", "-120%")
-      .attr("width", "340%")
-      .attr("height", "340%");
 
-    glow
-      .append("feGaussianBlur")
-      .attr("stdDeviation", 6)
-      .attr("result", "blur");
-    glow
-      .append("feMerge")
-      .selectAll("feMergeNode")
-      .data(["blur", "SourceGraphic"])
-      .join("feMergeNode")
-      .attr("in", (d) => d);
+    const defs = svg.append("defs");
 
     defs
       .append("marker")
@@ -172,7 +153,7 @@ export default function NetworkPage({ params }: PageProps) {
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,-4L10,0L0,4")
-      .attr("fill", "rgba(138, 166, 205, 0.42)");
+      .attr("fill", "rgba(0, 0, 0, 0.2)");
 
     const g = svg.append("g");
     const zoom = d3
@@ -235,7 +216,7 @@ export default function NetworkPage({ params }: PageProps) {
       .append("circle")
       .attr("class", "node-halo")
       .attr("r", 18)
-      .attr("fill", "rgba(122, 178, 235, 0.05)")
+      .attr("fill", "rgba(0, 0, 0, 0.04)")
       .attr("opacity", 0);
 
     nodeSel
@@ -249,7 +230,7 @@ export default function NetworkPage({ params }: PageProps) {
       .attr("class", "node-label")
       .attr("text-anchor", "middle")
       .attr("font-size", "11px")
-      .attr("fill", "var(--foreground)")
+      .attr("fill", "#000000")
       .attr("font-weight", 600)
       .attr("pointer-events", "none")
       .text((d) => d.name);
@@ -309,10 +290,10 @@ export default function NetworkPage({ params }: PageProps) {
       const selected = selectedNodeRef.current;
 
       edgeSel
-        .attr("x1", (link) => ((link.source as OrbitNode).x ?? 0))
-        .attr("y1", (link) => ((link.source as OrbitNode).y ?? 0))
-        .attr("x2", (link) => ((link.target as OrbitNode).x ?? 0))
-        .attr("y2", (link) => ((link.target as OrbitNode).y ?? 0))
+        .attr("x1", (link) => (link.source as OrbitNode).x ?? 0)
+        .attr("y1", (link) => (link.source as OrbitNode).y ?? 0)
+        .attr("x2", (link) => (link.target as OrbitNode).x ?? 0)
+        .attr("y2", (link) => (link.target as OrbitNode).y ?? 0)
         .attr("display", (link) =>
           hidden.has((link.source as OrbitNode).layer) ||
           hidden.has((link.target as OrbitNode).layer)
@@ -320,27 +301,36 @@ export default function NetworkPage({ params }: PageProps) {
             : "inline",
         )
         .attr("stroke", (link) => {
-          const connected = hovered && (link.fromId === hovered || link.toId === hovered);
-          const selectedLink = selected && (link.fromId === selected || link.toId === selected);
-          if (connected) return "rgba(123, 220, 198, 0.92)";
-          if (selectedLink) return "rgba(245, 199, 109, 0.78)";
+          const connected =
+            hovered && (link.fromId === hovered || link.toId === hovered);
+          const selectedLink =
+            selected && (link.fromId === selected || link.toId === selected);
+          if (connected) return "#000000";
+          if (selectedLink) return "#333333";
           return link.crossLayer
-            ? "rgba(138, 166, 205, 0.28)"
-            : "rgba(120, 141, 173, 0.18)";
+            ? "rgba(0, 0, 0, 0.18)"
+            : "rgba(0, 0, 0, 0.1)";
         })
         .attr("stroke-opacity", (link) =>
           hovered && (link.fromId === hovered || link.toId === hovered)
             ? 1
             : selected && (link.fromId === selected || link.toId === selected)
-              ? 0.92
-              : 0.72,
+              ? 0.8
+              : 0.6,
         )
         .attr("stroke-width", (link) => Math.max(1, link.weight * 2.6))
-        .attr("stroke-dasharray", (link) => (link.crossLayer ? "5 7" : "none"));
+        .attr("stroke-dasharray", (link) =>
+          link.crossLayer ? "5 7" : "none",
+        );
 
       nodeSel
-        .attr("display", (node) => (hidden.has(node.layer) ? "none" : "inline"))
-        .attr("transform", (node) => `translate(${node.x ?? 0},${node.y ?? 0})`)
+        .attr("display", (node) =>
+          hidden.has(node.layer) ? "none" : "inline",
+        )
+        .attr(
+          "transform",
+          (node) => `translate(${node.x ?? 0},${node.y ?? 0})`,
+        )
         .sort((a, b) => (a.impact ?? 0) - (b.impact ?? 0));
 
       nodeSel
@@ -350,11 +340,8 @@ export default function NetworkPage({ params }: PageProps) {
         )
         .attr("fill", (node) =>
           hovered === node.id || selected === node.id
-            ? `${impactColor(node.impact, node.phi)}33`
+            ? "rgba(0, 0, 0, 0.06)"
             : "transparent",
-        )
-        .attr("filter", (node) =>
-          hovered === node.id || selected === node.id ? "url(#nodeGlow)" : null,
         );
 
       nodeSel
@@ -363,10 +350,10 @@ export default function NetworkPage({ params }: PageProps) {
         .attr("fill", (node) => impactColor(node.impact, node.phi))
         .attr("fill-opacity", (node) => (node.phi ? 1 : 0.94))
         .attr("stroke", (node) => {
-          if (node.phi) return "var(--danger)";
-          if (hovered === node.id) return "rgba(255,255,255,0.86)";
-          if (selected === node.id) return "var(--selected)";
-          return "rgba(255,255,255,0.16)";
+          if (node.phi) return "#b91c1c";
+          if (hovered === node.id) return "#000000";
+          if (selected === node.id) return "#000000";
+          return "rgba(0, 0, 0, 0.15)";
         })
         .attr("stroke-width", (node) =>
           hovered === node.id || selected === node.id || node.phi ? 2.4 : 1.4,
@@ -424,18 +411,14 @@ export default function NetworkPage({ params }: PageProps) {
   // ---- Loading state ----
   if (!graph) {
     return (
-      <div className="app-shell flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col">
         <NavBar sessionId={sessionId} />
         <div className="flex-1 grid place-items-center">
           <div className="text-center">
-            <div
-              className="w-10 h-10 border-2 rounded-full animate-spin mx-auto mb-4"
-              style={{
-                borderColor: "var(--muted)",
-                borderTopColor: "var(--accent)",
-              }}
-            />
-            <p style={{ color: "var(--muted)" }}>Loading network graph...</p>
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin border-2 border-[var(--border)] border-t-[var(--text)]" />
+            <p className="text-sm text-[var(--text-muted)]">
+              Loading network graph...
+            </p>
           </div>
         </div>
       </div>
@@ -444,34 +427,29 @@ export default function NetworkPage({ params }: PageProps) {
 
   // ---- Render ----
   return (
-    <div className="app-shell flex h-screen flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-white">
       <NavBar sessionId={sessionId} />
 
       <div className="flex flex-1 min-h-0">
-        {/* ================================================================
-            LEFT: D3 Graph Canvas (70.8%)
-            ================================================================ */}
-        <div className="relative flex-[7.08] min-w-0">
-          <div className="pointer-events-none absolute left-8 top-8 z-10 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-              <div className="mono-label text-[10px] text-[var(--accent-soft)]">
-                TOPOLOGY_MONITOR_ACTIVE
-              </div>
-            </div>
-            <div className="bracket-box rounded-2xl border-white/5 bg-black/40 backdrop-blur-xl p-5">
-              <p className="mono-label text-[9px] mb-2 opacity-50">
-                RESILIENCE_FIELD_INDEX
-              </p>
-              <p className="text-sm font-medium text-[var(--foreground)] leading-tight">
-                Node radius reflects theta and modeled impact.
+        {/* D3 Graph Canvas */}
+        <div className="relative flex-[7] min-w-0 border-r border-[var(--border)]">
+          {/* Legend */}
+          <div className="pointer-events-none absolute left-6 top-6 z-10">
+            <div className="border border-[var(--border)] bg-white p-4">
+              <p className="mono-label text-[9px] mb-2">Legend</p>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                Node size = impact weight.
                 <br />
-                Edge thickness shows dependency weight between nodes.
+                Edge thickness = dependency strength.
               </p>
-              <div className="mt-4 flex items-center justify-between gap-4">
-                <span className="mono-label text-[8px]">STABLE</span>
-                <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-[var(--healthy)] via-[var(--warn)] to-[var(--danger)] opacity-60" />
-                <span className="mono-label text-[8px]">CRITICAL</span>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="font-mono text-[9px] text-[var(--text-light)]">
+                  Stable
+                </span>
+                <div className="h-1 flex-1 bg-gradient-to-r from-[#999999] to-[#b91c1c]" />
+                <span className="font-mono text-[9px] text-[var(--text-light)]">
+                  Critical
+                </span>
               </div>
             </div>
           </div>
@@ -479,32 +457,29 @@ export default function NetworkPage({ params }: PageProps) {
           <svg
             ref={svgRef}
             className="block w-full h-full"
-            style={{ background: "transparent" }}
+            style={{ background: "#fafafa" }}
             role="img"
-            aria-label="3D Organizational Resilience Graph"
+            aria-label="Organizational Dependency Graph"
           >
             <title>
-              Interactive 3D graph showing organizational dependencies and their
-              relative risk levels.
+              Interactive graph showing organizational dependencies and risk
+              levels.
             </title>
           </svg>
 
-          {/* Layer toggles overlay */}
-          <div className="absolute bottom-8 left-8 flex flex-col gap-4 p-6 rounded-3xl border border-white/5 bg-black/40 backdrop-blur-xl">
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-4 bg-white/20" />
-              <span className="mono-label text-[10px]">LAYER_FILTER</span>
-            </div>
+          {/* Layer toggles */}
+          <div className="absolute bottom-6 left-6 border border-[var(--border)] bg-white p-4">
+            <p className="mono-label text-[9px] mb-3">Layers</p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {layers.map((layer) => (
                 <label
                   key={layer}
-                  className="group flex items-center gap-3 cursor-pointer select-none py-1 transition-opacity hover:opacity-100"
+                  className="flex items-center gap-2 cursor-pointer select-none text-xs"
                   style={{ opacity: hiddenLayers.has(layer) ? 0.3 : 1 }}
                 >
-                  <div className="relative flex h-4 w-4 items-center justify-center rounded border border-white/20 transition-all group-hover:border-[var(--accent-soft)]">
+                  <div className="relative flex h-3.5 w-3.5 items-center justify-center border border-[var(--border)]">
                     {!hiddenLayers.has(layer) && (
-                      <div className="h-2 w-2 rounded-[1px] bg-[var(--accent)]" />
+                      <div className="h-2 w-2 bg-[var(--text)]" />
                     )}
                     <input
                       type="checkbox"
@@ -513,72 +488,49 @@ export default function NetworkPage({ params }: PageProps) {
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                   </div>
-                  <div
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: layerColor(layer) }}
-                  />
-                  <span className="mono-label text-[9px] text-[var(--foreground)]">
-                    {layer.toUpperCase()}
-                  </span>
+                  <span className="text-[var(--text-secondary)]">{layer}</span>
                 </label>
               ))}
             </div>
           </div>
         </div>
 
-        {/* ================================================================
-            RIGHT: Analysis Panel (29.2%)
-            ================================================================ */}
-        <aside className="flex-[2.92] min-w-0 overflow-y-auto p-8 flex flex-col gap-8 border-l border-white/5 bg-black/20 backdrop-blur-md">
-          {/* ---- Network Health ---- */}
-          <section className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-1 w-6 bg-[var(--accent)]" />
-              <div className="mono-label text-[10px]">SYSTEM_INTEGRITY</div>
-            </div>
-            <div className="bracket-box rounded-[32px] border-white/5 bg-white/[0.02] p-8">
-              <div className="mono-label text-[9px] mb-2 opacity-40 text-center">
-                NETWORK_HEALTH_QUOTIENT
-              </div>
-              <div className="display-face text-6xl font-bold tracking-tighter text-center tabular-nums text-[var(--accent)]">
+        {/* Right Panel */}
+        <aside className="flex-[3] min-w-0 overflow-y-auto p-6 flex flex-col gap-6 bg-white">
+          {/* Network Health */}
+          <section>
+            <p className="mono-label text-[9px] mb-3">Network Health</p>
+            <div className="border border-[var(--border)] p-6 text-center">
+              <p className="display-face text-5xl font-normal tracking-tight tabular-nums">
                 {vulnerabilityReport
                   ? vulnerabilityReport.network_health.toFixed(2)
                   : "0.00"}
-                <span className="text-xl opacity-20 ml-1">_H</span>
-              </div>
+              </p>
             </div>
           </section>
 
-          {/* ---- Layer Health Bars ---- */}
+          {/* Layer Health */}
           {vulnerabilityReport && (
-            <section className="flex flex-col gap-6">
-              <div className="mono-label text-[10px] text-[var(--accent-soft)]">
-                LAYER_DIAGNOSTICS
-              </div>
-              <div className="grid gap-4">
+            <section>
+              <p className="mono-label text-[9px] mb-3">Layer Diagnostics</p>
+              <div className="divide-y divide-[var(--border)] border border-[var(--border)]">
                 {Object.entries(vulnerabilityReport.layer_analysis).map(
                   ([layer, info]) => (
-                    <div key={layer} className="flex flex-col gap-2">
-                      <div className="flex justify-between items-end px-1">
-                        <span
-                          className="mono-label text-[9px] font-bold"
-                          style={{ color: layerColor(layer) }}
-                        >
-                          {layer.toUpperCase()}
+                    <div
+                      key={layer}
+                      className="flex items-center justify-between px-4 py-2.5"
+                    >
+                      <span className="text-xs font-medium">{layer}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="h-1 w-16 bg-[var(--border)]">
+                          <div
+                            className="h-full bg-[var(--text)] transition-all duration-700"
+                            style={{ width: `${info.layer_health * 100}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-[10px] text-[var(--text-muted)] w-8 text-right">
+                          {Math.round(info.layer_health * 100)}%
                         </span>
-                        <span className="font-mono text-[10px] opacity-60">
-                          {Math.round(info.layer_health * 100)}%_INTEGRITY
-                        </span>
-                      </div>
-                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-1000"
-                          style={{
-                            width: `${info.layer_health * 100}%`,
-                            background: layerColor(layer),
-                            boxShadow: `0 0 8px ${layerColor(layer)}44`,
-                          }}
-                        />
                       </div>
                     </div>
                   ),
@@ -587,41 +539,32 @@ export default function NetworkPage({ params }: PageProps) {
             </section>
           )}
 
-          {/* ---- Top Risks ---- */}
+          {/* Top Risks */}
           {topRisks.length > 0 && (
-            <section className="flex flex-col gap-4">
-              <div className="mono-label text-[10px] text-[var(--danger)]">
-                CRITICAL_CHOKEPOINTS
-              </div>
-              <div className="flex flex-col gap-2">
+            <section>
+              <p className="mono-label text-[9px] mb-3">Critical Nodes</p>
+              <div className="divide-y divide-[var(--border)] border border-[var(--border)]">
                 {topRisks.map((r, i) => {
                   const node = graph.nodes.find((n) => n.id === r.node_id);
                   return (
                     <button
                       key={r.node_id}
-                      className={`group flex items-center justify-between rounded-xl border p-4 text-left transition-all ${
-                        selectedNodeId === r.node_id
-                          ? "border-[var(--danger)]/40 bg-[var(--danger)]/10"
-                          : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-[var(--bg-alt)] ${
+                        selectedNodeId === r.node_id ? "bg-[var(--bg-alt)]" : ""
                       }`}
                       onClick={() => setSelectedNode(r.node_id)}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="mono-label text-[9px] opacity-30">
+                        <span className="font-mono text-[9px] text-[var(--text-light)]">
                           {String(i + 1).padStart(2, "0")}
                         </span>
-                        <span className="text-sm font-bold tracking-tight text-[var(--foreground)] uppercase">
+                        <span className="text-sm font-medium">
                           {node?.name ?? r.node_id}
                         </span>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="mono-label text-[8px] text-[var(--danger)]">
-                          IMPACT_LOSS
-                        </span>
-                        <span className="font-mono text-xs font-bold text-[var(--danger)]">
-                          -{r.health_loss.toFixed(3)}
-                        </span>
-                      </div>
+                      <span className="font-mono text-xs text-[var(--danger)]">
+                        -{r.health_loss.toFixed(3)}
+                      </span>
                     </button>
                   );
                 })}
@@ -629,50 +572,49 @@ export default function NetworkPage({ params }: PageProps) {
             </section>
           )}
 
-          {/* ---- Summary stats ---- */}
+          {/* Stats */}
           {vulnerabilityReport && (
-            <section className="grid grid-cols-2 gap-4">
+            <section className="grid grid-cols-2 gap-3">
               <StatCard
-                label="BRIDGE_NODES"
+                label="Bridge Nodes"
                 value={vulnerabilityReport.bridge_nodes.length}
               />
               <StatCard
-                label="CLUSTERS_DETECTED"
+                label="Clusters"
                 value={vulnerabilityReport.clusters.length}
               />
               {highestSynergy && (
                 <div className="col-span-2">
                   <StatCard
-                    label="MAX_SYNERGY_COLLAPSE"
-                    value={`${highestSynergy.node_a.toUpperCase()} + ${highestSynergy.node_b.toUpperCase()}`}
-                    sub={`${highestSynergy.synergy_ratio.toFixed(1)}x AMPLIFICATION`}
-                    accent="var(--danger)"
+                    label="Max Synergy"
+                    value={`${highestSynergy.node_a} + ${highestSynergy.node_b}`}
+                    sub={`${highestSynergy.synergy_ratio.toFixed(1)}x amplification`}
                   />
                 </div>
               )}
             </section>
           )}
 
-          {/* ---- Actions ---- */}
-          <div className="flex flex-col gap-3 mt-auto pt-6 border-t border-white/5">
+          {/* Actions */}
+          <div className="flex flex-col gap-2 mt-auto pt-6 border-t border-[var(--border)]">
             <button
-              className="accent-button w-full py-5 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
+              className="w-full border border-[var(--text)] bg-[var(--text)] py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--text-secondary)] disabled:opacity-30"
               onClick={() => runAnalysis()}
               disabled={analyzing}
             >
-              {analyzing ? "CALCULATING..." : "RUN ANALYSIS"}
+              {analyzing ? "Analyzing..." : "Run Analysis"}
             </button>
 
             <button
-              className="ghost-button w-full py-5 rounded-full text-xs font-bold uppercase tracking-[0.2em]"
+              className="w-full border border-[var(--border)] py-3 text-sm font-medium transition-colors hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
               onClick={() => router.push(`/simulate/${sessionId}` as Route)}
             >
-              START SIMULATION →
+              Start Simulation
             </button>
 
             {selectedNodeId && (
               <button
-                className="w-full py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all bg-[var(--danger)] text-white hover:brightness-110 shadow-[0_0_24px_rgba(239,68,68,0.2)]"
+                className="w-full border border-[var(--danger)] py-3 text-sm font-medium text-[var(--danger)] transition-colors hover:bg-red-50"
                 onClick={() =>
                   runCascade({
                     target: selectedNodeId,
@@ -680,79 +622,54 @@ export default function NetworkPage({ params }: PageProps) {
                   })
                 }
               >
-                TERMINATE_NODE:{" "}
-                {selectedNode?.name?.toUpperCase() ??
-                  selectedNodeId.toUpperCase()}
+                Terminate: {selectedNode?.name ?? selectedNodeId}
               </button>
             )}
           </div>
 
-          {/* ---- Node Detail Panel ---- */}
+          {/* Node Detail Panel */}
           {selectedNode && (
-            <section className="control-surface-strong absolute bottom-8 right-8 z-20 w-[360px] overflow-hidden rounded-[32px] p-8 shadow-[0_32px_80px_rgba(0,0,0,0.5)] fade-rise">
-              <div className="mb-6 flex items-start justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <div className="mono-label text-[9px] text-[var(--accent-soft)]">
-                    NODE_PROPERTIES
-                  </div>
-                  <h3 className="display-face text-2xl font-bold tracking-tight text-[var(--foreground)] uppercase">
-                    {selectedNode.name}
-                  </h3>
+            <section className="absolute bottom-6 right-6 z-20 w-[340px] border border-[var(--border)] bg-white p-6 shadow-lg fade-rise">
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <p className="mono-label text-[9px] mb-1">Node</p>
+                  <h3 className="text-lg font-medium">{selectedNode.name}</h3>
                 </div>
                 <button
-                  className="mono-label !text-[9px] opacity-40 hover:opacity-100"
+                  className="text-xs text-[var(--text-light)] hover:text-[var(--text)]"
                   onClick={() => setSelectedNode(null)}
                 >
-                  [ CLOSE ]
+                  Close
                 </button>
               </div>
 
-              <div
-                className="inline-block text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-lg mb-6"
-                style={{
-                  background: layerColor(selectedNode.layer) + "15",
-                  color: layerColor(selectedNode.layer),
-                  border: `1px solid ${layerColor(selectedNode.layer)}33`,
-                }}
-              >
-                LAYER: {selectedNode.layer.toUpperCase()}
+              <div className="mb-4 inline-block border border-[var(--border)] px-2 py-0.5 text-[10px] font-medium">
+                {selectedNode.layer}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <NodeStat
-                  label="IMPACT_WEIGHT"
+                  label="Impact"
                   value={(
                     impactByNodeId.get(selectedNode.id) ?? selectedNode.theta
                   ).toFixed(3)}
-                  accentColor={impactColor(
-                    impactByNodeId.get(selectedNode.id) ?? selectedNode.theta,
-                    selectedNode.phi,
-                  )}
                 />
                 <NodeStat
-                  label="HEALTH_STATE"
+                  label="Health"
                   value={selectedNode.h.toFixed(3)}
-                  accentColor={
-                    selectedNode.phi ? "var(--danger)" : "var(--healthy)"
-                  }
+                  alert={selectedNode.phi}
                 />
                 <NodeStat
-                  label="LOCAL_THETA"
+                  label="Theta"
                   value={selectedNode.theta.toFixed(3)}
                 />
                 <NodeStat
-                  label="RECOVERY_COST"
+                  label="Recovery"
                   value={`$${(selectedNode.r / 1000).toFixed(0)}K`}
                 />
-                <div className="col-span-2 pt-2">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-px flex-1 bg-white/5" />
-                    <span className="mono-label text-[8px] opacity-30">
-                      CONNECTIONS
-                    </span>
-                    <div className="h-px flex-1 bg-white/5" />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
+                <div className="col-span-2 pt-2 border-t border-[var(--border)]">
+                  <p className="mono-label text-[8px] mb-2">Connections</p>
+                  <div className="flex flex-wrap gap-1">
                     {selectedEdges.map((e, i) => {
                       const otherId =
                         e.from === selectedNode.id ? e.to : e.from;
@@ -760,13 +677,12 @@ export default function NetworkPage({ params }: PageProps) {
                         (n) => n.id === otherId,
                       );
                       return (
-                        <div
+                        <span
                           key={i}
-                          className="rounded-md border border-white/5 bg-white/5 px-2 py-1 font-mono text-[9px] opacity-60"
+                          className="border border-[var(--border)] px-2 py-0.5 font-mono text-[9px]"
                         >
-                          {otherNode?.name?.toUpperCase() ??
-                            otherId.toUpperCase()}
-                        </div>
+                          {otherNode?.name ?? otherId}
+                        </span>
                       );
                     })}
                   </div>
@@ -788,23 +704,20 @@ function StatCard({
   label,
   value,
   sub,
-  accent,
 }: {
   label: string;
   value: string | number;
   sub?: string;
-  accent?: string;
 }) {
   return (
-    <div className="bracket-box flex flex-col gap-2 rounded-2xl border-white/5 bg-white/[0.02] p-4">
-      <p className="mono-label !text-[8px] opacity-40">{label}</p>
-      <p
-        className="text-sm font-bold tracking-tight uppercase"
-        style={{ color: accent }}
-      >
-        {value}
-      </p>
-      {sub && <p className="mono-label !text-[8px] opacity-60">{sub}</p>}
+    <div className="border border-[var(--border)] p-3">
+      <p className="mono-label text-[8px] mb-1">{label}</p>
+      <p className="text-sm font-medium">{value}</p>
+      {sub && (
+        <p className="font-mono text-[9px] text-[var(--text-muted)] mt-1">
+          {sub}
+        </p>
+      )}
     </div>
   );
 }
@@ -813,21 +726,17 @@ function NodeStat({
   label,
   value,
   alert,
-  accentColor,
 }: {
   label: string;
   value: string;
   alert?: boolean;
-  accentColor?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="mono-label !text-[8px] opacity-40">{label}</p>
+    <div>
+      <p className="mono-label text-[8px] mb-1">{label}</p>
       <p
-        className="font-mono text-sm font-bold tabular-nums"
-        style={{
-          color: alert ? "var(--danger)" : (accentColor ?? "var(--foreground)"),
-        }}
+        className="font-mono text-sm font-medium tabular-nums"
+        style={{ color: alert ? "var(--danger)" : undefined }}
       >
         {value}
       </p>

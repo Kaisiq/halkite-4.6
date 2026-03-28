@@ -106,32 +106,25 @@ export function RiskDocumentsPanel({
   };
 
   return (
-    <section
-      className="mx-6 mb-6 rounded-2xl border p-6"
-      style={{
-        background: "var(--panel)",
-        borderColor: "rgba(156, 176, 197, 0.10)",
-        backdropFilter: "blur(16px)",
-      }}
-    >
+    <section className="mx-6 mb-6 border border-[var(--border)] bg-white p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <p
-            className="text-xs font-semibold uppercase tracking-[0.24em]"
-            style={{ color: "var(--accent)" }}
+            className="mono-label text-xs font-semibold uppercase tracking-[0.24em]"
+            style={{ color: "var(--text-muted)" }}
           >
             Team Risk Dossiers
           </p>
           <h2
             className="mt-2 text-2xl font-semibold"
-            style={{ color: "var(--foreground)" }}
+            style={{ color: "var(--text)" }}
           >
             Scenario documents for what can fail, where it lands, and how to
             treat it
           </h2>
           <p
             className="mt-2 max-w-2xl text-sm leading-6"
-            style={{ color: "var(--muted)" }}
+            style={{ color: "var(--text-muted)" }}
           >
             These dossiers reorganize the explored worst-case scenarios into
             team-focused review packs so risk, continuity, and operational
@@ -144,11 +137,9 @@ export function RiskDocumentsPanel({
           {STANDARDS.map((standard) => (
             <span
               key={standard}
-              className="rounded-full border px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+              className="border border-[var(--border)] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
               style={{
-                borderColor: "rgba(110, 231, 200, 0.18)",
-                background: "rgba(110, 231, 200, 0.08)",
-                color: "var(--accent)",
+                color: "var(--text-muted)",
               }}
             >
               {standard}
@@ -159,11 +150,9 @@ export function RiskDocumentsPanel({
 
       {documents.length === 0 ? (
         <div
-          className="mt-6 rounded-2xl border p-6 text-sm leading-6"
+          className="mt-6 border border-[var(--border)] bg-[var(--bg-alt)] p-6 text-sm leading-6"
           style={{
-            borderColor: "rgba(156, 176, 197, 0.10)",
-            background: "rgba(255, 255, 255, 0.02)",
-            color: "var(--muted)",
+            color: "var(--text-muted)",
           }}
         >
           Run exploration first. The dossiers are generated from the
@@ -180,36 +169,35 @@ export function RiskDocumentsPanel({
                   key={doc.id}
                   type="button"
                   onClick={() => setActiveDocumentId(doc.id)}
-                  className="w-full rounded-2xl border p-4 text-left transition-all"
+                  className="w-full border p-4 text-left transition-all"
                   style={{
                     borderColor: active
-                      ? "rgba(110, 231, 200, 0.28)"
-                      : "rgba(156, 176, 197, 0.10)",
+                      ? "var(--text)"
+                      : "var(--border)",
                     background: active
-                      ? "rgba(110, 231, 200, 0.08)"
-                      : "rgba(156, 176, 197, 0.03)",
+                      ? "var(--bg-alt)"
+                      : "white",
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p
                         className="text-sm font-semibold"
-                        style={{ color: "var(--foreground)" }}
+                        style={{ color: "var(--text)" }}
                       >
                         {doc.teamName}
                       </p>
                       <p
                         className="mt-1 text-[0.72rem] uppercase tracking-[0.18em]"
-                        style={{ color: "var(--muted)" }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {doc.primaryLayer}
                       </p>
                     </div>
                     <span
-                      className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+                      className="border border-[var(--border)] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                       style={{
-                        background: "var(--danger) / 0.12",
-                        color: "var(--danger)",
+                        color: "var(--text)",
                       }}
                     >
                       {doc.riskScore.toFixed(2)}
@@ -242,30 +230,24 @@ export function RiskDocumentsPanel({
 
           {activeDocument && (
             <div className="space-y-4">
-              <div
-                className="rounded-2xl border p-5"
-                style={{
-                  borderColor: "rgba(156, 176, 197, 0.10)",
-                  background: "rgba(255, 255, 255, 0.025)",
-                }}
-              >
+              <div className="border border-[var(--border)] bg-white p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-3xl">
                     <p
-                      className="text-xs font-semibold uppercase tracking-[0.22em]"
-                      style={{ color: "var(--muted)" }}
+                      className="mono-label text-xs font-semibold uppercase tracking-[0.22em]"
+                      style={{ color: "var(--text-muted)" }}
                     >
                       Extensive scenario document
                     </p>
                     <h3
                       className="mt-2 text-2xl font-semibold"
-                      style={{ color: "var(--foreground)" }}
+                      style={{ color: "var(--text)" }}
                     >
                       {activeDocument.teamName} risk dossier
                     </h3>
                     <p
                       className="mt-2 text-sm leading-6"
-                      style={{ color: "var(--muted)" }}
+                      style={{ color: "var(--text-muted)" }}
                     >
                       {activeDocument.executiveSummary}
                     </p>
@@ -275,10 +257,9 @@ export function RiskDocumentsPanel({
                     <button
                       type="button"
                       onClick={handleCopy}
-                      className="rounded-lg border px-4 py-2 text-sm font-semibold transition-all hover:bg-white/[0.04]"
+                      className="border border-[var(--border)] px-4 py-2 text-sm font-semibold transition-all hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
                       style={{
-                        borderColor: "rgba(156, 176, 197, 0.14)",
-                        color: "var(--foreground)",
+                        color: "var(--text)",
                       }}
                     >
                       Copy Markdown
@@ -286,11 +267,7 @@ export function RiskDocumentsPanel({
                     <button
                       type="button"
                       onClick={handleDownload}
-                      className="rounded-lg border px-4 py-2 text-sm font-semibold transition-all hover:bg-[rgba(110,231,200,0.10)]"
-                      style={{
-                        borderColor: "rgba(110, 231, 200, 0.30)",
-                        color: "var(--accent)",
-                      }}
+                      className="border border-[var(--text)] bg-[var(--text)] px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-[var(--text-secondary)]"
                     >
                       Download .md
                     </button>
@@ -320,7 +297,7 @@ export function RiskDocumentsPanel({
                 {copyState && (
                   <p
                     className="mt-3 text-xs"
-                    style={{ color: "var(--accent)" }}
+                    style={{ color: "var(--text-muted)" }}
                   >
                     {copyState}
                   </p>
@@ -330,7 +307,7 @@ export function RiskDocumentsPanel({
               <DocumentSection title="Impact Statement">
                 <p
                   className="text-sm leading-7"
-                  style={{ color: "var(--foreground)" }}
+                  style={{ color: "var(--text)" }}
                 >
                   {activeDocument.impactStatement}
                 </p>
@@ -341,27 +318,23 @@ export function RiskDocumentsPanel({
                   {activeDocument.exposedNodes.slice(0, 9).map((node) => (
                     <div
                       key={node.id}
-                      className="rounded-xl border px-4 py-3"
-                      style={{
-                        borderColor: "rgba(156, 176, 197, 0.08)",
-                        background: "rgba(156, 176, 197, 0.04)",
-                      }}
+                      className="border border-[var(--border)] bg-[var(--bg-alt)] px-4 py-3"
                     >
                       <p
                         className="text-sm font-semibold"
-                        style={{ color: "var(--foreground)" }}
+                        style={{ color: "var(--text)" }}
                       >
                         {node.name}
                       </p>
                       <p
                         className="mt-1 text-xs uppercase tracking-[0.18em]"
-                        style={{ color: "var(--muted)" }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {node.layer}
                       </p>
                       <p
                         className="mt-2 text-xs leading-6"
-                        style={{ color: "var(--muted)" }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {describeNodeExposure(node)}
                       </p>
@@ -375,39 +348,32 @@ export function RiskDocumentsPanel({
                   {activeDocument.scenarioEntries.map((entry) => (
                     <div
                       key={`${activeDocument.id}-${entry.scenario.rank}`}
-                      className="rounded-2xl border p-4"
-                      style={{
-                        borderColor: "rgba(156, 176, 197, 0.08)",
-                        background: "rgba(255, 255, 255, 0.02)",
-                      }}
+                      className="border border-[var(--border)] bg-white p-4"
                     >
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="max-w-3xl">
                           <div className="flex flex-wrap items-center gap-2">
                             <span
-                              className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+                              className="border border-[var(--border)] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                               style={{
-                                background: "var(--warn) / 0.12",
-                                color: "var(--warn)",
+                                color: "var(--text-muted)",
                               }}
                             >
                               Scenario {entry.scenario.rank}
                             </span>
                             <span
-                              className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+                              className="border border-[var(--border)] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                               style={{
-                                background: "var(--danger) / 0.12",
-                                color: "var(--danger)",
+                                color: "var(--text)",
                               }}
                             >
                               {entry.scenario.severity_label}
                             </span>
                             {entry.directlyTargeted && (
                               <span
-                                className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+                                className="border border-[var(--border)] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                                 style={{
-                                  background: "var(--accent) / 0.12",
-                                  color: "var(--accent)",
+                                  color: "var(--text-muted)",
                                 }}
                               >
                                 Directly targeted
@@ -417,19 +383,19 @@ export function RiskDocumentsPanel({
 
                           <h4
                             className="mt-3 text-lg font-semibold"
-                            style={{ color: "var(--foreground)" }}
+                            style={{ color: "var(--text)" }}
                           >
                             {entry.scenario.title}
                           </h4>
                           <p
                             className="mt-2 text-sm leading-7"
-                            style={{ color: "var(--muted)" }}
+                            style={{ color: "var(--text-muted)" }}
                           >
                             {entry.businessEffect}
                           </p>
                           <p
                             className="mt-2 text-sm leading-7"
-                            style={{ color: "var(--foreground)" }}
+                            style={{ color: "var(--text)" }}
                           >
                             Trigger chain: {entry.triggerSummary}
                           </p>
@@ -462,10 +428,9 @@ export function RiskDocumentsPanel({
                           {entry.affectedNodes.map((node) => (
                             <span
                               key={node.id}
-                              className="rounded-full border px-3 py-1 text-xs"
+                              className="border border-[var(--border)] px-3 py-1 text-xs"
                               style={{
-                                borderColor: "rgba(156, 176, 197, 0.12)",
-                                color: "var(--foreground)",
+                                color: "var(--text)",
                               }}
                             >
                               {node.name}
@@ -483,27 +448,23 @@ export function RiskDocumentsPanel({
                   {activeDocument.mitigationTracks.map((track) => (
                     <div
                       key={`${track.horizon}-${track.title}`}
-                      className="rounded-xl border px-4 py-3"
-                      style={{
-                        borderColor: "rgba(110, 231, 200, 0.12)",
-                        background: "rgba(110, 231, 200, 0.05)",
-                      }}
+                      className="border border-[var(--border)] bg-[var(--bg-alt)] px-4 py-3"
                     >
                       <p
-                        className="text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
-                        style={{ color: "var(--accent)" }}
+                        className="mono-label text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {track.horizon}
                       </p>
                       <p
                         className="mt-2 text-sm font-semibold"
-                        style={{ color: "var(--foreground)" }}
+                        style={{ color: "var(--text)" }}
                       >
                         {track.title}
                       </p>
                       <p
                         className="mt-2 text-sm leading-7"
-                        style={{ color: "var(--muted)" }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {track.detail}
                       </p>
@@ -512,13 +473,10 @@ export function RiskDocumentsPanel({
                 </div>
 
                 {activeDocument.relevantRecommendations.length > 0 && (
-                  <div
-                    className="mt-4 rounded-xl border p-4"
-                    style={{ borderColor: "rgba(156, 176, 197, 0.08)" }}
-                  >
+                  <div className="mt-4 border border-[var(--border)] p-4">
                     <p
-                      className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
-                      style={{ color: "var(--muted)" }}
+                      className="mono-label text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
+                      style={{ color: "var(--text-muted)" }}
                     >
                       Linked deterministic recommendations
                     </p>
@@ -529,13 +487,13 @@ export function RiskDocumentsPanel({
                         >
                           <p
                             className="text-sm font-semibold"
-                            style={{ color: "var(--foreground)" }}
+                            style={{ color: "var(--text)" }}
                           >
                             P{rec.priority} {rec.action}
                           </p>
                           <p
                             className="mt-1 text-sm leading-7"
-                            style={{ color: "var(--muted)" }}
+                            style={{ color: "var(--text-muted)" }}
                           >
                             {rec.reason} Expected resilience gain:{" "}
                             {rec.estimated_resilience_gain}. Scenarios
@@ -555,7 +513,7 @@ export function RiskDocumentsPanel({
                       <li
                         key={signal}
                         className="text-sm leading-7"
-                        style={{ color: "var(--foreground)" }}
+                        style={{ color: "var(--text)" }}
                       >
                         {signal}
                       </li>
@@ -569,7 +527,7 @@ export function RiskDocumentsPanel({
                       <li
                         key={note}
                         className="text-sm leading-7"
-                        style={{ color: "var(--foreground)" }}
+                        style={{ color: "var(--text)" }}
                       >
                         {note}
                       </li>
@@ -1184,9 +1142,9 @@ function formatCompactNumber(value: number): string {
 }
 
 function healthTone(health: number): string {
-  if (health <= 0.3) return "var(--danger)";
-  if (health <= 0.7) return "var(--warn)";
-  return "var(--accent)";
+  if (health <= 0.3) return "var(--text)";
+  if (health <= 0.7) return "var(--text-secondary)";
+  return "var(--text-muted)";
 }
 
 function DocumentSection({
@@ -1197,16 +1155,10 @@ function DocumentSection({
   children: ReactNode;
 }) {
   return (
-    <section
-      className="rounded-2xl border p-5"
-      style={{
-        borderColor: "rgba(156, 176, 197, 0.10)",
-        background: "rgba(255, 255, 255, 0.025)",
-      }}
-    >
+    <section className="border border-[var(--border)] bg-white p-5">
       <p
-        className="text-xs font-semibold uppercase tracking-[0.22em]"
-        style={{ color: "var(--muted)" }}
+        className="mono-label text-xs font-semibold uppercase tracking-[0.22em]"
+        style={{ color: "var(--text-muted)" }}
       >
         {title}
       </p>
@@ -1225,22 +1177,16 @@ function MetricPill({
   tone?: string;
 }) {
   return (
-    <div
-      className="rounded-xl border px-3 py-2"
-      style={{
-        borderColor: "rgba(156, 176, 197, 0.10)",
-        background: "rgba(156, 176, 197, 0.05)",
-      }}
-    >
+    <div className="border border-[var(--border)] bg-[var(--bg-alt)] px-3 py-2">
       <p
-        className="text-[0.62rem] font-semibold uppercase tracking-[0.18em]"
-        style={{ color: "var(--muted)" }}
+        className="mono-label text-[0.62rem] font-semibold uppercase tracking-[0.18em]"
+        style={{ color: "var(--text-muted)" }}
       >
         {label}
       </p>
       <p
         className="mt-1 text-sm font-semibold"
-        style={{ color: tone ?? "var(--foreground)" }}
+        style={{ color: tone ?? "var(--text)" }}
       >
         {value}
       </p>
