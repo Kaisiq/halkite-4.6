@@ -122,3 +122,8 @@ docker compose up --build -d
 ```
 
 The frontend is served on port `3000` and proxies backend requests to the API container internally.
+
+## License
+
+This repository is source-available, not open source. See [LICENSE](LICENSE).
+No permission is granted to use, copy, modify, or distribute this software.
