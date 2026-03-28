@@ -1,0 +1,12 @@
+{
+  "name": "@halkite/api",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "python -m fastapi dev src/nexus_api/main.py",
+    "build": "python -m compileall src",
+    "lint": "python -m ruff check src tests",
+    "typecheck": "python -m mypy src tests",
+    "test": "python -m pytest"
+  }
+}

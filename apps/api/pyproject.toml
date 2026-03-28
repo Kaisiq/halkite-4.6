@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-api"
+version = "0.1.0"
+description = "FastAPI backend for the NEXUS network survival analyzer."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "anthropic>=0.50.0,<1.0.0",
+  "fastapi[standard]>=0.115.0,<1.0.0",
+  "networkx>=3.4.0,<4.0.0",
+  "numpy>=2.2.0,<3.0.0",
+  "openpyxl>=3.1.0,<4.0.0",
+  "Pillow>=11.0.0,<12.0.0",
+  "PyPDF2>=3.0.0,<4.0.0",
+  "python-docx>=1.1.0,<2.0.0",
+  "python-multipart>=0.0.20,<1.0.0",
+  "scipy>=1.15.0,<2.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28.0,<1.0.0",
+  "mypy>=1.15.0,<2.0.0",
+  "pytest>=8.3.0,<9.0.0",
+  "pytest-asyncio>=0.26.0,<1.0.0",
+  "ruff>=0.11.0,<1.0.0"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nexus_api*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+strict = true
+mypy_path = ["src"]
+

@@ -1,0 +1,7 @@
+{
+  "include": ["apps/api/src", "apps/api/tests", "apps/web"],
+  "exclude": ["**/node_modules", "**/.next", "**/__pycache__"],
+  "venvPath": ".",
+  "venv": ".venv"
+}
+
