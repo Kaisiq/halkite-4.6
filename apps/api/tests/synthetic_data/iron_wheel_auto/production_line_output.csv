@@ -1,0 +1,84 @@
+date,shift,line_id,product_model,units_planned,units_produced,defect_count,downtime_mins,downtime_reason,supervisor,notes
+2025-11-01,DAY,L1,Sedan_X,120,118,3,0,,Martinez,
+2025-11-01,NIGHT,L1,Sedan_X,120,115,5,22,Press_A hydraulic fault,Kowalski,Press_A acting up again - delayed start by 20 min
+11/01/2025,DAY,L2,SUV_K,80,79,2,0,,Chen,
+2025-11-01,NIGHT,L2,SUV_K,80,74,4,35,waiting on steel delivery,Kowalski,GlobalSteel truck late AGAIN
+2025-11-02,1,L1,Sedan_X,120,112,6,45,Press_A oil leak,Martinez,Press_A oil leak AGAIN - maintenance called at 0930
+2025-11-02,2,L1,Sedan_X,120,101,8,67,Press_A oil leak continued,Kowalski,Press_A still leaking after shift 1 fix attempt
+11/02/2025,1,L2,SUV_K,80,78,1,0,,Chen,
+2025-11-02,2,L2,SUV_K,80,80,2,0,,Reeves,
+2025-11-03,DAY,L1,Truck_M,100,97,4,15,conveyor jam,Martinez,minor jam cleared quickly
+2025-11-03,NIGHT,L1,Truck_M,100,88,7,52,Press_A vibration alarm,Kowalski,Press_A vibrating bad - had to slow feed rate 40%
+2025/11/03,DAY,L2,Coupe_Z,60,58,2,0,,Chen,
+2025-11-03,NIGHT,L2,Coupe_Z,60,55,3,18,,Reeves,power dip from sub generator
+2025-11-04,DAY,L1,Sedan_X,120,120,1,0,,Martinez,rare good day
+2025-11-04,NIGHT,L1,Sedan_X,120,117,4,12,weld robot B2 calibration off,Kowalski,
+11/04/2025,DAY,L2,SUV_K,80,76,3,0,,Chen,
+2025-11-04,3,L2,SUV_K,80,71,5,28,material shortage,Reeves,FlexiCorp rubber seals batch rejected by QA
+2025-11-05,DAY,L1,Truck_M,100,85,9,78,Press_A shutdown,Martinez,Press_A emergency shutdown - bearing temp 140C!!!
+2025-11-05,DAY,L1,Truck_M,100,85,9,78,Press_A shutdown,Martinez,Press_A emergency shutdown - bearing temp 140C!!!
+2025-11-05,NIGHT,L1,Truck_M,100,62,12,112,Press_A down + weld backlog,Kowalski,cascading delay from day shift Press_A failure. weld stations B1 B2 both idle 45 min waiting for parts
+11/05/25,DAY,L2,Coupe_Z,60,59,1,0,,Chen,
+2025-11-05,NIGHT,L2,Coupe_Z,60,54,4,25,paint booth humidity alarm,Reeves,
+2025-11-06,1,L1,Sedan_X,120,90,11,95,Press_A still down,Martinez,maintenance says Press_A needs new bearing - part on order. running backup press at 60% capacity
+2025-11-06,2,L1,Sedan_X,120,78,14,130,Press_A down / backup press overheating,Kowalski,backup press cant handle full load. weld B1 and B2 starved for blanks
+2025-11-06,DAY,L2,SUV_K,80,77,2,0,,Chen,
+2025-11-06,NIGHT,L2,SUV_K,80,73,3,22,,Reeves,
+2025-11-07,DAY,L1,Truck_M,100,68,15,140,Press_A down day 3,Martinez,Gary came down to floor. NOT happy. said get the damn press fixed
+2025-11-07,NIGHT,L1,Truck_M,100,55,18,155,Press_A down / quality collapse,Kowalski,backup press blanks out of spec causing downstream weld rejects. 18 defects is a record
+2025-11-07,1,L2,Coupe_Z,60,57,2,8,compressor drop,Chen,
+11/7/2025,NIGHT,L2,Coupe_Z,60,52,5,30,ECU install failures,Reeves,TechAuto ECU batch 2411-C bad connector pins. 5 units pulled
+2025-11-08,DAY,L1,Sedan_X,120,105,7,55,Press_A limping,Martinez,Press_A back online but running at 70%. bearing replaced but alignment suspect
+2025-11-08,NIGHT,L1,Sedan_X,120,110,5,32,Press_A alignment,Kowalski,Press_A drifting again after 4 hrs
+2025-11-08,DAY,L2,SUV_K,80,80,1,0,,Chen,good day
+2025-11-08,2,L2,SUV_K,80,75,4,18,rubber seal rework,Reeves,more FlexiCorp seals failing fitment check
+2025-11-09,DAY,L1,Truck_M,100,92,6,38,Press_A recalibration,Martinez,
+2025-11-09,NIGHT,L1,Truck_M,100,89,5,28,weld robot B1 tip wear,Kowalski,B1 tips should have been changed 2 days ago
+2025-11-09,1,L2,Coupe_Z,60,58,3,10,,Chen,
+2025-11-09,NIGHT,L2,Coupe_Z,60,49,7,42,ECU failures + rework,Reeves,another batch of TechAuto ECUs failing. Tom is livid
+Nov 10 2025,DAY,L1,Sedan_X,120,114,4,18,Press_A vibration,Martinez,vibration creeping up again
+2025-11-10,NIGHT,L1,Sedan_X,120,108,6,35,Press_A + conveyor,Kowalski,Press_A caused conveyor jam when blank ejected sideways
+2025-11-10,DAY,L2,SUV_K,80,76,3,12,steel quality issue,Chen,GlobalSteel batch GS-2411-08 thickness variance. had to sort manually
+2025-11-10,NIGHT,L2,SUV_K,80,72,5,25,steel sorting + line slow,Reeves,still sorting GlobalSteel sheets from today
+2025-11-11,DAY,L1,Truck_M,100,95,4,20,Press_A minor,Martinez,
+2025-11-11,NIGHT,L1,Truck_M,100,91,5,30,,Kowalski,weld B2 acting funny after Press_A hiccup
+2025-11-11,DAY,L2,Coupe_Z,60,56,4,15,ECU rework,Chen,
+2025-11-11,2,L2,Coupe_Z,60,50,8,48,ECU + tire delay,Reeves,TireDirect delivery 3 hrs late. had to shuffle line schedule
+2025-11-12,DAY,L1,Sedan_X,120,88,10,85,Press_A hydraulic failure,Martinez,Press_A hydraulic line burst. oil everywhere. 2 hr cleanup
+2025-11-12,DAY,L1,Sedan_X,120,88,10,85,Press_A hydraulic failure,Martinez,Press_A hydraulic line burst. oil everywhere. 2 hr cleanup
+2025-11-12,NIGHT,L1,Sedan_X,120,70,16,120,Press_A down + cascade,Kowalski,no blanks flowing. weld B1 B2 ASM L1 all idle. sent 8 people home early
+2025-11-12,1,L2,SUV_K,80,78,2,5,,Chen,
+2025-11-12,NIGHT,L2,SUV_K,80,69,6,38,MetalWorks chassis short,Reeves,MetalWorks only shipped 60% of order. had to pull from safety stock
+2025-11-13,DAY,L1,Truck_M,100,72,13,105,Press_A down day 2,Martinez,running everything through backup press. quality is garbage
+2025-11-13,NIGHT,L1,Truck_M,100,65,15,125,Press_A down + QA hold,Kowalski,QA put hold on all Truck_M from today. weld quality unacceptable
+2025-11-13,DAY,L2,Coupe_Z,60,57,3,8,,Chen,
+2025-11-13,NIGHT,L2,Coupe_Z,60,48,9,55,ECU batch reject,Reeves,ENTIRE TechAuto ECU batch 2411-F rejected. line stopped 55 min waiting for known-good units
+2025-11-14,DAY,L1,Sedan_X,120,110,5,30,Press_A partial,Martinez,Press_A back at 75%. new hydraulic lines but old pump
+2025-11-14,NIGHT,L1,Sedan_X,120,106,6,35,Press_A + paint,Kowalski,Press_A blanks slightly warped causing paint adhesion issues downstream
+11/14/2025,DAY,L2,SUV_K,80,74,4,20,chassis shortage,Chen,MetalWorks still behind on deliveries
+2025-11-14,NIGHT,L2,SUV_K,80,70,5,30,chassis + rubber,Reeves,double hit - MetalWorks short AND FlexiCorp seals failing again
+2025-11-15,DAY,L1,Truck_M,100,93,5,25,Press_A vibration,Martinez,vibration sensor reads 8.2 mm/s. threshold is 6.0. maintenance says "within tolerance" lol
+2025-11-15,NIGHT,L1,Truck_M,100,87,7,42,Press_A + weld,Kowalski,Press_A vibration causing inconsistent blank thickness. weld params dont match
+2025-11-15,1,L2,Coupe_Z,60,55,4,18,,Chen,TireDirect late again
+2025-11-15,NIGHT,L2,Coupe_Z,60,53,5,22,tire delay,Reeves,TireDirect 2nd late delivery this week
+2025-11-16,DAY,L1,Sedan_X,120,82,12,98,Press_A major fault,Martinez,Press_A threw code P-4401. called OEM hotline. they say need full inspection
+2025-11-16,NIGHT,L1,Sedan_X,120,60,19,145,Press_A offline + cascade,Kowalski,worst night this quarter. Press_A offline. backup press overheated and tripped at 2AM. entire L1 dead for 2.5 hrs
+2025-11-16,DAY,L2,SUV_K,80,77,2,5,,Chen,
+2025-11-16,2,L2,SUV_K,80,73,4,20,,Reeves,
+2025-11-17,DAY,L1,Truck_M,100,70,14,110,Press_A OEM inspection,Martinez,OEM tech on site. says main ram cylinder scored. needs replacement. 5-7 day lead time for part
+2025-11-17,NIGHT,L1,Truck_M,100,58,17,135,backup press only,Kowalski,running 100% on backup press. its not rated for this duty cycle. expecting it to fail any day
+11/17/25,DAY,L2,Coupe_Z,60,56,3,10,,Chen,
+2025-11-17,NIGHT,L2,Coupe_Z,60,44,11,65,ECU + assembly chaos,Reeves,TechAuto ECU connector redesign doesnt fit old harness. 11 units need hand rework
+2025-11-18,DAY,L1,Sedan_X,120,75,11,100,backup press failing,Martinez,backup press making grinding noise. we are so screwed
+2025-11-18,NIGHT,L1,Sedan_X,120,45,22,165,both presses down,Kowalski,backup press died at 11PM. no stamping capability. L1 completely down. Gary called emergency meeting for tomorrow
+2025-11-18,DAY,L2,SUV_K,80,71,5,28,GlobalSteel late,Chen,GlobalSteel delivery 6 hrs late. no explanation. Maria fuming
+2025-11-18,NIGHT,L2,SUV_K,80,65,7,40,steel short + chassis,Reeves,running out of steel AND MetalWorks chassis. double whammy
+Nov 19 2025,DAY,L1,Truck_M,100,0,0,480,FULL LINE DOWN,Martinez,NO PRODUCTION. Both presses down. OEM part still 3 days out. Gary authorized weekend overtime for when part arrives
+2025-11-19,NIGHT,L1,Truck_M,100,0,0,480,FULL LINE DOWN,Kowalski,L1 dark. maintenance doing preventive work on weld stations while we wait
+2025-11-19,DAY,L2,Coupe_Z,60,54,4,15,ECU rework,Chen,
+2025-11-19,NIGHT,L2,Coupe_Z,60,46,8,50,ECU + tire,Reeves,TireDirect shipment had wrong spec tires mixed in. had to inspect every unit
+2025-11-20,DAY,L1,Sedan_X,120,0,0,480,FULL LINE DOWN,Martinez,day 2 no L1 production. customers calling. Gary on phone with OEM all morning
+2025-11-20,NIGHT,L1,Sedan_X,120,0,0,480,FULL LINE DOWN,Kowalski,
+2025-11-20,1,L2,SUV_K,80,76,3,10,,Chen,
+2025-11-20,NIGHT,L2,SUV_K,80,68,6,35,MetalWorks short,Reeves,MetalWorks says they have capacity issues. might not normalize until December
+2025-11-20,NIGHT,L2,SUV_K,80,68,6,35,MetalWorks short,Reeves,MetalWorks says they have capacity issues. might not normalize until December

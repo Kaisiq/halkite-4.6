@@ -1,0 +1,200 @@
+IRON WHEEL AUTOMOTIVE — EMPLOYEE INTERVIEW TRANSCRIPTS
+Conducted: February 18–20, 2026
+Interviewer: Tomás Brandt, Operational Risk Analyst
+
+================================================================================
+INTERVIEW #1 — Sandra Kovacs, Shift Supervisor, Assembly Line C (16 years tenure)
+February 18, 2026 | 7:00 AM | Break Room, Building 4
+================================================================================
+
+TB: Sandra, you've been here a long time. What's the biggest change you've seen?
+
+SK: Headcount. When I started we had 14 people on Line C. Now we're at eight doing
+the same volume. Management calls it "lean manufacturing." I call it running
+people into the ground. We've had more repetitive strain injuries in the last two
+years than the previous ten combined. My guys are tired.
+
+TB: How does that affect output?
+
+SK: Defect rate on Line C was 1.2% in 2023. Last quarter it hit 3.8%. That's not a
+mystery — it's fatigue. When you're bolting the same subframe 400 times a shift
+and you've been doing overtime for six straight weeks, you miss things. QA catches
+most of it, but not all. We had a batch of 60 axle housings ship to the Puebla
+plant in January with misaligned welds. That was a $95,000 recall and rework.
+
+TB: Is overtime voluntary?
+
+SK: Technically yes. Practically no. If you say no too many times, you stop getting
+Saturday shifts, which is where the real money is. People have mortgages. So
+everybody says yes and everybody's exhausted. I've raised this in every monthly
+review since September. I have it in writing. Nothing changes because the output
+numbers look fine on paper.
+
+================================================================================
+INTERVIEW #2 — Devonte Harris, CNC Machinist, Precision Shop (5 years tenure)
+February 18, 2026 | 1:30 PM | Precision Shop Floor
+================================================================================
+
+TB: Devonte, tell me about the equipment you work with.
+
+DH: I run two Okuma LB3000s and a Mazak Integrex. The Okuma machines are workhorses,
+no complaints. The Mazak is the problem child. It's a 2011 model, been refurbed
+twice, and the spindle has about 600 hours left before it needs another rebuild.
+I've been logging the vibration data myself because the monitoring system doesn't
+flag it until it's way too late.
+
+TB: You're tracking vibration manually?
+
+DH: Yeah, with a handheld accelerometer and a notebook. Every morning before first
+cut. The plant's condition monitoring system — VibeSense, they call it — only
+checks once a week during the Sunday maintenance window. A spindle can go from
+fine to catastrophic in three days. I've seen it happen twice.
+
+TB: What happened those times?
+
+DH: First time was the Mazak in 2024. Spindle bearing seized mid-run, threw a
+workpiece. Nobody got hurt, thank God, but it was a $40,000 repair and Line A was
+down for nine days waiting on parts we were supposed to machine. Second time was
+an Okuma at the Eastside facility — same story, different machine. They lost a
+whole production run of transmission cases.
+
+TB: Has anyone proposed upgrading the monitoring?
+
+DH: I wrote a proposal last March. Real-time vibration monitoring, continuous feed,
+alerts on my phone. Total cost was about $18,000 for all three machines. Got
+rejected because it "wasn't in the capital budget." Meanwhile we've spent over
+$120,000 on emergency repairs in the last eighteen months. The math isn't hard.
+
+================================================================================
+INTERVIEW #3 — Maria Luisa Estrada, Quality Assurance Lead (9 years tenure)
+February 19, 2026 | 9:00 AM | QA Lab
+================================================================================
+
+TB: Maria Luisa, walk me through how quality control works on the floor.
+
+MLE: We have three inspection gates. First is inline — operators are supposed to
+self-inspect every tenth part. Second is end-of-line, where my team does
+dimensional checks and visual inspection. Third is final audit before shipping,
+which is a statistical sample, usually 5%.
+
+TB: Where do things break down?
+
+MLE: Gate one is basically fiction. Operators don't have time. Sandra's people are
+running flat out, they're not stopping to measure every tenth part with a caliper.
+I don't blame them — I blame the production schedule. So gate two is where we
+actually catch things, but by then you've already made 50 bad parts.
+
+TB: How does that affect your team?
+
+MLE: We're firefighting constantly. Last month I had my team working until 10 PM three
+nights in a row sorting a batch of 800 brake brackets because inline inspection
+missed a tooling drift. If we'd caught it at part 10, it's a minor adjustment.
+At part 300, it's a crisis.
+
+TB: What about the ERP system? Doesn't it track this?
+
+MLE: The ERP — SAP, technically, but we're on a version from 2018 — tracks what we
+tell it. And what we tell it depends on whether people enter the data. The shop
+floor terminals are slow, the interface is terrible, and half the operators just
+batch-enter at the end of the shift from memory. So the data in SAP is maybe
+70% accurate on a good day. I've stopped trusting it for real-time decisions.
+I walk the floor instead.
+
+TB: That's not scalable.
+
+MLE: No, it isn't. And when I'm on vacation, things slip. I came back from a week off
+in December and found that a customer shipment had gone out with parts from a
+quarantined lot. Quarantine tags were on the bin, but the night shift loader
+didn't check. We had to do a field recall. That cost us the Meridian Auto
+contract — $1.4 million annually.
+
+================================================================================
+INTERVIEW #4 — Ray Chen, IT Systems Administrator (3 years tenure)
+February 19, 2026 | 3:00 PM | IT Office
+================================================================================
+
+TB: Ray, what does the technology landscape look like here?
+
+RC: Fragmented. We've got SAP for ERP, but like Maria Luisa probably told you, it's
+outdated. We have VibeSense for condition monitoring, which barely works.
+Scheduling is done in Excel by the production planners. HR is on some cloud thing
+called PeopleFirst. Payroll is ADP. None of these talk to each other.
+
+TB: How do you handle integration?
+
+RC: Manually. I've built some Python scripts that pull data from SAP and VibeSense
+into a shared dashboard, but it's held together with duct tape. If I leave
+tomorrow, nobody can maintain it. I'm the only IT person for this plant. The
+other guy, Haruto, transferred to corporate six months ago and they never
+backfilled his position.
+
+TB: You're the sole IT support for the entire plant?
+
+RC: For 340 employees, yes. I handle everything from password resets to server
+maintenance to that dashboard I mentioned. Last week I was debugging a network
+switch failure while also trying to patch a security vulnerability in our VPN.
+Something's going to fall through the cracks eventually. Actually, it already
+has — we had an expired SSL certificate on our supplier portal in January that
+blocked purchase orders for two days. Nobody noticed until the procurement
+manager called me screaming.
+
+TB: What about cybersecurity?
+
+RC: We're exposed, honestly. The shop floor PLCs are on the same network as the
+office because the network segmentation project got shelved in 2024. I've
+flagged it quarterly. If someone gets into the office network through a phishing
+email, they could theoretically reach the machine controllers. I lose sleep
+over it. I've started doing my own off-hours penetration testing just to
+understand the exposure, but I don't have time to fix what I find.
+
+================================================================================
+INTERVIEW #5 — Nina Petrović, Supply Chain Coordinator (6 years tenure)
+February 20, 2026 | 10:00 AM | Logistics Office
+================================================================================
+
+TB: Nina, how stable is your supply chain right now?
+
+NP: It depends on the part. For commodity steel and fasteners, we're fine — multiple
+suppliers, good pricing. For the specialty alloys and the electronic modules,
+we're single-sourced on almost everything. Our camshaft forgings come from one
+supplier in Düsseldorf. If they go down, we go down. There's no backup.
+
+TB: Has that been a problem?
+
+NP: In October their plant had a gas line issue and shut down for three weeks. We
+ran out of camshaft blanks in eleven days. Line A was idle for four days before
+we found an emergency supplier in Korea at triple the cost. Total impact was
+around $600,000 between downtime, air freight, and the price premium.
+
+TB: Why not dual-source?
+
+NP: I've proposed it three times. The Düsseldorf supplier gives us a 15% discount
+for exclusivity. Procurement loves that number. They don't see the risk because
+it hasn't shown up in their KPIs — supply chain disruption isn't a metric anyone
+tracks here. It's invisible until it explodes.
+
+TB: What about inventory buffers?
+
+NP: We run lean. Too lean, in my opinion. Management targets five days of safety
+stock for critical components. For the camshafts, five days is nothing — lead
+time for a replacement order is eight weeks. I've been padding my own numbers
+quietly, keeping about eight days when I can, but that's still nothing against
+a real disruption. And every quarter someone from finance asks me why my
+inventory carrying costs are "above target."
+
+================================================================================
+END OF TRANSCRIPTS
+================================================================================
+
+Interviewer Notes (Tomás Brandt):
+- Workforce fatigue is directly correlated with rising defect rates on Line C
+- Condition monitoring infrastructure is inadequate; one machinist's notebook is
+  more reliable than the plant's $50K monitoring system
+- Quality gate one (inline inspection) is effectively non-functional
+- ERP data integrity is estimated at ~70%, rendering system-based decisions unreliable
+- Single IT administrator for 340-person plant is a critical staffing gap
+- Network architecture creates cybersecurity exposure to industrial control systems
+- Single-source dependencies on specialty components with no resilience planning
+- Safety stock policy is misaligned with actual supplier lead times
+- Estimated annualized losses from issues surfaced in these interviews: >$2.5M
+- Strong recommendation: immediate risk quantification exercise before next budget cycle
