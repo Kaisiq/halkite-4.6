@@ -1,8 +1,8 @@
 """Module 3 -- Agent Briefing.
 
 Transform the ``VulnerabilityReport`` (Module 2 output) into targeted
-``AgentBrief`` packets for each of the five agent strategies.  This is a
-pure deterministic mapping -- no AI, no randomness.
+``AgentBrief`` packets for each agent strategy.  This is a pure
+deterministic mapping -- no AI, no randomness.
 
 An optional Monte Carlo brief can be appended when ``MCConfig`` is provided.
 
@@ -13,6 +13,8 @@ brief_bridge_breaker(report)                -> AgentBrief
 brief_compound_exploiter(report)            -> AgentBrief
 brief_layer_assassin(report, graph)         -> AgentBrief
 brief_cluster_isolator(report, graph)       -> AgentBrief
+brief_cascading_domino(report)              -> AgentBrief
+brief_recovery_maximizer(report)            -> AgentBrief
 brief_monte_carlo(mc_config)                -> AgentBrief
 generate_all_briefs(report, graph)          -> list[AgentBrief]
 create_all_agents(briefs, mc_config=None)   -> list[Agent]
@@ -315,6 +317,63 @@ def brief_cluster_isolator(
     )
 
 
+def brief_cascading_domino(report: VulnerabilityReport) -> AgentBrief:
+    """Agent 7: Cascading Domino.
+
+    Targets: nodes ranked by cascade depth potential — nodes whose failure
+    triggers the longest chain reactions.  Uses the same top-10 nodes from
+    node impact ranking but the agent re-scores by cascade depth at runtime.
+    Depth 5, branching 3.
+    """
+    top_nodes = sorted(
+        report.node_rankings,
+        key=lambda n: n.cascade_depth,
+        reverse=True,
+    )[:10]
+
+    priority_targets = [n.node_id for n in top_nodes]
+    initial_events = [Event(target=n.node_id, action="kill") for n in top_nodes[:3]]
+
+    return AgentBrief(
+        agent_type="cascading_domino",
+        priority_targets=priority_targets,
+        priority_edges=[],
+        focus_layers=[],
+        focus_clusters=[],
+        initial_events=initial_events,
+        max_depth=5,
+        branching_factor=3,
+    )
+
+
+def brief_recovery_maximizer(report: VulnerabilityReport) -> AgentBrief:
+    """Agent 8: Recovery Cost Maximizer.
+
+    Targets: nodes ranked by recovery cost impact — nodes whose cascade
+    produces the highest total cost to restore.
+    Depth 5, branching 3.
+    """
+    top_nodes = sorted(
+        report.node_rankings,
+        key=lambda n: n.recovery_cost,
+        reverse=True,
+    )[:10]
+
+    priority_targets = [n.node_id for n in top_nodes]
+    initial_events = [Event(target=n.node_id, action="kill") for n in top_nodes[:3]]
+
+    return AgentBrief(
+        agent_type="recovery_maximizer",
+        priority_targets=priority_targets,
+        priority_edges=[],
+        focus_layers=[],
+        focus_clusters=[],
+        initial_events=initial_events,
+        max_depth=5,
+        branching_factor=3,
+    )
+
+
 def brief_monte_carlo(mc_config: MCConfig) -> AgentBrief:
     """Agent 6: Monte Carlo Explorer.
 
@@ -366,6 +425,8 @@ def generate_all_briefs(
         brief_compound_exploiter(report),
         brief_layer_assassin(report, graph),
         brief_cluster_isolator(report, graph),
+        brief_cascading_domino(report),
+        brief_recovery_maximizer(report),
     ]
 
 
@@ -385,11 +446,13 @@ def _get_agent_registry() -> dict[str, type[Agent]]:
         return _AGENT_REGISTRY
 
     from nexus_api.agents.bridge_breaker import BridgeBreaker
+    from nexus_api.agents.cascading_domino import CascadingDomino
     from nexus_api.agents.cluster_isolator import ClusterIsolator
     from nexus_api.agents.compound_exploiter import CompoundExploiter
     from nexus_api.agents.critical_node import CriticalNodeAttacker
     from nexus_api.agents.layer_assassin import LayerAssassin
     from nexus_api.agents.monte_carlo import MonteCarloAgent
+    from nexus_api.agents.recovery_maximizer import RecoveryCostMaximizer
 
     _AGENT_REGISTRY = {
         "critical_node_attacker": CriticalNodeAttacker,
@@ -397,6 +460,8 @@ def _get_agent_registry() -> dict[str, type[Agent]]:
         "compound_exploiter": CompoundExploiter,
         "layer_assassin": LayerAssassin,
         "cluster_isolator": ClusterIsolator,
+        "cascading_domino": CascadingDomino,
+        "recovery_maximizer": RecoveryCostMaximizer,
         "monte_carlo": MonteCarloAgent,
     }
     return _AGENT_REGISTRY
