@@ -1,7 +1,12 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
-import type { GraphData, GraphNode, Recommendation, Scenario } from "@/lib/types";
+import type {
+  GraphData,
+  GraphNode,
+  Recommendation,
+  Scenario,
+} from "@/lib/types";
 
 interface RiskDocumentsPanelProps {
   graph: GraphData | null;
@@ -71,7 +76,9 @@ export function RiskDocumentsPanel({
   const [copyState, setCopyState] = useState<string | null>(null);
 
   const activeDocument =
-    documents.find((doc) => doc.id === activeDocumentId) ?? documents[0] ?? null;
+    documents.find((doc) => doc.id === activeDocumentId) ??
+    documents[0] ??
+    null;
 
   const handleCopy = async () => {
     if (!activeDocument) return;
@@ -119,12 +126,17 @@ export function RiskDocumentsPanel({
             className="mt-2 text-2xl font-semibold"
             style={{ color: "var(--foreground)" }}
           >
-            Scenario documents for what can fail, where it lands, and how to treat it
+            Scenario documents for what can fail, where it lands, and how to
+            treat it
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: "var(--muted)" }}>
-            These dossiers reorganize the explored worst-case scenarios into team-focused review
-            packs so risk, continuity, and operational resilience teams can assess exposure,
-            ownership, and mitigation work without rewriting the math.
+          <p
+            className="mt-2 max-w-2xl text-sm leading-6"
+            style={{ color: "var(--muted)" }}
+          >
+            These dossiers reorganize the explored worst-case scenarios into
+            team-focused review packs so risk, continuity, and operational
+            resilience teams can assess exposure, ownership, and mitigation work
+            without rewriting the math.
           </p>
         </div>
 
@@ -154,8 +166,9 @@ export function RiskDocumentsPanel({
             color: "var(--muted)",
           }}
         >
-          Run exploration first. The dossiers are generated from the deterministic scenario set,
-          impacted nodes, and treatment recommendations returned by the backend.
+          Run exploration first. The dossiers are generated from the
+          deterministic scenario set, impacted nodes, and treatment
+          recommendations returned by the backend.
         </div>
       ) : (
         <div className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -179,10 +192,16 @@ export function RiskDocumentsPanel({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--foreground)" }}
+                      >
                         {doc.teamName}
                       </p>
-                      <p className="mt-1 text-[0.72rem] uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
+                      <p
+                        className="mt-1 text-[0.72rem] uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
                         {doc.primaryLayer}
                       </p>
                     </div>
@@ -198,7 +217,10 @@ export function RiskDocumentsPanel({
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    <MetricPill label="Scenarios" value={String(doc.scenarioCount)} />
+                    <MetricPill
+                      label="Scenarios"
+                      value={String(doc.scenarioCount)}
+                    />
                     <MetricPill
                       label="Worst H"
                       value={doc.worstHealth.toFixed(2)}
@@ -241,7 +263,10 @@ export function RiskDocumentsPanel({
                     >
                       {activeDocument.teamName} risk dossier
                     </h3>
-                    <p className="mt-2 text-sm leading-6" style={{ color: "var(--muted)" }}>
+                    <p
+                      className="mt-2 text-sm leading-6"
+                      style={{ color: "var(--muted)" }}
+                    >
                       {activeDocument.executiveSummary}
                     </p>
                   </div>
@@ -273,8 +298,14 @@ export function RiskDocumentsPanel({
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                  <MetricPill label="Primary layer" value={activeDocument.primaryLayer} />
-                  <MetricPill label="Scenario count" value={String(activeDocument.scenarioCount)} />
+                  <MetricPill
+                    label="Primary layer"
+                    value={activeDocument.primaryLayer}
+                  />
+                  <MetricPill
+                    label="Scenario count"
+                    value={String(activeDocument.scenarioCount)}
+                  />
                   <MetricPill
                     label="Worst health"
                     value={activeDocument.worstHealth.toFixed(2)}
@@ -287,14 +318,20 @@ export function RiskDocumentsPanel({
                 </div>
 
                 {copyState && (
-                  <p className="mt-3 text-xs" style={{ color: "var(--accent)" }}>
+                  <p
+                    className="mt-3 text-xs"
+                    style={{ color: "var(--accent)" }}
+                  >
                     {copyState}
                   </p>
                 )}
               </div>
 
               <DocumentSection title="Impact Statement">
-                <p className="text-sm leading-7" style={{ color: "var(--foreground)" }}>
+                <p
+                  className="text-sm leading-7"
+                  style={{ color: "var(--foreground)" }}
+                >
                   {activeDocument.impactStatement}
                 </p>
               </DocumentSection>
@@ -310,13 +347,22 @@ export function RiskDocumentsPanel({
                         background: "rgba(156, 176, 197, 0.04)",
                       }}
                     >
-                      <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--foreground)" }}
+                      >
                         {node.name}
                       </p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
+                      <p
+                        className="mt-1 text-xs uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
                         {node.layer}
                       </p>
-                      <p className="mt-2 text-xs leading-6" style={{ color: "var(--muted)" }}>
+                      <p
+                        className="mt-2 text-xs leading-6"
+                        style={{ color: "var(--muted)" }}
+                      >
                         {describeNodeExposure(node)}
                       </p>
                     </div>
@@ -375,24 +421,38 @@ export function RiskDocumentsPanel({
                           >
                             {entry.scenario.title}
                           </h4>
-                          <p className="mt-2 text-sm leading-7" style={{ color: "var(--muted)" }}>
+                          <p
+                            className="mt-2 text-sm leading-7"
+                            style={{ color: "var(--muted)" }}
+                          >
                             {entry.businessEffect}
                           </p>
-                          <p className="mt-2 text-sm leading-7" style={{ color: "var(--foreground)" }}>
+                          <p
+                            className="mt-2 text-sm leading-7"
+                            style={{ color: "var(--foreground)" }}
+                          >
                             Trigger chain: {entry.triggerSummary}
                           </p>
                         </div>
 
                         <div className="grid min-w-[240px] grid-cols-2 gap-2 text-xs">
-                          <MetricPill label="Remaining H" value={entry.scenario.health_remaining.toFixed(2)} />
-                          <MetricPill label="Affected nodes" value={String(entry.affectedNodes.length)} />
+                          <MetricPill
+                            label="Remaining H"
+                            value={entry.scenario.health_remaining.toFixed(2)}
+                          />
+                          <MetricPill
+                            label="Affected nodes"
+                            value={String(entry.affectedNodes.length)}
+                          />
                           <MetricPill
                             label="Impact share"
                             value={`${Math.round(entry.impactShare * 100)}%`}
                           />
                           <MetricPill
                             label="Recovery"
-                            value={formatCompactNumber(entry.scenario.recovery_cost)}
+                            value={formatCompactNumber(
+                              entry.scenario.recovery_cost,
+                            )}
                           />
                         </div>
                       </div>
@@ -429,13 +489,22 @@ export function RiskDocumentsPanel({
                         background: "rgba(110, 231, 200, 0.05)",
                       }}
                     >
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
+                      <p
+                        className="text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--accent)" }}
+                      >
                         {track.horizon}
                       </p>
-                      <p className="mt-2 text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                      <p
+                        className="mt-2 text-sm font-semibold"
+                        style={{ color: "var(--foreground)" }}
+                      >
                         {track.title}
                       </p>
-                      <p className="mt-2 text-sm leading-7" style={{ color: "var(--muted)" }}>
+                      <p
+                        className="mt-2 text-sm leading-7"
+                        style={{ color: "var(--muted)" }}
+                      >
                         {track.detail}
                       </p>
                     </div>
@@ -443,18 +512,34 @@ export function RiskDocumentsPanel({
                 </div>
 
                 {activeDocument.relevantRecommendations.length > 0 && (
-                  <div className="mt-4 rounded-xl border p-4" style={{ borderColor: "rgba(156, 176, 197, 0.08)" }}>
-                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
+                  <div
+                    className="mt-4 rounded-xl border p-4"
+                    style={{ borderColor: "rgba(156, 176, 197, 0.08)" }}
+                  >
+                    <p
+                      className="text-[0.72rem] font-semibold uppercase tracking-[0.18em]"
+                      style={{ color: "var(--muted)" }}
+                    >
                       Linked deterministic recommendations
                     </p>
                     <div className="mt-3 space-y-3">
                       {activeDocument.relevantRecommendations.map((rec) => (
-                        <div key={`${rec.priority}-${rec.target}-${rec.action}`}>
-                          <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        <div
+                          key={`${rec.priority}-${rec.target}-${rec.action}`}
+                        >
+                          <p
+                            className="text-sm font-semibold"
+                            style={{ color: "var(--foreground)" }}
+                          >
                             P{rec.priority} {rec.action}
                           </p>
-                          <p className="mt-1 text-sm leading-7" style={{ color: "var(--muted)" }}>
-                            {rec.reason} Expected resilience gain: {rec.estimated_resilience_gain}. Scenarios prevented: {rec.scenarios_prevented}.
+                          <p
+                            className="mt-1 text-sm leading-7"
+                            style={{ color: "var(--muted)" }}
+                          >
+                            {rec.reason} Expected resilience gain:{" "}
+                            {rec.estimated_resilience_gain}. Scenarios
+                            prevented: {rec.scenarios_prevented}.
                           </p>
                         </div>
                       ))}
@@ -467,7 +552,11 @@ export function RiskDocumentsPanel({
                 <DocumentSection title="Monitoring Signals">
                   <ul className="space-y-3">
                     {activeDocument.monitoringSignals.map((signal) => (
-                      <li key={signal} className="text-sm leading-7" style={{ color: "var(--foreground)" }}>
+                      <li
+                        key={signal}
+                        className="text-sm leading-7"
+                        style={{ color: "var(--foreground)" }}
+                      >
                         {signal}
                       </li>
                     ))}
@@ -477,7 +566,11 @@ export function RiskDocumentsPanel({
                 <DocumentSection title="Governance Notes">
                   <ul className="space-y-3">
                     {activeDocument.governanceNotes.map((note) => (
-                      <li key={note} className="text-sm leading-7" style={{ color: "var(--foreground)" }}>
+                      <li
+                        key={note}
+                        className="text-sm leading-7"
+                        style={{ color: "var(--foreground)" }}
+                      >
                         {note}
                       </li>
                     ))}
@@ -506,7 +599,9 @@ function buildTeamRiskDocuments(
   for (const bucket of teamBuckets) {
     const teamNodeIds = new Set(bucket.nodes.map((node) => node.id));
     const scenarioEntries = scenarios
-      .map((scenario) => buildScenarioEntry(scenario, teamNodeIds, nodeById, bucket.name))
+      .map((scenario) =>
+        buildScenarioEntry(scenario, teamNodeIds, nodeById, bucket.name),
+      )
       .filter((entry): entry is TeamScenarioEntry => entry !== null);
 
     if (scenarioEntries.length === 0) continue;
@@ -517,10 +612,16 @@ function buildTeamRiskDocuments(
         exposedNodeMap.set(node.id, node);
       }
     }
-    const exposedNodes = [...exposedNodeMap.values()].sort((a, b) => b.theta - a.theta);
+    const exposedNodes = [...exposedNodeMap.values()].sort(
+      (a, b) => b.theta - a.theta,
+    );
     const primaryLayer = dominantLayer(bucket.layerCounts);
-    const directlyTargetedCount = scenarioEntries.filter((entry) => entry.directlyTargeted).length;
-    const worstHealth = Math.min(...scenarioEntries.map((entry) => entry.scenario.health_remaining));
+    const directlyTargetedCount = scenarioEntries.filter(
+      (entry) => entry.directlyTargeted,
+    ).length;
+    const worstHealth = Math.min(
+      ...scenarioEntries.map((entry) => entry.scenario.health_remaining),
+    );
     const totalRecoveryCost = scenarioEntries.reduce(
       (sum, entry) => sum + entry.scenario.recovery_cost,
       0,
@@ -528,11 +629,21 @@ function buildTeamRiskDocuments(
     const riskScore = scenarioEntries.reduce(
       (sum, entry) =>
         sum +
-        entry.scenario.severity * entry.impactShare * (entry.directlyTargeted ? 1.2 : 1),
+        entry.scenario.severity *
+          entry.impactShare *
+          (entry.directlyTargeted ? 1.2 : 1),
       0,
     );
     const relevantRecommendations = recommendations
-      .filter((rec) => isRecommendationRelevant(rec, bucket, primaryLayer, teamNodeIds, nodeById))
+      .filter((rec) =>
+        isRecommendationRelevant(
+          rec,
+          bucket,
+          primaryLayer,
+          teamNodeIds,
+          nodeById,
+        ),
+      )
       .sort((a, b) => a.priority - b.priority)
       .slice(0, 4);
 
@@ -603,7 +714,10 @@ function collectTeamBuckets(nodes: GraphNode[]): TeamBucket[] {
     const existing = buckets.get(id);
     if (existing) {
       existing.nodes.push(node);
-      existing.layerCounts.set(node.layer, (existing.layerCounts.get(node.layer) ?? 0) + 1);
+      existing.layerCounts.set(
+        node.layer,
+        (existing.layerCounts.get(node.layer) ?? 0) + 1,
+      );
       continue;
     }
     buckets.set(id, {
@@ -697,7 +811,9 @@ function buildImpactStatement(
   exposedNodes: GraphNode[],
   totalRecoveryCost: number,
 ): string {
-  const directHits = scenarioEntries.filter((entry) => entry.directlyTargeted).length;
+  const directHits = scenarioEntries.filter(
+    (entry) => entry.directlyTargeted,
+  ).length;
   const topNodeText = exposedNodes
     .slice(0, 4)
     .map((node) => `${node.name} (${node.layer})`)
@@ -712,16 +828,29 @@ function buildMitigationTracks(
   exposedNodes: GraphNode[],
   recommendations: Recommendation[],
 ): MitigationTrack[] {
-  const tracks: MitigationTrack[] = recommendations.slice(0, 3).map((rec, index) => ({
-    horizon: index === 0 ? "0-30 days" : index === 1 ? "30-90 days" : "90-180 days",
-    title: rec.action,
-    detail: `${rec.reason} Track this as an owned treatment item with evidence of execution and a post-change simulation rerun. Expected resilience gain: ${rec.estimated_resilience_gain}.`,
-  }));
+  const tracks: MitigationTrack[] = recommendations
+    .slice(0, 3)
+    .map((rec, index) => ({
+      horizon:
+        index === 0 ? "0-30 days" : index === 1 ? "30-90 days" : "90-180 days",
+      title: rec.action,
+      detail: `${rec.reason} Track this as an owned treatment item with evidence of execution and a post-change simulation rerun. Expected resilience gain: ${rec.estimated_resilience_gain}.`,
+    }));
 
-  const topNodeNames = exposedNodes.slice(0, 3).map((node) => node.name).join(", ");
+  const topNodeNames = exposedNodes
+    .slice(0, 3)
+    .map((node) => node.name)
+    .join(", ");
 
   if (tracks.length < 3) {
-    tracks.push(...defaultMitigationTracks(teamName, primaryLayer, topNodeNames, scenarioEntries));
+    tracks.push(
+      ...defaultMitigationTracks(
+        teamName,
+        primaryLayer,
+        topNodeNames,
+        scenarioEntries,
+      ),
+    );
   }
 
   return tracks.slice(0, 4);
@@ -733,7 +862,9 @@ function defaultMitigationTracks(
   topNodeNames: string,
   scenarioEntries: TeamScenarioEntry[],
 ): MitigationTrack[] {
-  const directHits = scenarioEntries.filter((entry) => entry.directlyTargeted).length;
+  const directHits = scenarioEntries.filter(
+    (entry) => entry.directlyTargeted,
+  ).length;
   const commonPrefix =
     directHits > 0
       ? `${teamName} needs direct-response playbooks because top scenarios start at the team boundary.`
@@ -750,12 +881,14 @@ function defaultMitigationTracks(
         {
           horizon: "30-90 days",
           title: "Reduce key-person fragility",
-          detail: "Document tacit knowledge, approval paths, and external contacts. Test whether the team can continue operating for one business cycle with the primary role unavailable.",
+          detail:
+            "Document tacit knowledge, approval paths, and external contacts. Test whether the team can continue operating for one business cycle with the primary role unavailable.",
         },
         {
           horizon: "90-180 days",
           title: "Bake continuity checks into workforce planning",
-          detail: "Link hiring, succession, leave coverage, and contractor decisions to scenario reruns so personnel changes are assessed before they become structural failure points.",
+          detail:
+            "Link hiring, succession, leave coverage, and contractor decisions to scenario reruns so personnel changes are assessed before they become structural failure points.",
         },
       ];
     case "Technology":
@@ -768,12 +901,14 @@ function defaultMitigationTracks(
         {
           horizon: "30-90 days",
           title: "Shorten mean time to recover for critical services",
-          detail: "Convert tribal recovery knowledge into runbooks, automate dependency checks, and remove restore bottlenecks so modeled recovery cost comes down in the next simulation cycle.",
+          detail:
+            "Convert tribal recovery knowledge into runbooks, automate dependency checks, and remove restore bottlenecks so modeled recovery cost comes down in the next simulation cycle.",
         },
         {
           horizon: "90-180 days",
           title: "Add architectural bypasses",
-          detail: "Reduce single-route dependency by introducing alternate paths, segmented responsibilities, or substitute services where the graph shows concentrated blast radius.",
+          detail:
+            "Reduce single-route dependency by introducing alternate paths, segmented responsibilities, or substitute services where the graph shows concentrated blast radius.",
         },
       ];
     case "Supply":
@@ -786,12 +921,14 @@ function defaultMitigationTracks(
         {
           horizon: "30-90 days",
           title: "Set trigger-based inventory and escalation thresholds",
-          detail: "Define when order delays, quality issues, or contractual breaches move from vendor management to resilience response and executive escalation.",
+          detail:
+            "Define when order delays, quality issues, or contractual breaches move from vendor management to resilience response and executive escalation.",
         },
         {
           horizon: "90-180 days",
           title: "Diversify supplier concentration",
-          detail: "Use scenario frequency as input to sourcing strategy so recurrent supply-chain failure paths are not left to case-by-case mitigation.",
+          detail:
+            "Use scenario frequency as input to sourcing strategy so recurrent supply-chain failure paths are not left to case-by-case mitigation.",
         },
       ];
     default:
@@ -804,12 +941,14 @@ function defaultMitigationTracks(
         {
           horizon: "30-90 days",
           title: "Document minimum viable operation",
-          detail: "Write the smallest operating mode the team can sustain under dependency loss, including manual workarounds, decision rights, and recovery prerequisites.",
+          detail:
+            "Write the smallest operating mode the team can sustain under dependency loss, including manual workarounds, decision rights, and recovery prerequisites.",
         },
         {
           horizon: "90-180 days",
           title: "Re-test after structural change",
-          detail: "Any reorg, vendor change, major system release, or control redesign should trigger another stress-test run so residual risk is re-measured rather than assumed.",
+          detail:
+            "Any reorg, vendor change, major system release, or control redesign should trigger another stress-test run so residual risk is re-measured rather than assumed.",
         },
       ];
   }
@@ -822,10 +961,12 @@ function buildMonitoringSignals(
   exposedNodes: GraphNode[],
 ): string[] {
   const signals = [
-    `Track the health and ownership status of ${exposedNodes
-      .slice(0, 3)
-      .map((node) => node.name)
-      .join(", ") || "the team's highest-risk nodes"} as leading indicators for ${teamName}.`,
+    `Track the health and ownership status of ${
+      exposedNodes
+        .slice(0, 3)
+        .map((node) => node.name)
+        .join(", ") || "the team's highest-risk nodes"
+    } as leading indicators for ${teamName}.`,
     "Escalate any material dependency change, unresolved outage, or control exception into a fresh scenario review instead of handling it as a local ticket only.",
     "Maintain an evidence trail for control testing, recovery exercises, and unresolved assumptions so the dossier stays auditable.",
   ];
@@ -844,7 +985,9 @@ function buildMonitoringSignals(
     );
   }
 
-  const directHits = scenarioEntries.filter((entry) => entry.directlyTargeted).length;
+  const directHits = scenarioEntries.filter(
+    (entry) => entry.directlyTargeted,
+  ).length;
   if (directHits > 0) {
     signals.push(
       `Because ${teamName} is directly targeted in ${directHits} of the top scenarios, any degradation in local readiness should trigger executive awareness before a wider cascade forms.`,
@@ -854,7 +997,10 @@ function buildMonitoringSignals(
   return signals.slice(0, 5);
 }
 
-function buildGovernanceNotes(teamName: string, primaryLayer: string): string[] {
+function buildGovernanceNotes(
+  teamName: string,
+  primaryLayer: string,
+): string[] {
   return [
     `${teamName} should have a named treatment owner, target date, and validation method for every mitigation item in this dossier.`,
     `Use this dossier as scenario-based evidence for ${primaryLayer} continuity planning, but keep the underlying deterministic outputs as the source of truth for severity and recovery math.`,
@@ -863,7 +1009,9 @@ function buildGovernanceNotes(teamName: string, primaryLayer: string): string[] 
   ];
 }
 
-function buildMarkdownDocument(doc: Omit<TeamRiskDocument, "markdown">): string {
+function buildMarkdownDocument(
+  doc: Omit<TeamRiskDocument, "markdown">,
+): string {
   const lines = [
     `# ${doc.teamName} Risk Dossier`,
     "",
@@ -880,7 +1028,12 @@ function buildMarkdownDocument(doc: Omit<TeamRiskDocument, "markdown">): string 
     doc.impactStatement,
     "",
     "## Exposed Dependencies",
-    ...doc.exposedNodes.slice(0, 10).map((node) => `- ${node.name} (${node.layer}): ${describeNodeExposure(node)}`),
+    ...doc.exposedNodes
+      .slice(0, 10)
+      .map(
+        (node) =>
+          `- ${node.name} (${node.layer}): ${describeNodeExposure(node)}`,
+      ),
     "",
     "## Scenario Register",
     ...doc.scenarioEntries.flatMap((entry) => [
@@ -934,10 +1087,13 @@ function isRecommendationRelevant(
     return teamNodeIds.has(node.id);
   }
 
-  const haystack = `${recommendation.action} ${recommendation.reason}`.toLowerCase();
+  const haystack =
+    `${recommendation.action} ${recommendation.reason}`.toLowerCase();
   return (
     haystack.includes(bucket.name.toLowerCase()) ||
-    bucket.nodes.some((teamNode) => haystack.includes(teamNode.name.toLowerCase()))
+    bucket.nodes.some((teamNode) =>
+      haystack.includes(teamNode.name.toLowerCase()),
+    )
   );
 }
 
@@ -964,10 +1120,16 @@ function resolveTeamName(node: GraphNode): string {
 }
 
 function dominantLayer(layerCounts: Map<string, number>): string {
-  return [...layerCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Operations";
+  return (
+    [...layerCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+    "Operations"
+  );
 }
 
-function readMetaString(meta: Record<string, unknown>, keys: string[]): string | null {
+function readMetaString(
+  meta: Record<string, unknown>,
+  keys: string[],
+): string | null {
   for (const key of keys) {
     const value = meta[key];
     if (typeof value === "string" && value.trim().length > 0) {
@@ -987,7 +1149,10 @@ function describeEventTarget(
 function describeNodeExposure(node: GraphNode): string {
   const functionName = readMetaString(node.meta, ["function"]);
   const owner = readMetaString(node.meta, ["owner"]);
-  const spof = node.meta.single_point_of_failure === true ? " Flagged as a single point of failure." : "";
+  const spof =
+    node.meta.single_point_of_failure === true
+      ? " Flagged as a single point of failure."
+      : "";
   return `${functionName ? `${startCase(functionName)} function.` : "Mapped organizational dependency."} Theta ${node.theta.toFixed(2)}, recovery ${formatCompactNumber(node.r)}.${owner ? ` Owned by ${owner}.` : ""}${spof}`;
 }
 
@@ -1034,7 +1199,10 @@ function DocumentSection({
         background: "rgba(255, 255, 255, 0.025)",
       }}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: "var(--muted)" }}>
+      <p
+        className="text-xs font-semibold uppercase tracking-[0.22em]"
+        style={{ color: "var(--muted)" }}
+      >
         {title}
       </p>
       <div className="mt-4">{children}</div>
@@ -1059,10 +1227,16 @@ function MetricPill({
         background: "rgba(156, 176, 197, 0.05)",
       }}
     >
-      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>
+      <p
+        className="text-[0.62rem] font-semibold uppercase tracking-[0.18em]"
+        style={{ color: "var(--muted)" }}
+      >
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold" style={{ color: tone ?? "var(--foreground)" }}>
+      <p
+        className="mt-1 text-sm font-semibold"
+        style={{ color: tone ?? "var(--foreground)" }}
+      >
         {value}
       </p>
     </div>
