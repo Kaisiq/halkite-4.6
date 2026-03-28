@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
 import { useNexusStore } from "@/lib/store";
-import type { ExploreConfig } from "@/lib/types";
+import type { ExploreConfig, Scenario } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Agent definitions
@@ -103,6 +103,7 @@ export default function SimulatePage() {
 
   // -- Store slices --
   const exploring = useNexusStore((s) => s.exploring);
+  const graph = useNexusStore((s) => s.graph);
   const scenarios = useNexusStore((s) => s.scenarios);
   const treeStats = useNexusStore((s) => s.treeStats);
   const vizData = useNexusStore((s) => s.vizData);
@@ -342,6 +343,121 @@ export default function SimulatePage() {
       setActiveScenario(0);
     }
   }, [activeScenarioIndex, scenarios.length, setActiveScenario]);
+
+  const focusedPathNodes = useMemo(() => {
+    if (!focusTargetId || !treeNodeMap.size) return [] as TreeNode[];
+    const path: TreeNode[] = [];
+    let current = treeNodeMap.get(focusTargetId) ?? null;
+    while (current) {
+      path.push(current);
+      current = current.parent_id ? (treeNodeMap.get(current.parent_id) ?? null) : null;
+    }
+    return path.reverse();
+  }, [focusTargetId, treeNodeMap]);
+
+  const selectedScenario: Scenario | null =
+    activeScenarioIndex !== null && scenarios[activeScenarioIndex]
+      ? scenarios[activeScenarioIndex]
+      : scenarios[0] ?? null;
+
+  const nextBranchCandidates = useMemo(() => {
+    if (!focusTargetId) return [] as TreeNode[];
+    return [...(childrenByNodeId.get(focusTargetId) ?? [])].sort((a, b) => a.H - b.H);
+  }, [childrenByNodeId, focusTargetId]);
+
+  const currentPathBriefing = useMemo(() => {
+    if (!focusedPathNodes.length) return null;
+
+    const terminalNode = focusedPathNodes[focusedPathNodes.length - 1];
+    const failedNodeIds = new Set(selectedScenario?.failed_nodes ?? []);
+    const failedNodes = graph?.nodes.filter((node) => failedNodeIds.has(node.id)) ?? [];
+    const failedPeople = failedNodes.filter((node) => node.layer === "People");
+    const failedOps = failedNodes.filter((node) => node.layer !== "People");
+    const estimatedImpact = Math.max(
+      terminalNode.delta_H,
+      1 - terminalNode.H,
+      selectedScenario ? 1 - selectedScenario.health_remaining : 0,
+    );
+
+    const events = focusedPathNodes
+      .slice(1)
+      .map((node, index) => ({
+        step: index + 1,
+        event: node.event_summary,
+        deltaH: node.delta_H,
+        H: node.H,
+        failures: node.failed_count,
+      }));
+
+    const summary =
+      selectedScenario?.summary ??
+      (events.length > 0
+        ? `${events[0]?.event ?? "The first branch"} triggered a cascade that brought the network to H ${focusedPathNodes.at(-1)?.H.toFixed(2)}.`
+        : "The system is still at the initial state root.");
+
+    const story =
+      selectedScenario?.narrative ||
+      (events.length > 0
+        ? `The branch compounds through ${events.length} event${events.length === 1 ? "" : "s"}, with each step reducing resilience and widening the failure set around the focused path.`
+        : "No event has been applied yet. The tree is waiting for the first branch selection.");
+
+    const forecast = nextBranchCandidates.length > 0
+      ? (() => {
+          const worstNext = nextBranchCandidates[0];
+          const alternatives = nextBranchCandidates.slice(1, 3);
+          const altText =
+            alternatives.length > 0
+              ? `Other immediate continuations remain less severe, bottoming near H ${alternatives
+                  .map((node) => node.H.toFixed(2))
+                  .join(" / ")}.`
+              : "There are no materially softer immediate continuations from this node.";
+          return `If this branch continues, the most likely damaging next step is ${worstNext.event_summary}, which would push the state to roughly H ${worstNext.H.toFixed(2)} with ${worstNext.failed_count} failed nodes. ${altText}`;
+        })()
+      : `This branch currently terminates here. Based on the explored state space, this is an end-state candidate with network health at H ${focusedPathNodes.at(-1)?.H.toFixed(2)}.`;
+
+    const terminalBusinessOutlook =
+      nextBranchCandidates.length > 0
+        ? null
+        : (() => {
+            const peopleSentence =
+              failedPeople.length > 0
+                ? `${failedPeople.length} people-layer node${failedPeople.length === 1 ? "" : "s"} have been removed from the active business graph${failedPeople.length <= 4 ? `: ${failedPeople.map((node) => node.name).join(", ")}` : ""}. Expect leadership gaps, slower decisions, and loss of tacit coordination capacity.`
+                : "No explicit people-layer removals are recorded on this terminal branch, so the primary damage is operational rather than personnel-driven.";
+
+            const opsSentence =
+              failedOps.length > 0
+                ? `${failedOps.length} non-people dependencies are down, which implies disrupted systems, supplier relationships, or operating capabilities that the business will struggle to route around quickly.`
+                : "Operational dependencies remain partly intact, but the remaining network health still indicates a severely constrained operating posture.";
+
+            const recoverySentence =
+              selectedScenario
+                ? `The current scenario projects recovery cost around ${selectedScenario.recovery_cost.toLocaleString()}, so management should treat this as a continuity event rather than a temporary incident.`
+                : "Treat this as a sustained continuity failure, not a short-lived disturbance.";
+
+            return `${peopleSentence} ${opsSentence} ${recoverySentence}`;
+          })();
+
+    return {
+      title:
+        selectedScenario?.title ??
+        (focusedPathNodes.length > 1
+          ? `Focused branch at depth ${focusedPathNodes.at(-1)?.depth ?? 0}`
+          : "Root scenario"),
+      severityLabel: selectedScenario?.severity_label ?? "ACTIVE",
+      summary,
+      story,
+      forecast,
+      impact: {
+        healthLoss: 1 - terminalNode.H,
+        deltaH: terminalNode.delta_H,
+        failedCount: terminalNode.failed_count,
+        estimatedImpact,
+      },
+      terminalBusinessOutlook,
+      events,
+      recommendations: selectedScenario?.recommendations ?? [],
+    };
+  }, [focusedPathNodes, graph, nextBranchCandidates, selectedScenario]);
 
   // -- D3 tree rendering --
   useEffect(() => {
@@ -1012,6 +1128,182 @@ export default function SimulatePage() {
                 />
               </div>
 
+              {currentPathBriefing && (
+                <div
+                  className="rounded-2xl border p-4"
+                  style={{
+                    borderColor: "rgba(156, 176, 197, 0.12)",
+                    background: "rgba(255, 255, 255, 0.025)",
+                  }}
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p
+                        className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Current Path Briefing
+                      </p>
+                      <h4
+                        className="mt-1 text-base font-semibold"
+                        style={{ color: "var(--foreground)" }}
+                      >
+                        {currentPathBriefing.title}
+                      </h4>
+                    </div>
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em]"
+                      style={{
+                        color: severityColor(currentPathBriefing.severityLabel),
+                        background: `${severityColor(currentPathBriefing.severityLabel)}18`,
+                      }}
+                    >
+                      {currentPathBriefing.severityLabel}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 text-sm leading-6">
+                    <div>
+                      <p
+                        className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Impact
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <MiniMetric
+                          label="Health loss"
+                          value={currentPathBriefing.impact.healthLoss.toFixed(2)}
+                          tone="#ef4444"
+                        />
+                        <MiniMetric
+                          label="Last delta"
+                          value={currentPathBriefing.impact.deltaH.toFixed(2)}
+                          tone="#f59e0b"
+                        />
+                        <MiniMetric
+                          label="Failed nodes"
+                          value={String(currentPathBriefing.impact.failedCount)}
+                          tone="var(--foreground)"
+                        />
+                        <MiniMetric
+                          label="Impact score"
+                          value={currentPathBriefing.impact.estimatedImpact.toFixed(2)}
+                          tone="var(--accent)"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p
+                        className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        What happened
+                      </p>
+                      <p style={{ color: "var(--foreground)" }}>
+                        {currentPathBriefing.summary}
+                      </p>
+                      <p className="mt-2" style={{ color: "var(--muted)" }}>
+                        {currentPathBriefing.story}
+                      </p>
+                    </div>
+
+                    {currentPathBriefing.events.length > 0 && (
+                      <div>
+                        <p
+                          className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Sequence
+                        </p>
+                        <div className="space-y-2">
+                          {currentPathBriefing.events.map((event) => (
+                            <div
+                              key={`${event.step}-${event.event}`}
+                              className="rounded-xl border px-3 py-2"
+                              style={{
+                                borderColor: "rgba(156, 176, 197, 0.08)",
+                                background: "rgba(156, 176, 197, 0.04)",
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span style={{ color: "var(--foreground)" }}>
+                                  Step {event.step}: {event.event}
+                                </span>
+                                <span
+                                  className="tabular-nums text-xs"
+                                  style={{ color: "#ef4444" }}
+                                >
+                                  -{event.deltaH.toFixed(2)} H
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                                State settles at H {event.H.toFixed(2)} with {event.failures} failed nodes.
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <p
+                        className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Forward projection
+                      </p>
+                      <p style={{ color: "var(--foreground)" }}>
+                        {currentPathBriefing.forecast}
+                      </p>
+                    </div>
+
+                    {currentPathBriefing.terminalBusinessOutlook && (
+                      <div>
+                        <p
+                          className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Terminal outlook
+                        </p>
+                        <p style={{ color: "var(--foreground)" }}>
+                          {currentPathBriefing.terminalBusinessOutlook}
+                        </p>
+                      </div>
+                    )}
+
+                    {currentPathBriefing.recommendations.length > 0 && (
+                      <div>
+                        <p
+                          className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Recommended intervention
+                        </p>
+                        <ul className="space-y-2">
+                          {currentPathBriefing.recommendations.slice(0, 2).map((rec) => (
+                            <li
+                              key={`${rec.action}-${rec.reason}`}
+                              className="rounded-xl border px-3 py-2"
+                              style={{
+                                borderColor: "rgba(110, 231, 200, 0.14)",
+                                background: "rgba(110, 231, 200, 0.05)",
+                              }}
+                            >
+                              <p style={{ color: "var(--foreground)" }}>{rec.action}</p>
+                              <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                                {rec.reason}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Per-agent stats */}
               {agentStatEntries.length > 0 && (
                 <div>
@@ -1151,6 +1443,39 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p
         className="text-lg font-bold tabular-nums"
         style={{ color: "var(--foreground)" }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function MiniMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+}) {
+  return (
+    <div
+      className="rounded-xl border px-3 py-2"
+      style={{
+        borderColor: "rgba(156, 176, 197, 0.08)",
+        background: "rgba(156, 176, 197, 0.04)",
+      }}
+    >
+      <p
+        className="text-[10px] font-semibold uppercase tracking-[0.18em]"
+        style={{ color: "var(--muted)" }}
+      >
+        {label}
+      </p>
+      <p
+        className="mt-1 text-sm font-semibold tabular-nums"
+        style={{ color: tone }}
       >
         {value}
       </p>
