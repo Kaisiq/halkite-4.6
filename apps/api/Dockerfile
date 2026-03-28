@@ -37,4 +37,4 @@ USER nexus
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn nexus_api.main:app --host \"${API_HOST}\" --port \"${API_PORT}\" --log-level \"$(printf '%s' \"${LOG_LEVEL}\" | tr '[:upper:]' '[:lower:]')\""]
+CMD ["sh", "-c", "uvicorn nexus_api.main:app --host \"${API_HOST}\" --port \"${API_PORT}\" --timeout-keep-alive 300 --log-level \"$(printf '%s' \"${LOG_LEVEL}\" | tr '[:upper:]' '[:lower:]')\""]
