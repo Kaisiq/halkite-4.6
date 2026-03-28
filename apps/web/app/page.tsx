@@ -92,12 +92,18 @@ const SIGNALS = [
 ] as const;
 
 const PREVIEW_NODES = [
-  { name: "CEO", x: 108, y: 68, size: 22, color: "var(--accent-soft)" },
-  { name: "CTO", x: 196, y: 118, size: 16, color: "#85aef0" },
-  { name: "COO", x: 122, y: 180, size: 15, color: "#f0b663" },
-  { name: "Platform", x: 268, y: 86, size: 14, color: "#78d7c7" },
-  { name: "Sales", x: 252, y: 196, size: 13, color: "#de8d63" },
-  { name: "Finance", x: 332, y: 148, size: 12, color: "#d7d36a" },
+  { name: "CEO", x: 108, y: 68, size: 22, color: "var(--layer-people)" },
+  { name: "CTO", x: 196, y: 118, size: 16, color: "var(--layer-people)" },
+  { name: "COO", x: 122, y: 180, size: 15, color: "var(--layer-people)" },
+  { name: "Platform", x: 268, y: 86, size: 14, color: "var(--layer-tech)" },
+  { name: "Sales", x: 252, y: 196, size: 13, color: "var(--layer-ops)" },
+  {
+    name: "Finance",
+    x: 332,
+    y: 148,
+    size: 12,
+    color: "var(--layer-financial)",
+  },
 ] as const;
 
 const PREVIEW_EDGES = [
@@ -413,10 +419,9 @@ export default function DataInputPage() {
       driveAccessTokenRef.current = accessToken;
       setDriveFolderId("");
       setDriveFolderPath([{ id: "root", name: "My Drive" }]);
-      const loaded = await loadDriveFolders(
+      const loaded = await loadDriveFolders({ id: "root", name: "My Drive" }, [
         { id: "root", name: "My Drive" },
-        [{ id: "root", name: "My Drive" }],
-      );
+      ]);
       if (!loaded) {
         return;
       }
@@ -485,154 +490,130 @@ export default function DataInputPage() {
   }, [description, driveFolderId, importGoogleDriveFolder]);
 
   return (
-    <main className="app-shell px-4 py-5 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-[1540px] flex-col gap-8">
-        <header className="fade-rise border-b hairline pb-5">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="eyebrow mb-3">
-                Nexus // Organizational Survival Analysis
-              </div>
-              <h1 className="display-face max-w-4xl text-[clamp(3.3rem,8vw,6.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-[var(--foreground)]">
-                Reveal the dependencies that can break the whole organization.
-              </h1>
+    <main className="app-shell min-h-screen px-6 py-8 md:px-12 md:py-16">
+      <div className="mx-auto flex w-full max-w-[1720px] flex-col gap-12 lg:gap-24">
+        <header className="fade-rise flex flex-col items-start gap-12 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <span className="mono-label rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                RESILIENCE CONSOLE v1.0
+              </span>
+              <span className="status-dot animate-pulse" />
+              <span className="mono-label text-[var(--accent-soft)]">
+                OPERATIONAL STATUS: READY
+              </span>
             </div>
+            <h1 className="display-face text-[clamp(2.5rem,8vw,5.5rem)] font-bold leading-[0.92] tracking-[-0.05em] text-[var(--foreground)]">
+              Discover the dependencies that{" "}
+              <span className="text-[var(--danger)]">break</span> the
+              organization.
+            </h1>
+          </div>
 
-            <div className="grid max-w-xl grid-cols-1 gap-2 text-sm text-[var(--muted)] sm:grid-cols-3">
-              {SIGNALS.map((signal) => (
-                <div
-                  key={signal}
-                  className="metric-chip rounded-full px-4 py-2 text-center"
-                >
-                  {signal}
-                </div>
-              ))}
-            </div>
+          <div className="flex flex-col gap-4 text-left lg:max-w-xs lg:text-right">
+            <div className="eyebrow">Strategic Resilience Console</div>
+            <p className="text-sm leading-relaxed text-[var(--muted)]">
+              Deterministic stress-testing for complex human and technical
+              systems. Map, analyze, and preempt catastrophic failure paths.
+            </p>
           </div>
         </header>
 
-        <section className="grid gap-8 lg:grid-cols-[1.12fr_0.88fr] lg:items-start">
-          <div className="fade-rise-delay flex flex-col gap-8">
-            <div className="max-w-2xl space-y-5">
-              <p className="max-w-xl text-lg leading-8 text-[var(--muted-strong)] sm:text-xl">
-                Upload your org data, build a living dependency map, and rank
-                the catastrophic failure paths before they happen in production.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <ValueBlock
-                  label="Input"
-                  value="Any source"
-                  detail="CSV, docs, images, notes"
-                />
-                <ValueBlock
-                  label="Output"
-                  value="True graph"
-                  detail="Nodes, edges, weakpoints"
-                />
-                <ValueBlock
-                  label="Decision"
-                  value="Fix first"
-                  detail="Scenario-ranked action plan"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
+        <section className="grid gap-16 lg:grid-cols-[1.3fr_0.7fr] lg:items-start">
+          <div className="fade-rise-delay flex flex-col gap-12">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {PIPELINE_STEPS.map((step) => (
-                <article
+                <div
                   key={step.id}
-                  className="control-surface rounded-[26px] p-5"
+                  className="bracket-box flex flex-col gap-3 rounded-xl border-white/5 bg-white/[0.02] p-5"
                 >
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent-soft)]">
-                      {step.id}
+                  <div className="flex items-center justify-between">
+                    <span className="mono-label text-[var(--accent-soft)]">
+                      STAGE_{step.id}
                     </span>
-                    <span className="h-px w-14 bg-white/10" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
                   </div>
-                  <h2 className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
+                  <div className="text-lg font-bold tracking-tight text-[var(--foreground)] uppercase">
                     {step.title}
-                  </h2>
-                  <p className="mt-3 max-w-sm text-sm leading-6 text-[var(--muted)]">
+                  </div>
+                  <p className="text-xs leading-5 text-[var(--muted)]">
                     {step.detail}
                   </p>
-                </article>
+                </div>
               ))}
             </div>
 
-            <section className="control-surface-strong rounded-[34px] p-5 sm:p-7">
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                  <div>
-                    <div className="eyebrow mb-2">Data Intake</div>
-                    <h2 className="display-face text-[clamp(2rem,4vw,3rem)] font-medium tracking-[-0.04em] text-[var(--foreground)]">
-                      Build the network.
-                    </h2>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                      Start with one file or drop the full operational
-                      footprint. We will extract entities, connect dependencies,
-                      and push the session into the graph view.
-                    </p>
+            <section className="control-surface-strong relative overflow-hidden rounded-[40px] p-8 sm:p-12">
+              <div className="absolute top-0 right-0 h-48 w-48 opacity-10 pointer-events-none">
+                <svg viewBox="0 0 100 100" fill="none" stroke="currentColor">
+                  <circle cx="100" cy="0" r="80" strokeWidth="0.5" />
+                  <circle cx="100" cy="0" r="60" strokeWidth="0.5" />
+                  <circle cx="100" cy="0" r="40" strokeWidth="0.5" />
+                </svg>
+              </div>
+
+              <div className="flex flex-col gap-10">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-1 w-8 bg-[var(--accent)]" />
+                    <div className="eyebrow">DATA INTAKE MODULE</div>
                   </div>
-                  <div className="metric-chip rounded-2xl px-4 py-3 text-sm">
-                    Accepted formats: PDF, DOCX, XLSX, CSV, TSV, PNG, JPG, JSON,
-                    XML, TXT, MD
-                  </div>
+                  <h2 className="display-face text-[clamp(2rem,5vw,3.5rem)] font-medium tracking-[-0.04em] text-[var(--foreground)]">
+                    Initialize organizational footprint.
+                  </h2>
+                  <p className="max-w-2xl text-base leading-relaxed text-[var(--muted)]">
+                    Start with your core roster or drop the full operational
+                    stack. We will extract entities, map dependencies, and stage
+                    the graph for adversarial simulation.
+                  </p>
                 </div>
 
                 <div
                   role="button"
                   tabIndex={0}
                   onClick={() => inputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      inputRef.current?.click();
-                    }
-                  }}
+                  className={`rounded-[32px] border border-dashed p-8 transition-all sm:p-12 ${
+                    dragging
+                      ? "border-[var(--accent)] bg-[color:rgb(123_220_198_/_0.12)]"
+                      : "border-white/10 bg-white/[0.04] hover:border-[var(--accent-soft)] hover:bg-white/[0.06]"
+                  }`}
                   onDragOver={onDragOver}
                   onDragLeave={onDragLeave}
                   onDrop={onDrop}
-                  className={`rounded-[28px] border border-dashed p-6 transition-all sm:p-8 ${
-                    dragging
-                      ? "border-[color:rgb(123_220_198_/_0.48)] bg-[color:rgb(123_220_198_/_0.08)]"
-                      : "border-white/12 bg-white/[0.03] hover:border-[color:rgb(123_220_198_/_0.28)]"
-                  }`}
                 >
-                  <div className="grid gap-4 lg:grid-cols-[auto_1fr_auto] lg:items-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+                  <div className="flex flex-col items-center justify-center gap-6 text-center">
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]">
+                      <div className="absolute inset-[-1px] rounded-2xl border border-white/10 pointer-events-none" />
                       <svg
-                        className="h-7 w-7 text-[var(--accent-soft)]"
+                        className="h-8 w-8 text-[var(--accent-soft)]"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                        strokeWidth={1.8}
+                        strokeWidth={1.5}
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          d="M12 16V4m0 0L8 8m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"
+                          d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
                         />
                       </svg>
                     </div>
                     <div>
-                      <p className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
-                        {dragging
-                          ? "Release to stage the files"
-                          : "Drop files or browse your source set"}
+                      <p className="display-face text-3xl font-medium tracking-tight text-[var(--foreground)]">
+                        {dragging ? "RELEASE TO STAGE" : "DROP SOURCE FILES"}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        Use one employee CSV to test the full path, or combine
-                        org charts, process docs, and operational notes for a
-                        richer graph.
+                      <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+                        CSV, PDF, DOCX, XLSX, JSON, IMAGE.
+                        <br />
+                        Combine multiple files for 10x graph resolution.
                       </p>
                     </div>
-                    <div className="justify-self-start lg:justify-self-end">
-                      <button
-                        type="button"
-                        className="ghost-button rounded-full px-5 py-3 text-sm font-semibold"
-                      >
-                        Select Files
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="accent-button mt-4 rounded-full px-8 py-4 text-xs font-bold uppercase tracking-[0.2em]"
+                    >
+                      SELECT SOURCE
+                    </button>
                   </div>
 
                   <input
@@ -648,100 +629,88 @@ export default function DataInputPage() {
                 </div>
 
                 {files.length > 0 && (
-                  <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
-                    <div>
-                      <div className="mb-3 flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                          Uploaded Payload
-                        </p>
-                        <p className="text-sm text-[var(--muted)]">
-                          {files.length} file{files.length === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                      <ul className="custom-scrollbar grid max-h-64 gap-2 overflow-y-auto pr-1">
-                        {files.map((file, index) => {
-                          const ext = fileExtension(file.name);
-                          return (
-                            <li
-                              key={`${file.name}-${file.size}`}
-                              className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                  <div className="grid gap-6">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <p className="mono-label">
+                        STAGED PAYLOAD: {files.length} ENTITY
+                        {files.length === 1 ? "" : "IES"}
+                      </p>
+                    </div>
+                    <ul className="custom-scrollbar grid gap-3 overflow-y-auto max-h-[320px] pr-2">
+                      {files.map((file, index) => {
+                        const ext = fileExtension(file.name);
+                        return (
+                          <li
+                            key={`${file.name}-${file.size}`}
+                            className="group flex items-center gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:bg-white/[0.04]"
+                          >
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-[10px] font-bold uppercase tracking-widest ${badgeClass(ext)}`}
                             >
-                              <span
-                                className={`rounded-full border px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] ${badgeClass(ext)}`}
-                              >
-                                {ext || "file"}
-                              </span>
-                              <span className="min-w-0 flex-1 truncate text-sm text-[var(--foreground)]">
+                              {ext || "FILE"}
+                            </div>
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-sm font-medium text-[var(--foreground)]">
                                 {file.name}
                               </span>
-                              <span className="text-xs text-[var(--muted)] tabular-nums">
-                                {formatSize(file.size)}
+                              <span className="mono-label text-[10px] opacity-60">
+                                SIZE: {formatSize(file.size)}
                               </span>
-                              <button
-                                type="button"
-                                className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeFile(index);
-                                }}
-                              >
-                                Remove
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-
-                    <div className="metric-chip rounded-[24px] px-4 py-4 text-sm lg:w-[220px]">
-                      <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
-                        Suggested test path
-                      </div>
-                      Start with the org CSV, then expand into diagrams and
-                      process notes to increase graph coverage.
-                    </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="mono-label text-[10px] opacity-0 transition-opacity hover:text-[var(--danger)] group-hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFile(index);
+                              }}
+                            >
+                              [ REMOVE ]
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
                 )}
 
-                <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
-                  <label className="field-shell block rounded-[26px] p-4">
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                      Organization context
-                    </div>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={4}
-                      placeholder="Example: 24-person SaaS company with a centralized platform team, revenue concentrated in enterprise sales, and a single office and AWS footprint."
-                      className="min-h-[118px] w-full resize-y border-0 bg-transparent text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[color:rgb(161_177_196_/_0.36)]"
-                    />
-                  </label>
+                <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+                  <div className="flex flex-col gap-4">
+                    <label className="flex flex-col gap-2">
+                      <span className="mono-label">
+                        Narrative Context (Optional)
+                      </span>
+                      <div className="field-shell rounded-3xl p-5">
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          rows={4}
+                          placeholder="Example: 24-person SaaS company with a centralized platform team, revenue concentrated in enterprise sales, and a single office and AWS footprint."
+                          className="w-full resize-none border-0 bg-transparent text-sm leading-relaxed text-[var(--foreground)] outline-none placeholder:text-white/20"
+                        />
+                      </div>
+                    </label>
+                  </div>
 
-                  <div className="flex flex-col gap-3 xl:min-w-[240px]">
+                  <div className="flex flex-col gap-4 lg:min-w-[280px]">
                     <button
                       type="button"
-                      className="ghost-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="ghost-button rounded-full py-5 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
                       onClick={handleConnectGoogleDrive}
                       disabled={uploading || driveAuthPending}
                     >
                       {driveAuthPending
-                        ? "Authorizing Drive"
-                        : "Connect Google Drive"}
+                        ? "AUTHORIZING..."
+                        : "CONNECT GOOGLE DRIVE"}
                     </button>
                     <button
                       type="button"
-                      className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="accent-button rounded-full py-5 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
                       onClick={handleBuild}
                       disabled={files.length === 0 || uploading}
-                      suppressHydrationWarning
                     >
-                      {uploading ? "Building Network" : "Build Network"}
+                      {uploading ? "CALCULATING..." : "BUILD NETWORK →"}
                     </button>
-                    <p className="text-xs leading-5 text-[var(--muted)]">
-                      Drive import uses a browser OAuth popup. Your Google OAuth
-                      client must allow this app origin, for example
-                      `http://localhost:3000` in local development.
-                    </p>
                   </div>
                 </div>
 
@@ -792,127 +761,151 @@ export default function DataInputPage() {
             </section>
 
             {driveDialogOpen && (
-              <section className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[color:rgb(6_10_18_/_0.78)] px-4 py-8 backdrop-blur-sm sm:px-6">
+              <section className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 px-4 py-8 backdrop-blur-md sm:px-6">
                 <div
                   ref={driveDialogRef}
-                  className="control-surface relative w-full max-w-4xl overflow-hidden rounded-[28px] p-6 shadow-[0_32px_120px_rgba(0,0,0,0.45)]"
+                  className="control-surface-strong relative w-full max-w-5xl overflow-hidden rounded-[48px] p-8 shadow-[0_32px_120px_rgba(0,0,0,0.6)] sm:p-12"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <div className="eyebrow mb-2">Google Drive import</div>
-                      <h3 className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
-                        Choose the folder to import.
+                  <div className="mb-12 flex items-start justify-between gap-6">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1 w-8 bg-[var(--accent)]" />
+                        <div className="eyebrow">DRIVE_ACCESS_PROTOCOL</div>
+                      </div>
+                      <h3 className="display-face text-[clamp(2rem,4vw,3rem)] font-medium tracking-[-0.03em] text-[var(--foreground)]">
+                        Select target directory.
                       </h3>
-                      <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                        Browse your Drive folders below, select one, then import
-                        it. Manual folder URL/id entry remains available as a
-                        fallback.
+                      <p className="max-w-2xl text-base leading-relaxed text-[var(--muted)]">
+                        Browse your Google Drive folders below. Selecting a root
+                        folder with high connectivity will improve the final
+                        graph resolution.
                       </p>
                     </div>
                     <button
                       type="button"
-                      className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="mono-label rounded-full border border-white/10 px-5 py-2 transition-colors hover:bg-white/5"
                       onClick={() => setDriveDialogOpen(false)}
                       disabled={isDriveImporting}
                     >
-                      Close
+                      [ CLOSE ]
                     </button>
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
-                    <label className="field-shell block rounded-[26px] p-4">
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                        Selected folder
+                  <div className="grid gap-8 lg:grid-cols-[1fr_280px] lg:items-end">
+                    <label className="flex flex-col gap-2">
+                      <span className="mono-label text-[10px]">
+                        SELECTED_RESOURCE_ID
+                      </span>
+                      <div className="field-shell rounded-3xl p-5">
+                        <input
+                          ref={driveFolderInputRef}
+                          value={driveFolderId}
+                          onChange={(e) => setDriveFolderId(e.target.value)}
+                          placeholder="FOLDER_ID_OR_URL"
+                          className="w-full border-0 bg-transparent font-mono text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-white/10"
+                        />
                       </div>
-                      <input
-                        ref={driveFolderInputRef}
-                        value={driveFolderId}
-                        onChange={(e) => setDriveFolderId(e.target.value)}
-                        placeholder="Pick a folder below or paste a Drive folder URL/id"
-                        className="w-full border-0 bg-transparent text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[color:rgb(161_177_196_/_0.36)]"
-                      />
                     </label>
 
-                    <div className="flex flex-col gap-3 xl:min-w-[240px]">
+                    <div className="flex flex-col gap-4">
                       <button
                         type="button"
-                        className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="accent-button rounded-full py-5 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
                         onClick={handleImportGoogleDrive}
                         disabled={uploading || driveFolderBrowserLoading}
                       >
-                        {isDriveImporting ? "Importing Folder" : "Import Folder"}
+                        {isDriveImporting
+                          ? "IMPORTING..."
+                          : "IMPORT DIRECTORY →"}
                       </button>
-                      <p className="text-xs leading-5 text-[var(--muted)]">
-                        Requires a browser-authorized Google account with read
-                        access to the selected folder.
-                      </p>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(240px,0.8fr)]">
-                    <div className="rounded-[26px] border border-white/10 bg-white/[0.03] p-4">
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                        Current selection
+                  <div className="mt-12 grid gap-6 md:grid-cols-2">
+                    <div className="bracket-box rounded-3xl border-white/5 bg-white/[0.02]">
+                      <div className="mb-4 mono-label text-[10px]">
+                        ACTIVE_SELECTION
                       </div>
-                      <div className="text-base font-semibold text-[var(--foreground)]">
+                      <div className="text-xl font-bold text-[var(--foreground)]">
                         {selectedDriveFolder?.name ||
                           displayDriveFolderLabel(driveFolderId)}
                       </div>
-                      <div className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                      <div className="mt-3 font-mono text-[10px] opacity-40">
                         {selectedDriveFolder
-                          ? `Folder id: ${selectedDriveFolder.id}`
+                          ? `UID: ${selectedDriveFolder.id}`
                           : driveFolderId
-                            ? "Using a manually entered folder reference."
-                            : "Select a folder from the browser or paste a folder URL/id."}
+                            ? "MANUAL_REFERENCE_DETECTED"
+                            : "AWAITING_SELECTION..."}
                       </div>
                     </div>
 
-                    <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(135deg,rgba(120,226,201,0.12),rgba(80,110,176,0.08))] p-4">
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
-                        Import flow
+                    <div className="bracket-box rounded-3xl border-white/5 bg-[var(--accent)]/[0.03]">
+                      <div className="mb-4 mono-label text-[10px] text-[var(--accent-soft)]">
+                        IMPORT_SEQUENCE
                       </div>
-                      <div className="space-y-2 text-sm text-[var(--foreground)]">
-                        <div className={driveAuthPending ? "text-[var(--accent-soft)]" : "text-[var(--muted)]"}>
-                          01 Authorize Google Drive
+                      <div className="space-y-3 font-mono text-[11px]">
+                        <div
+                          className={
+                            driveAuthPending
+                              ? "text-[var(--accent)]"
+                              : "text-white/40"
+                          }
+                        >
+                          01_AUTHORIZE_PROTOCOL
                         </div>
-                        <div className={driveDialogOpen ? "text-[var(--accent-soft)]" : "text-[var(--muted)]"}>
-                          02 Choose target folder
+                        <div
+                          className={
+                            driveDialogOpen
+                              ? "text-[var(--accent)]"
+                              : "text-white/40"
+                          }
+                        >
+                          02_RESOLVE_HIERARCHY
                         </div>
-                        <div className={isDriveImporting ? "text-[var(--accent-soft)]" : "text-[var(--muted)]"}>
-                          03 Import and build graph
+                        <div
+                          className={
+                            isDriveImporting
+                              ? "text-[var(--accent)]"
+                              : "text-white/40"
+                          }
+                        >
+                          03_INGEST_PAYLOAD
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-5 rounded-[26px] border border-white/10 bg-white/[0.03] p-4">
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-8 flex flex-col gap-6 rounded-[32px] border border-white/5 bg-white/[0.01] p-6 sm:p-8">
+                    <div className="flex flex-wrap items-center gap-3">
                       {driveFolderPath.map((folder, index) => (
-                        <button
+                        <div
                           key={`${folder.id}-${index}`}
-                          type="button"
-                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
-                          onClick={() => void handleJumpToDrivePath(index)}
-                          disabled={driveFolderBrowserLoading}
+                          className="flex items-center gap-3"
                         >
-                          {folder.name}
-                        </button>
+                          <button
+                            type="button"
+                            className="mono-label text-[10px] transition-colors hover:text-[var(--accent-soft)] disabled:opacity-20"
+                            onClick={() => void handleJumpToDrivePath(index)}
+                            disabled={driveFolderBrowserLoading}
+                          >
+                            {folder.name.toUpperCase()}
+                          </button>
+                          {index < driveFolderPath.length - 1 && (
+                            <span className="text-white/10">/</span>
+                          )}
+                        </div>
                       ))}
                     </div>
 
-                    <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <div className="text-sm font-semibold text-[var(--foreground)]">
-                          Browse folders
-                        </div>
-                        <div className="text-xs leading-5 text-[var(--muted)]">
-                          Open a folder to inspect its children, or select it
-                          directly for import.
+                        <div className="mono-label text-[10px]">
+                          DIRECTORY_BROWSER
                         </div>
                       </div>
                       <button
                         type="button"
-                        className="ghost-button rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="mono-label rounded-full border border-white/10 px-4 py-2 text-[9px] hover:bg-white/5 disabled:opacity-20"
                         onClick={() =>
                           void loadDriveFolders(
                             driveFolderPath[driveFolderPath.length - 1] ?? {
@@ -924,52 +917,62 @@ export default function DataInputPage() {
                         }
                         disabled={driveFolderBrowserLoading || isDriveImporting}
                       >
-                        {driveFolderBrowserLoading ? "Loading" : "Refresh"}
+                        {driveFolderBrowserLoading
+                          ? "REFRESHING..."
+                          : "FORCE_REFRESH"}
                       </button>
                     </div>
 
                     <div className="grid gap-2">
                       {driveFolderBrowserLoading ? (
-                        <div className="rounded-[20px] border border-white/8 px-4 py-6 text-sm text-[var(--muted)]">
-                          Loading Drive folders...
+                        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-12 text-center">
+                          <span className="mono-label text-[10px] animate-pulse">
+                            SYNCHRONIZING_DIRECTORY_TREE...
+                          </span>
                         </div>
                       ) : driveFolders.length > 0 ? (
-                        driveFolders.map((folder) => (
-                          <div
-                            key={folder.id}
-                            className="flex items-center justify-between gap-3 rounded-[20px] border border-white/8 bg-white/[0.02] px-4 py-3"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-medium text-[var(--foreground)]">
-                                {folder.name}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {driveFolders.map((folder) => (
+                            <div
+                              key={folder.id}
+                              className="group flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:bg-white/[0.04]"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-bold text-[var(--foreground)] uppercase tracking-tight">
+                                  {folder.name}
+                                </div>
+                                <div className="truncate font-mono text-[9px] opacity-30">
+                                  {folder.id}
+                                </div>
                               </div>
-                              <div className="truncate text-xs text-[var(--muted)]">
-                                {folder.id}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="mono-label rounded-lg border border-white/5 bg-white/5 px-3 py-1.5 text-[9px] transition-colors hover:bg-white/10"
+                                  onClick={() => setDriveFolderId(folder.id)}
+                                  disabled={isDriveImporting}
+                                >
+                                  SELECT
+                                </button>
+                                <button
+                                  type="button"
+                                  className="mono-label rounded-lg border border-white/5 px-3 py-1.5 text-[9px] transition-colors hover:bg-white/10"
+                                  onClick={() =>
+                                    void handleOpenDriveFolder(folder)
+                                  }
+                                  disabled={isDriveImporting}
+                                >
+                                  OPEN
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
-                                onClick={() => setDriveFolderId(folder.id)}
-                                disabled={isDriveImporting}
-                              >
-                                Select
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
-                                onClick={() => void handleOpenDriveFolder(folder)}
-                                disabled={isDriveImporting}
-                              >
-                                Open
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          ))}
+                        </div>
                       ) : (
-                        <div className="rounded-[20px] border border-white/8 px-4 py-6 text-sm text-[var(--muted)]">
-                          No child folders found here.
+                        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-12 text-center">
+                          <span className="mono-label text-[10px] opacity-40">
+                            NO_SUBDIRECTORIES_DETECTED
+                          </span>
                         </div>
                       )}
                     </div>
@@ -982,37 +985,37 @@ export default function DataInputPage() {
                   )}
 
                   {isDriveImporting && (
-                    <div className="drive-import-overlay absolute inset-0 flex items-center justify-center rounded-[28px] p-5">
-                      <div className="w-full max-w-md rounded-[28px] border border-[color:rgb(120_226_201_/_0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-                        <div className="mb-4 flex items-center gap-3">
-                          <div className="relative h-12 w-12">
-                            <span className="absolute inset-0 rounded-full border border-[color:rgb(120_226_201_/_0.18)]" />
-                            <span className="absolute inset-[10px] rounded-full bg-[var(--accent-soft)] signal-pulse" />
-                            <span className="drive-import-spinner absolute inset-[3px] rounded-full border-2 border-transparent border-t-[var(--accent)] border-r-[var(--accent-soft)]" />
+                    <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 p-8 backdrop-blur-xl">
+                      <div className="control-surface-strong w-full max-w-lg rounded-[40px] p-10 shadow-[0_32px_90px_rgba(0,0,0,0.5)]">
+                        <div className="mb-8 flex items-center gap-6">
+                          <div className="relative h-16 w-16">
+                            <span className="absolute inset-0 rounded-full border border-white/5 animate-ping" />
+                            <span className="absolute inset-[14px] rounded-full bg-[var(--accent)] animate-pulse" />
+                            <span className="drive-import-spinner absolute inset-[2px] rounded-full border-2 border-transparent border-t-[var(--accent)]" />
                           </div>
                           <div>
-                            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
-                              Google Drive import
+                            <div className="mono-label text-[var(--accent-soft)]">
+                              INGESTION_IN_PROGRESS
                             </div>
-                            <div className="text-lg font-semibold text-[var(--foreground)]">
-                              {uploadProgress || "Importing folder"}
+                            <div className="display-face text-2xl font-bold text-[var(--foreground)]">
+                              {uploadProgress || "Mapping tree"}
                             </div>
                           </div>
                         </div>
 
-                        <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/6">
-                          <div className="drive-progress-bar h-full w-full rounded-full" />
+                        <div className="mb-6 h-1.5 overflow-hidden rounded-full bg-white/5">
+                          <div className="drive-progress-bar h-full w-full" />
                         </div>
 
-                        <div className="rounded-[22px] border border-white/8 bg-black/10 px-4 py-3 text-sm text-[var(--muted-strong)]">
-                          {selectedDriveFolder?.name ||
-                            displayDriveFolderLabel(driveFolderId)}
+                        <div className="rounded-2xl border border-white/5 bg-black/20 p-4 font-mono text-[10px] text-[var(--muted-strong)]">
+                          TARGET: {selectedDriveFolder?.name || "REMOTE_SOURCE"}
                         </div>
 
-                        <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-                          Scanning the folder, downloading supported files, and
-                          building the first graph snapshot. This can take a bit
-                          for larger Drive trees.
+                        <p className="mt-6 text-sm leading-relaxed text-[var(--muted)]">
+                          Scanning the directory tree, identifying supported
+                          entities, and establishing baseline dependency
+                          weights. Larger environments may require extended
+                          compute.
                         </p>
                       </div>
                     </div>
@@ -1022,48 +1025,58 @@ export default function DataInputPage() {
             )}
 
             {showFollowUp && (
-              <section className="control-surface rounded-[28px] p-6">
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <div>
-                    <div className="eyebrow mb-2">Analyst review</div>
-                    <h3 className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
-                      The graph is ready with flagged coverage gaps.
-                    </h3>
+              <section className="control-surface-strong rounded-[40px] p-8 sm:p-12">
+                <div className="mb-10 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-1 w-8 bg-[var(--accent)]" />
+                    <div className="eyebrow">GRAPH_VALIDATION_PROTOCOL</div>
                   </div>
-                  <div className="metric-chip rounded-full px-4 py-2 text-sm">
-                    Confidence {Math.round((confidence ?? 0) * 100)}%
+                  <div className="flex items-start justify-between gap-6">
+                    <h3 className="display-face text-[clamp(2rem,4vw,3rem)] font-medium tracking-[-0.03em] text-[var(--foreground)]">
+                      Coverage gaps detected.
+                    </h3>
+                    <div className="bracket-box rounded-2xl py-3 px-5">
+                      <div className="mono-label text-[9px] mb-1 opacity-50">
+                        CONFIDENCE_SCORE
+                      </div>
+                      <div className="text-xl font-bold text-[var(--accent)]">
+                        {Math.round((confidence ?? 0) * 100)}%
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-start">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                        Follow-up questions
+
+                <div className="grid gap-12 lg:grid-cols-[1fr_240px] lg:items-end">
+                  <div className="grid gap-10 md:grid-cols-2">
+                    <div className="flex flex-col gap-4">
+                      <p className="mono-label text-[10px] text-[var(--accent-soft)]">
+                        PENDING_CLARIFICATIONS
                       </p>
-                      <ul className="space-y-2">
+                      <ul className="flex flex-col gap-3">
                         {followUpQuestions.map((question, index) => (
                           <li
                             key={question}
-                            className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-[var(--foreground)]"
+                            className="flex gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm leading-relaxed text-[var(--foreground)]"
                           >
-                            <span className="text-[var(--accent-soft)]">
-                              {index + 1}
+                            <span className="font-mono text-[10px] text-[var(--accent-soft)] opacity-40">
+                              {String(index + 1).padStart(2, "0")}
                             </span>
                             <span>{question}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
+
                     {gaps.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                          Observed gaps
+                      <div className="flex flex-col gap-4">
+                        <p className="mono-label text-[10px] text-[var(--warn)]">
+                          OBSERVED_TOPOLOGY_GAPS
                         </p>
-                        <ul className="space-y-2">
+                        <ul className="flex flex-col gap-3">
                           {gaps.map((gap) => (
                             <li
                               key={gap}
-                              className="rounded-2xl border border-[color:rgb(215_195_106_/_0.18)] bg-[color:rgb(215_195_106_/_0.08)] px-4 py-3 text-sm text-[color:rgb(255_241_189)]"
+                              className="rounded-2xl border border-[var(--warn)]/10 bg-[var(--warn)]/5 p-4 text-sm leading-relaxed text-[var(--warn)]"
                             >
                               {gap}
                             </li>
@@ -1072,46 +1085,61 @@ export default function DataInputPage() {
                       </div>
                     )}
                   </div>
+
                   <button
                     type="button"
-                    className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em]"
+                    className="accent-button rounded-full py-6 text-xs font-bold uppercase tracking-[0.2em]"
                     onClick={handleProceed}
                   >
-                    Continue to network
+                    CONTINUE →
                   </button>
                 </div>
               </section>
             )}
           </div>
 
-          <aside className="fade-rise flex flex-col gap-6 lg:sticky lg:top-24">
-            <section className="control-surface-strong graph-preview-grid relative overflow-hidden rounded-[36px] p-6 sm:p-8">
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                  <div className="eyebrow mb-2">Live Preview</div>
-                  <h2 className="display-face text-[clamp(2rem,4vw,3.4rem)] font-medium tracking-[-0.05em] text-[var(--foreground)]">
-                    Dependency field
-                  </h2>
+          <aside className="fade-rise flex flex-col gap-10 lg:sticky lg:top-24">
+            <section className="control-surface-strong relative flex flex-col gap-8 overflow-hidden rounded-[48px] p-8 sm:p-10">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-[var(--accent)] animate-pulse" />
+                  <div className="eyebrow">LIVE DEPENDENCY MONITOR</div>
                 </div>
-                <div className="metric-chip rounded-2xl px-4 py-3 text-xs">
-                  Scenario engine armed
-                </div>
+                <h2 className="display-face text-[clamp(2rem,4vw,3.2rem)] font-medium tracking-[-0.05em] text-[var(--foreground)]">
+                  Topology Preview
+                </h2>
               </div>
 
-              <p className="max-w-lg text-sm leading-6 text-[var(--muted)] sm:text-base">
-                The interface should feel like a resilience war room from the
-                first screen. This preview hints at what the graph view becomes
-                once the upload completes.
-              </p>
+              <div className="relative overflow-hidden rounded-[32px] border border-white/5 bg-black/40 p-6">
+                <div className="absolute top-4 left-6 flex flex-col gap-1">
+                  <div className="mono-label text-[9px] opacity-40">
+                    SYSTEM_CLOCK: 172948.04
+                  </div>
+                  <div className="mono-label text-[9px] opacity-40">
+                    RESOLUTION: 1080P_SCAN
+                  </div>
+                </div>
 
-              <div className="relative mt-8 overflow-hidden rounded-[28px] border border-white/10 bg-[color:rgb(6_13_24_/_0.54)] px-4 py-6 sm:px-6">
-                <svg viewBox="0 0 400 270" className="h-auto w-full">
+                <svg
+                  viewBox="0 0 400 280"
+                  className="h-auto w-full filter drop-shadow-[0_0_12px_rgba(123,220,198,0.15)]"
+                >
                   <defs>
                     <linearGradient id="edgeGlow" x1="0%" x2="100%">
-                      <stop offset="0%" stopColor="rgba(132, 198, 244, 0.24)" />
+                      <stop
+                        offset="0%"
+                        stopColor="var(--accent-soft)"
+                        stopOpacity="0.1"
+                      />
+                      <stop
+                        offset="50%"
+                        stopColor="var(--accent)"
+                        stopOpacity="0.4"
+                      />
                       <stop
                         offset="100%"
-                        stopColor="rgba(123, 220, 198, 0.58)"
+                        stopColor="var(--accent-soft)"
+                        stopOpacity="0.1"
                       />
                     </linearGradient>
                   </defs>
@@ -1126,8 +1154,9 @@ export default function DataInputPage() {
                           y1={from.y}
                           x2={to.x}
                           y2={to.y}
-                          stroke="rgba(128, 154, 196, 0.22)"
-                          strokeWidth="1.5"
+                          stroke="white"
+                          strokeOpacity="0.05"
+                          strokeWidth="1"
                         />
                         <line
                           x1={from.x}
@@ -1135,8 +1164,8 @@ export default function DataInputPage() {
                           x2={to.x}
                           y2={to.y}
                           stroke="url(#edgeGlow)"
-                          strokeWidth="2.5"
-                          strokeDasharray="8 20"
+                          strokeWidth="1.5"
+                          strokeDasharray="4 16"
                           className="signal-track"
                         />
                       </g>
@@ -1149,116 +1178,74 @@ export default function DataInputPage() {
                       transform={`translate(${node.x}, ${node.y})`}
                     >
                       <circle
-                        r={node.size + 16}
+                        r={node.size + 14}
                         fill={node.color}
-                        opacity="0.07"
+                        opacity="0.08"
+                        className={index === 0 ? "animate-pulse" : ""}
                       />
-                      <circle
-                        r={node.size + 8}
-                        fill={node.color}
-                        opacity="0.05"
-                      />
-                      <circle
-                        r={node.size + 18}
-                        stroke={node.color}
-                        strokeOpacity="0.32"
-                        fill="none"
-                      >
-                        {index < 2 ? (
-                          <animate
-                            attributeName="r"
-                            values={`${node.size + 8};${node.size + 22}`}
-                            dur="2.4s"
-                            repeatCount="indefinite"
-                          />
-                        ) : null}
-                        {index < 2 ? (
-                          <animate
-                            attributeName="opacity"
-                            values="0.36;0"
-                            dur="2.4s"
-                            repeatCount="indefinite"
-                          />
-                        ) : null}
-                      </circle>
                       <circle
                         r={node.size}
-                        fill="rgba(8, 17, 31, 0.88)"
+                        fill="black"
                         stroke={node.color}
-                        strokeWidth="2"
+                        strokeWidth="1.5"
+                        strokeOpacity="0.6"
                       />
+                      <circle r={2} fill={node.color} />
                       <text
-                        y={node.size + 19}
+                        y={node.size + 18}
                         textAnchor="middle"
                         fill="var(--foreground)"
-                        fontSize="11"
-                        fontFamily="var(--font-body)"
+                        fontSize="10"
+                        fontWeight="600"
+                        className="mono-label !text-[10px] tracking-widest opacity-80"
                       >
-                        {node.name}
+                        {node.name.toUpperCase()}
                       </text>
                     </g>
                   ))}
                 </svg>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="mt-8 grid grid-cols-3 gap-4 border-t border-white/5 pt-6">
                   <PreviewMetric
-                    label="People layer"
-                    value="14 nodes"
-                    accent="var(--accent-soft)"
+                    label="ENTITY_COUNT"
+                    value="14_NODES"
+                    accent="var(--layer-people)"
                   />
                   <PreviewMetric
-                    label="Critical path"
-                    value="3 jumps"
-                    accent="#f0b663"
+                    label="CRITICAL_PATH"
+                    value="03_HOPS"
+                    accent="var(--danger)"
                   />
                   <PreviewMetric
-                    label="Collapse risk"
-                    value="0.28 H"
-                    accent="#e28766"
+                    label="HEALTH_IDX"
+                    value="1.00_H"
+                    accent="var(--healthy)"
                   />
                 </div>
               </div>
-            </section>
 
-            <section className="control-surface rounded-[30px] p-6">
-              <div className="eyebrow mb-2">Operator notes</div>
-              <div className="space-y-4 text-sm leading-6 text-[var(--muted)]">
-                <p>
-                  Keep the graph as the largest visual object. Every deeper
-                  screen should feel connected to this first decision.
-                </p>
-                <p>
-                  The UI is deliberately dense but readable: less dashboard
-                  chrome, more source-of-truth structure.
-                </p>
+              <div className="flex flex-col gap-4">
+                <div className="eyebrow">SYSTEM LOG</div>
+                <div className="flex flex-col gap-2 rounded-2xl border border-white/5 bg-white/[0.02] p-4 font-mono text-[10px] leading-relaxed text-[var(--muted)]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[var(--accent-soft)]">[INFO]</span>
+                    <span>ADVERSARIAL_ENGINE_INIT: OK</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[var(--accent-soft)]">[INFO]</span>
+                    <span>TOPOLOGY_SCAN_ACTIVE: WAITING_FOR_PAYLOAD</span>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-40">
+                    <span className="text-[var(--warn)]">[WARN]</span>
+                    <span>DETERMINISTIC_MODE: ENABLED</span>
+                  </div>
+                </div>
               </div>
             </section>
           </aside>
         </section>
       </div>
     </main>
-  );
-}
-
-function ValueBlock({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="control-surface rounded-[22px] px-4 py-4">
-      <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-        {label}
-      </div>
-      <div className="display-face mt-2 text-2xl font-medium tracking-[-0.04em] text-[var(--foreground)]">
-        {value}
-      </div>
-      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{detail}</p>
-    </div>
   );
 }
 
@@ -1272,11 +1259,12 @@ function PreviewMetric({
   accent: string;
 }) {
   return (
-    <div className="rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-3">
-      <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-        {label}
-      </div>
-      <div className="mt-2 text-lg font-semibold" style={{ color: accent }}>
+    <div className="flex flex-col gap-1">
+      <div className="mono-label !text-[9px] opacity-50">{label}</div>
+      <div
+        className="display-face text-sm font-bold tracking-tight"
+        style={{ color: accent }}
+      >
         {value}
       </div>
     </div>
