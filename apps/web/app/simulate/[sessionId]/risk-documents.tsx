@@ -208,8 +208,8 @@ export function RiskDocumentsPanel({
                     <span
                       className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                       style={{
-                        background: "rgba(239, 68, 68, 0.12)",
-                        color: "#fca5a5",
+                        background: "var(--danger) / 0.12",
+                        color: "var(--danger)",
                       }}
                     >
                       {doc.riskScore.toFixed(2)}
@@ -387,8 +387,8 @@ export function RiskDocumentsPanel({
                             <span
                               className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                               style={{
-                                background: "rgba(245, 158, 11, 0.12)",
-                                color: "#fcd34d",
+                                background: "var(--warn) / 0.12",
+                                color: "var(--warn)",
                               }}
                             >
                               Scenario {entry.scenario.rank}
@@ -396,8 +396,8 @@ export function RiskDocumentsPanel({
                             <span
                               className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                               style={{
-                                background: "rgba(239, 68, 68, 0.12)",
-                                color: "#fca5a5",
+                                background: "var(--danger) / 0.12",
+                                color: "var(--danger)",
                               }}
                             >
                               {entry.scenario.severity_label}
@@ -406,7 +406,7 @@ export function RiskDocumentsPanel({
                               <span
                                 className="rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em]"
                                 style={{
-                                  background: "rgba(110, 231, 200, 0.12)",
+                                  background: "var(--accent) / 0.12",
                                   color: "var(--accent)",
                                 }}
                               >
@@ -1179,8 +1179,8 @@ function formatCompactNumber(value: number): string {
 }
 
 function healthTone(health: number): string {
-  if (health <= 0.3) return "#fca5a5";
-  if (health <= 0.7) return "#fcd34d";
+  if (health <= 0.3) return "var(--danger)";
+  if (health <= 0.7) return "var(--warn)";
   return "var(--accent)";
 }
 

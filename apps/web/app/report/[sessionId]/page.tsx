@@ -44,7 +44,7 @@ function SeverityBadge({ label }: { label: string }) {
   const style = SEVERITY_STYLES[key] ?? SEVERITY_STYLES.MEDIUM;
   return (
     <span
-      className={`inline-block rounded-full border px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
+      className={`inline-block rounded-lg border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${style.bg} ${style.text} ${style.border}`}
     >
       {label}
     </span>
@@ -56,20 +56,20 @@ function SeverityBadge({ label }: { label: string }) {
 // ---------------------------------------------------------------------------
 
 const REC_TYPE_STYLES: Record<string, string> = {
-  add_redundancy: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  add_bypass: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  reduce_recovery_time: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  add_redundancy: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+  add_bypass: "bg-purple-500/15 text-purple-400 border-purple-500/20",
+  reduce_recovery_time: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   increase_layer_autonomy:
-    "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
 };
 
 function RecTypeBadge({ type }: { type: string }) {
   const classes =
-    REC_TYPE_STYLES[type] ?? "bg-white/10 text-[var(--muted)] border-white/10";
+    REC_TYPE_STYLES[type] ?? "bg-white/5 text-[var(--muted)] border-white/10";
   const label = type.replace(/_/g, " ");
   return (
     <span
-      className={`inline-block rounded-full border px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider ${classes}`}
+      className={`inline-block rounded-lg border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${classes}`}
     >
       {label}
     </span>
@@ -97,194 +97,173 @@ function ScenarioCard({
 
   return (
     <div
-      className="group rounded-xl border border-white/[0.06] transition-colors hover:border-white/[0.12]"
-      style={{ background: "var(--panel)" }}
+      className={`group rounded-3xl border transition-all ${
+        isExpanded
+          ? "border-white/10 bg-white/[0.03]"
+          : "border-white/5 bg-black/20 hover:border-white/10 hover:bg-white/[0.01]"
+      }`}
     >
       {/* ---- Header (always visible) ---- */}
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full cursor-pointer items-start gap-4 px-5 py-4 text-left"
+        className="flex w-full cursor-pointer items-start gap-6 p-6 text-left sm:p-8"
       >
         {/* Rank */}
-        <span
-          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
-          style={{
-            background: "rgba(110, 231, 200, 0.10)",
-            color: "var(--accent)",
-          }}
-        >
-          #{scenario.rank}
-        </span>
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="mono-label !text-[8px] opacity-40">RANK</div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 text-lg font-bold text-[var(--accent)] shadow-[0_0_12px_rgba(123,220,198,0.1)]">
+            {scenario.rank}
+          </span>
+        </div>
 
         {/* Title + badges row */}
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-semibold text-[var(--foreground)]">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <h3 className="display-face text-lg font-bold tracking-tight text-[var(--foreground)] uppercase">
               {scenario.title}
             </h3>
             <SeverityBadge label={scenario.severity_label} />
           </div>
 
           {/* Metrics row */}
-          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--muted)]">
-            <span>
-              H:{" "}
-              <span className="font-mono text-[var(--foreground)]">
-                {scenario.path.length > 0
-                  ? scenario.path[0].H_before.toFixed(2)
-                  : "1.00"}
-              </span>{" "}
-              <span className="mx-0.5 text-[var(--muted)]">&rarr;</span>{" "}
-              <span className="font-mono text-[var(--foreground)]">
-                {scenario.health_remaining.toFixed(2)}
+          <div className="flex flex-wrap gap-x-8 gap-y-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="mono-label !text-[8px] opacity-40">
+                HEALTH_TRANSITION
               </span>
-            </span>
-            <span>
-              Failed:{" "}
-              <span className="font-mono text-[var(--foreground)]">
-                {scenario.failed_nodes.length}
+              <div className="font-mono text-xs font-bold flex items-center gap-2">
+                <span className="text-[var(--healthy)]">1.00</span>
+                <span className="text-white/20">→</span>
+                <span className="text-[var(--danger)]">
+                  {scenario.health_remaining.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="mono-label !text-[8px] opacity-40">
+                ENTITY_LOSS
               </span>
-              /{totalNodes}
-            </span>
-            <span>
-              Recovery:{" "}
-              <span className="font-mono text-[var(--foreground)]">
-                {scenario.recovery_cost.toLocaleString()}
+              <span className="font-mono text-xs font-bold text-[var(--foreground)]">
+                {scenario.failed_nodes.length}/{totalNodes}
               </span>
-            </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="mono-label !text-[8px] opacity-40">
+                RECOVERY_INDEX
+              </span>
+              <span className="font-mono text-xs font-bold text-[var(--foreground)]">
+                ${(scenario.recovery_cost / 1000).toFixed(0)}K
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Chevron */}
-        <svg
-          className={`mt-1 h-4 w-4 shrink-0 text-[var(--muted)] transition-transform duration-200 ${
-            isExpanded ? "rotate-180" : ""
+        <div
+          className={`mt-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 transition-transform duration-300 ${
+            isExpanded ? "rotate-180 bg-white/10" : ""
           }`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+          <svg
+            className="h-4 w-4 text-[var(--muted)]"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
       </button>
 
       {/* ---- Expanded detail ---- */}
       {isExpanded && (
-        <div className="border-t border-white/[0.06] px-5 pb-5 pt-4">
+        <div className="border-t border-white/5 p-6 sm:p-8 space-y-8 fade-rise">
           {/* Cascade steps */}
           {scenario.path.length > 0 && (
-            <div className="mb-5">
-              <h4 className="mb-3 text-[0.65rem] font-bold uppercase tracking-widest text-[var(--muted)]">
-                Cascade Breakdown
-              </h4>
-              <ol className="relative space-y-3 border-l border-white/[0.08] pl-5">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-1 w-4 bg-[var(--accent)]" />
+                <h4 className="mono-label text-[9px] text-[var(--accent-soft)]">
+                  PROPAGATION_CHRONOLOGY
+                </h4>
+              </div>
+              <div className="relative space-y-4 pl-4 ml-1">
+                <div className="absolute left-0 top-2 bottom-2 w-px bg-white/5" />
                 {scenario.path.map((step: ScenarioPath) => (
-                  <li key={step.step} className="relative">
-                    {/* Timeline dot */}
-                    <span
-                      className="absolute -left-[1.625rem] top-1 h-2.5 w-2.5 rounded-full border-2"
-                      style={{
-                        borderColor: "var(--accent)",
-                        background: "var(--background)",
-                      }}
-                    />
-                    <p className="text-xs leading-relaxed text-[var(--foreground)]">
-                      <span
-                        className="font-semibold"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        Step {step.step}
-                      </span>
-                      {step.event && (
-                        <span className="text-[var(--muted)]">
-                          {" "}
-                          &mdash; {step.event.action}{" "}
-                          <span className="font-mono">{step.event.target}</span>
-                          {step.event.magnitude < 1 && (
-                            <span> (magnitude {step.event.magnitude})</span>
-                          )}
+                  <div key={step.step} className="relative flex flex-col gap-2">
+                    <div className="absolute -left-4 top-1.5 h-2 w-2 rounded-full border border-black bg-[var(--accent)]" />
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="mono-label !text-[9px] opacity-40">
+                          STEP_{String(step.step).padStart(2, "0")}
                         </span>
-                      )}
-                    </p>
-                    <p className="mt-0.5 text-[0.7rem] text-[var(--muted)]">
-                      H drops{" "}
-                      <span className="font-mono text-[var(--foreground)]">
-                        {step.H_before.toFixed(2)}
-                      </span>{" "}
-                      &rarr;{" "}
-                      <span className="font-mono text-[var(--foreground)]">
-                        {step.H_after.toFixed(2)}
-                      </span>
-                      {step.new_failures.length > 0 && (
-                        <>
-                          {" "}
-                          &middot; Failures:{" "}
-                          <span className="font-mono text-red-400">
-                            {step.new_failures.join(", ")}
+                        {step.event && (
+                          <span className="text-[11px] font-bold text-[var(--foreground)] uppercase tracking-tight">
+                            {step.event.action} {step.event.target}
                           </span>
-                        </>
-                      )}
-                    </p>
-                  </li>
+                        )}
+                      </div>
+                      <span className="font-mono text-xs font-bold text-[var(--danger)]">
+                        -{(step.H_before - step.H_after).toFixed(2)}H
+                      </span>
+                    </div>
+                    {step.new_failures.length > 0 && (
+                      <div className="flex flex-wrap gap-2 ml-4">
+                        <span className="mono-label !text-[8px] opacity-30 mt-1">
+                          NEW_FAILURES:
+                        </span>
+                        {step.new_failures.map((f) => (
+                          <span
+                            key={f}
+                            className="rounded-md border border-white/5 bg-white/5 px-2 py-0.5 font-mono text-[9px] opacity-60"
+                          >
+                            {f.toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </ol>
+              </div>
             </div>
-          )}
-
-          {/* Agent */}
-          {scenario.agent && (
-            <p className="mb-3 text-xs text-[var(--muted)]">
-              Found by agent:{" "}
-              <span className="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[0.7rem] text-[var(--foreground)]">
-                {scenario.agent}
-              </span>
-            </p>
           )}
 
           {/* Narrative */}
           {scenario.narrative && (
-            <div className="mb-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
-              <h4 className="mb-2 text-[0.65rem] font-bold uppercase tracking-widest text-[var(--muted)]">
-                AI Narrative
-              </h4>
-              <p className="text-sm leading-relaxed text-[var(--foreground)]/80">
+            <div className="bracket-box rounded-2xl border-white/5 bg-white/[0.02] p-6">
+              <div className="mb-4 mono-label text-[9px] opacity-40">
+                INTELLIGENCE_SUMMARY
+              </div>
+              <p className="text-sm leading-relaxed text-[var(--muted-strong)]">
                 {scenario.narrative}
               </p>
             </div>
           )}
 
           {/* View on Network button */}
-          <button
-            type="button"
-            onClick={() => router.push(`/network/${sessionId}` as Route)}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-2 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+          <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/5">
+            <div className="flex items-center gap-2">
+              <span className="mono-label !text-[8px] opacity-30">
+                DETECTION_ENGINE:
+              </span>
+              <span className="font-mono text-[10px] text-[var(--accent-soft)] opacity-60 uppercase">
+                {scenario.agent}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push(`/network/${sessionId}` as Route)}
+              className="ghost-button rounded-full px-6 py-3 text-[10px] font-bold uppercase tracking-widest"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
-            View on Network
-          </button>
+              VISUALIZE_TOPOLOGY →
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -297,49 +276,47 @@ function ScenarioCard({
 
 function RecommendationRow({ rec }: { rec: Recommendation }) {
   return (
-    <div
-      className="flex items-start gap-4 rounded-xl border border-white/[0.06] px-5 py-4 transition-colors hover:border-white/[0.12]"
-      style={{ background: "var(--panel)" }}
-    >
+    <div className="bracket-box flex items-start gap-6 rounded-3xl border-white/5 bg-black/20 p-6 sm:p-8">
       {/* Priority number */}
-      <span
-        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
-        style={{
-          background: "rgba(110, 231, 200, 0.10)",
-          color: "var(--accent)",
-        }}
-      >
-        {rec.priority}
-      </span>
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <div className="mono-label !text-[8px] opacity-40">PRIORITY</div>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 text-lg font-bold text-[var(--accent)] shadow-[0_0_12px_rgba(123,220,198,0.1)]">
+          {rec.priority}
+        </span>
+      </div>
 
       <div className="min-w-0 flex-1">
         {/* Type badge + action */}
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
           <RecTypeBadge type={rec.type} />
-          <span className="text-sm font-medium text-[var(--foreground)]">
+          <span className="display-face text-sm font-bold text-[var(--foreground)] uppercase tracking-tight">
             {rec.action}
           </span>
         </div>
 
         {/* Reason */}
-        <p className="mb-2 text-xs leading-relaxed text-[var(--muted)]">
+        <p className="mb-4 text-sm leading-relaxed text-[var(--muted)]">
           {rec.reason}
         </p>
 
         {/* Metrics */}
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--muted)]">
-          <span>
-            Resilience gain:{" "}
-            <span className="font-semibold text-[var(--accent)]">
-              {rec.estimated_resilience_gain}
+        <div className="flex flex-wrap gap-x-8 gap-y-3 pt-4 border-t border-white/5">
+          <div className="flex flex-col gap-0.5">
+            <span className="mono-label !text-[8px] opacity-40">
+              RESILIENCE_GAIN
             </span>
-          </span>
-          <span>
-            Scenarios prevented:{" "}
-            <span className="font-mono text-[var(--foreground)]">
-              {rec.scenarios_prevented}
+            <span className="font-mono text-xs font-bold text-[var(--accent)]">
+              +{Number.parseFloat(rec.estimated_resilience_gain).toFixed(2)}H
             </span>
-          </span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="mono-label !text-[8px] opacity-40">
+              VECTORS_PREVENTED
+            </span>
+            <span className="font-mono text-xs font-bold text-[var(--foreground)]">
+              {rec.scenarios_prevented}_SCENARIOS
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -352,13 +329,10 @@ function RecommendationRow({ rec }: { rec: Recommendation }) {
 
 function EmptyState({ sessionId }: { sessionId: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <div
-        className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl"
-        style={{ background: "rgba(110, 231, 200, 0.08)" }}
-      >
+    <div className="flex flex-col items-center justify-center py-32 text-center">
+      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03]">
         <svg
-          className="h-8 w-8 text-[var(--accent)]"
+          className="h-10 w-10 text-[var(--accent-soft)] opacity-40"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -371,32 +345,18 @@ function EmptyState({ sessionId }: { sessionId: string }) {
           />
         </svg>
       </div>
-      <h2 className="mb-2 text-lg font-semibold text-[var(--foreground)]">
-        No scenarios yet
+      <h2 className="display-face mb-3 text-2xl font-bold text-[var(--foreground)] uppercase tracking-tight">
+        No intelligence generated.
       </h2>
-      <p className="mb-6 max-w-sm text-sm text-[var(--muted)]">
-        Run a simulation to explore worst-case scenarios and generate
-        recommendations for your network.
+      <p className="mb-10 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
+        Initialize a stress-test simulation to discover worst-case scenarios and
+        generate automated mitigation strategies.
       </p>
       <Link
         href={`/simulate/${sessionId}` as Route}
-        className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[var(--background)] no-underline transition-colors hover:opacity-90"
-        style={{ background: "var(--accent)" }}
+        className="accent-button no-underline rounded-full px-8 py-4 text-xs font-bold uppercase tracking-[0.2em]"
       >
-        Go to Simulate
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M13 7l5 5m0 0l-5 5m5-5H6"
-          />
-        </svg>
+        GO_TO_SIMULATION →
       </Link>
     </div>
   );
@@ -449,39 +409,26 @@ export default function ReportPage() {
   const hasData = scenarios.length > 0;
 
   return (
-    <div
-      className="app-shell min-h-screen"
-      style={{ background: "var(--background)" }}
-    >
+    <div className="app-shell min-h-screen">
       <NavBar sessionId={sessionId} />
 
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <main className="mx-auto max-w-5xl px-8 py-16 sm:px-12">
         {!hasData ? (
           <EmptyState sessionId={sessionId} />
         ) : (
-          <>
+          <div className="flex flex-col gap-24">
             {/* ============================================================ */}
             {/* Section 1: WORST-CASE SCENARIOS                               */}
             {/* ============================================================ */}
-            <section className="mb-14">
-              <div className="mb-6 flex items-center gap-3">
-                <div
-                  className="h-px flex-1"
-                  style={{ background: "rgba(156, 176, 197, 0.12)" }}
-                />
-                <h2
-                  className="shrink-0 text-[0.65rem] font-bold uppercase tracking-[0.25em]"
-                  style={{ color: "var(--accent)" }}
-                >
-                  Worst-Case Scenarios
+            <section className="flex flex-col gap-10">
+              <div className="flex items-center gap-4">
+                <div className="h-1 w-8 bg-[var(--danger)]" />
+                <h2 className="mono-label text-[11px] text-[var(--danger)]">
+                  CRITICAL_FAILURE_VECTORS
                 </h2>
-                <div
-                  className="h-px flex-1"
-                  style={{ background: "rgba(156, 176, 197, 0.12)" }}
-                />
               </div>
 
-              <div className="space-y-3">
+              <div className="flex flex-col gap-4">
                 {scenarios.map((scenario) => (
                   <ScenarioCard
                     key={scenario.rank}
@@ -499,32 +446,22 @@ export default function ReportPage() {
             {/* Section 2: RECOMMENDATIONS                                    */}
             {/* ============================================================ */}
             {recommendations.length > 0 && (
-              <section>
-                <div className="mb-6 flex items-center gap-3">
-                  <div
-                    className="h-px flex-1"
-                    style={{ background: "rgba(156, 176, 197, 0.12)" }}
-                  />
-                  <h2
-                    className="shrink-0 text-[0.65rem] font-bold uppercase tracking-[0.25em]"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    Recommendations
+              <section className="flex flex-col gap-10">
+                <div className="flex items-center gap-4">
+                  <div className="h-1 w-8 bg-[var(--accent)]" />
+                  <h2 className="mono-label text-[11px] text-[var(--accent-soft)]">
+                    MITIGATION_ADVISORIES
                   </h2>
-                  <div
-                    className="h-px flex-1"
-                    style={{ background: "rgba(156, 176, 197, 0.12)" }}
-                  />
                 </div>
 
-                <div className="space-y-3">
+                <div className="flex flex-col gap-4">
                   {recommendations.map((rec) => (
                     <RecommendationRow key={rec.priority} rec={rec} />
                   ))}
                 </div>
               </section>
             )}
-          </>
+          </div>
         )}
       </main>
     </div>
