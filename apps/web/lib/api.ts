@@ -13,6 +13,7 @@ import type {
   ChatResponse,
   DriveImportResponse,
   ExploreConfig,
+  ExploreRequestOptions,
   ExploreResponse,
   GraphData,
   GraphOperation,
@@ -143,11 +144,16 @@ export async function runCascade(
  */
 export async function explore(
   sessionId: string,
-  config?: ExploreConfig,
+  options?: ExploreRequestOptions | ExploreConfig,
 ): Promise<ExploreResponse> {
+  const payload =
+    options && ("config" in options || "mc" in options)
+      ? options
+      : { config: options as ExploreConfig | undefined };
   const { data } = await client.post<ExploreResponse>("/api/explore", {
     session_id: sessionId,
-    config,
+    config: payload.config,
+    mc: payload.mc,
   });
   return data;
 }

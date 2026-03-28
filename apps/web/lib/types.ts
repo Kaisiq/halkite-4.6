@@ -191,9 +191,37 @@ export interface ExploreConfig {
   agents?: string[];
 }
 
+export type MonteCarloFailureModel =
+  | "uniform"
+  | "weighted_theta"
+  | "per_node";
+
+export interface ExploreMonteCarloConfig {
+  failure_model?: MonteCarloFailureModel;
+  kill_prob?: number;
+  damage_prob?: number;
+  damage_magnitude_min?: number;
+  damage_magnitude_max?: number;
+  branching_factor?: number;
+  max_depth?: number;
+  n_resilience_samples?: number;
+  per_node_probs?: Record<string, number>;
+}
+
+export interface ExploreRequestOptions {
+  config?: ExploreConfig;
+  mc?: ExploreMonteCarloConfig;
+}
+
 export interface ScenarioPath {
   step: number;
-  event: { target: string; action: string; magnitude: number } | null;
+  event:
+    | {
+        target: string | { from: string; to: string };
+        action: string;
+        magnitude: number;
+      }
+    | null;
   H_before: number;
   H_after: number;
   new_failures: string[];
@@ -211,7 +239,17 @@ export interface Scenario {
   depth: number;
   agent: string;
   path: ScenarioPath[];
-  narrative: string;
+  narrative:
+    | string
+    | {
+        title?: string;
+        summary?: string;
+        narrative?: string;
+        timeline?: Array<{ step?: number; description?: string }>;
+        business_impact?: Record<string, unknown>;
+        recommendations?: Array<Record<string, unknown>>;
+      }
+    | null;
   recommendations: { action: string; reason: string }[];
 }
 
@@ -243,6 +281,19 @@ export interface ExploreResponse {
     graph: GraphData;
     state_tree: { nodes: unknown[]; edges: unknown[] };
     cascade_animations: unknown[];
+  };
+  resilience_profile?: {
+    mean_H?: number;
+    std_H?: number;
+    min_H?: number;
+    max_H?: number;
+    p_catastrophic?: number;
+    p_severe?: number;
+    n_samples?: number;
+    layer_mean_damage?: Record<string, number>;
+    per_node_failure_prob?: Record<string, number>;
+    H_percentiles?: Record<string, number>;
+    sample_H_values?: number[];
   };
 }
 
