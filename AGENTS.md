@@ -30,6 +30,8 @@
 - When docs and code diverge, update code to match docs unless the user explicitly changes the spec.
 - Do not add feature code outside `apps/api` and `apps/web`.
 - Keep environment-specific values in env files, not hardcoded.
+- Before opening a PR, always ask the user for the task number from the board.
+- Each PR should be labeled `HALK-X`, where `X` is the task number from the board.
 
 ## Paths
 
@@ -37,4 +39,3 @@
 - `apps/web`: Next.js frontend.
 - `docs`: authoritative system design docs.
 - `.claude`: Claude-specific context mirror and future Claude tooling assets.
-

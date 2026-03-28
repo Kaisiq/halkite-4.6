@@ -69,6 +69,8 @@ Each module has a companion sub-module (01A Graph Model, 02A Cascade Engine, 03A
 - API shapes follow `docs/05_API.md`; frontend routes follow `docs/06_FRONTEND.md` (adapted to App Router).
 - No feature code outside `apps/api` and `apps/web`. Shared config/infra stays at repo root.
 - Environment-specific values go in `.env` files, not hardcoded. Copy `.env.example` to `.env`.
+- Before opening a PR, always ask the user for the task number from the board.
+- Each PR should be labeled `HALK-X`, where `X` is the task number from the board.
 
 ## Tooling & Style
 
