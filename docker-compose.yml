@@ -1,14 +1,37 @@
 services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: halkantir
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "${MONGO_EXTERNAL_PORT:-27017}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    image: nexus-api:latest
+    image: halkantir-api:latest
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      MONGODB_URI: mongodb://mongo:27017/halkantir
       API_HOST: 0.0.0.0
       API_PORT: 8000
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      HALKANTIR_DATA_DIR: /app/data
+    volumes:
+      - api_data:/app/data
+    depends_on:
+      mongo:
+        condition: service_healthy
     ports:
       - "${API_EXTERNAL_PORT:-8000}:8000"
     restart: unless-stopped
@@ -29,7 +52,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: nexus-web:latest
+    image: halkantir-web:latest
     environment:
       HOSTNAME: 0.0.0.0
       PORT: 3000
@@ -41,3 +64,7 @@ services:
     ports:
       - "${WEB_EXTERNAL_PORT:-3000}:3000"
     restart: unless-stopped
+
+volumes:
+  mongo_data:
+  api_data:

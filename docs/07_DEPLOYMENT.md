@@ -29,6 +29,9 @@ Halkantir Web Container (Next.js, port 3000)
       |
       v
 Halkantir API Container (FastAPI, port 8000)
+      |
+      v
+MongoDB Container (port 27017, persistent volume)
 ```
 
 ---
@@ -38,9 +41,11 @@ Halkantir API Container (FastAPI, port 8000)
 ### API
 
 - `GEMINI_API_KEY`: required when AI-backed ingestion or narrative generation is enabled.
+- `MONGODB_URI`: MongoDB connection string. Default `mongodb://mongo:27017/halkantir` in Docker. When unset, the API falls back to in-memory session storage (sessions lost on restart).
 - `API_HOST`: bind host inside the container. Default `0.0.0.0`.
 - `API_PORT`: bind port inside the container. Default `8000`.
 - `LOG_LEVEL`: Uvicorn log level. Default `info`. Uppercase values are normalized in the container.
+- `HALKANTIR_DATA_DIR`: directory for standard format JSON persistence. Default `data`, mapped to a Docker volume.
 
 The API now fails during startup if any required environment variable is missing.
 
@@ -78,8 +83,12 @@ code.
 
 ## Notes
 
-- Session storage is currently in-memory, matching `docs/05_API.md`.
+- Session storage uses MongoDB when `MONGODB_URI` is set (default in Docker),
+  with automatic fallback to in-memory storage for local dev. Graph data is
+  persisted to MongoDB after each mutation (upload, update, explore) and
+  restored on session retrieval.
+- MongoDB data is stored in a named Docker volume (`mongo_data`) and survives
+  container restarts.
 - For client environments with stricter ingress rules, only the web port needs
   to be exposed if same-origin proxying is used.
-- For production persistence and horizontal scaling, replace the in-memory
-  session store with Redis or a database-backed implementation.
+- The `GET /api/sessions` endpoint lists all known session IDs.
