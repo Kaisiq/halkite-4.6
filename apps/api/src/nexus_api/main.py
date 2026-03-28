@@ -95,9 +95,14 @@ class CascadeRequest(BaseModel):
 class ExploreRequest(BaseModel):
     session_id: str
     config: dict[str, Any] | None = None
+    mc: dict[str, Any] | None = None
 
 
 class ResetRequest(BaseModel):
+    session_id: str
+
+
+class ReingestRequest(BaseModel):
     session_id: str
 
 
@@ -128,6 +133,7 @@ def _serialize_graph(graph: Any) -> dict[str, Any]:
                 "from": e.from_id,
                 "to": e.to_id,
                 "weight": round(e.weight, 6),
+                **({"meta": e.meta} if e.meta is not None else {}),
             }
             for e in g.edges
         ],
@@ -168,6 +174,7 @@ async def upload_files(
 
     try:
         from nexus_api.ingestion.extractor import ingest
+        from nexus_api.ingestion.standard import save_standard
 
         raw_files: list[tuple[str, bytes]] = []
         for f in files:
@@ -180,7 +187,11 @@ async def upload_files(
         session.graph = result.graph
         session.r_unit = result.r_unit
 
-        return JSONResponse({
+        # Persist the standard format to disk
+        if result.standard is not None:
+            save_standard(session.session_id, result.standard)
+
+        response_data: dict[str, Any] = {
             "session_id": session.session_id,
             "files_parsed": result.files_parsed,
             "graph": _serialize_graph(result.graph),
@@ -188,10 +199,72 @@ async def upload_files(
             "confidence": result.confidence,
             "gaps": result.gaps,
             "follow_up_questions": result.follow_up_questions,
-        })
+        }
+        if result.standard is not None:
+            response_data["company"] = result.standard.company
+            response_data["known_risks"] = result.standard.known_risks
+
+        return JSONResponse(response_data)
     except Exception as e:
         traceback.print_exc()
         return error_response("AI_ERROR", f"Graph extraction failed: {e}", 500)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/standard/{session_id}
+# ---------------------------------------------------------------------------
+
+@app.get("/api/standard/{session_id}")
+async def get_standard(session_id: str) -> JSONResponse:
+    """Retrieve the saved standard JSON for a session."""
+    store.require(session_id)
+    from nexus_api.ingestion.standard import load_standard
+
+    try:
+        standard = load_standard(session_id)
+    except FileNotFoundError as e:
+        return error_response("STANDARD_NOT_FOUND", str(e), 404)
+
+    return JSONResponse(standard.model_dump(by_alias=True))
+
+
+# ---------------------------------------------------------------------------
+# POST /api/reingest
+# ---------------------------------------------------------------------------
+
+@app.post("/api/reingest")
+async def reingest(body: ReingestRequest) -> JSONResponse:
+    """Rebuild graph from saved standard.json without re-running AI."""
+    session = store.require(body.session_id)
+
+    from nexus_api.ingestion.extractor import detect_gaps
+    from nexus_api.ingestion.standard import build_graph_from_standard, load_standard
+
+    try:
+        standard = load_standard(body.session_id)
+    except FileNotFoundError as e:
+        return error_response("STANDARD_NOT_FOUND", str(e), 404)
+
+    graph, r_unit = build_graph_from_standard(standard)
+
+    gaps, follow_up_questions = detect_gaps(graph)
+
+    session.graph = graph
+    session.r_unit = r_unit
+    # Clear stale analysis results
+    session.vulnerability_report = None
+    session.state_tree = None
+    session.final_report = None
+
+    return JSONResponse({
+        "session_id": body.session_id,
+        "graph": _serialize_graph(graph),
+        "r_unit": r_unit,
+        "company": standard.company,
+        "known_risks": standard.known_risks,
+        "gaps": gaps,
+        "follow_up_questions": follow_up_questions,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +518,11 @@ async def explore(body: ExploreRequest) -> JSONResponse:
     if session.vulnerability_report is None:
         return error_response("ANALYSIS_NOT_RUN", "Run /api/analyze first.", 400)
 
-    from nexus_api.briefing.briefing import create_all_agents, generate_all_briefs
+    from nexus_api.briefing.briefing import (
+        brief_monte_carlo,
+        create_all_agents,
+        generate_all_briefs,
+    )
     from nexus_api.engine.state_tree import ExplorationConfig, build_state_tree, tree_stats
     from nexus_api.results.ranking import build_final_report
 
@@ -456,19 +533,45 @@ async def explore(body: ExploreRequest) -> JSONResponse:
         worst_k=config_data.get("worst_k", 10),
     )
 
+    # -- Monte Carlo configuration -----------------------------------------
+    mc_config = None
+    if body.mc is not None:
+        from nexus_api.mc.config import MCConfig
+        try:
+            mc_config = MCConfig.from_dict(body.mc)
+        except (ValueError, TypeError) as e:
+            return error_response("INVALID_MC_CONFIG", str(e), 400)
+
     agent_filter = config_data.get("agents")
 
     t0 = time.perf_counter()
 
     briefs = generate_all_briefs(session.vulnerability_report, session.graph)
+
+    # Append MC brief before filtering so it respects agent_filter too.
+    if mc_config is not None:
+        briefs.append(brief_monte_carlo(mc_config))
+
     if agent_filter:
         briefs = [b for b in briefs if b.agent_type in agent_filter]
 
-    agents = create_all_agents(briefs)
+    agents = create_all_agents(briefs, mc_config=mc_config)
     tree = build_state_tree(session.graph, agents, config)
     session.state_tree = tree
 
-    report = build_final_report(session.graph, tree, session.vulnerability_report)
+    # -- Post-tree resilience analysis -------------------------------------
+    resilience_data = None
+    if mc_config is not None:
+        from nexus_api.mc.resilience import run_resilience_analysis
+        pristine = session.graph.deep_copy()
+        pristine.reset()
+        profile = run_resilience_analysis(pristine, mc_config)
+        resilience_data = profile.to_dict()
+
+    report = build_final_report(
+        session.graph, tree, session.vulnerability_report,
+        resilience_profile=resilience_data,
+    )
     session.final_report = report
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
@@ -476,12 +579,16 @@ async def explore(body: ExploreRequest) -> JSONResponse:
     stats = tree_stats(tree)
     stats["computation_time_ms"] = elapsed_ms
 
-    return JSONResponse({
+    response: dict[str, Any] = {
         "tree_stats": _serialize_tree_stats(stats),
         "worst_scenarios": _serialize_scenarios(report.worst_scenarios),
         "recommendations": _serialize_recommendations(report.recommendations),
         "visualization_data": _serialize_viz_data(report, session.graph),
-    })
+    }
+    if resilience_data is not None:
+        response["resilience_profile"] = resilience_data
+
+    return JSONResponse(response)
 
 
 def _serialize_tree_stats(stats: dict[str, Any]) -> dict[str, Any]:
@@ -624,14 +731,17 @@ async def get_report(session_id: str) -> JSONResponse:
         )
 
     report = session.final_report
-    return JSONResponse({
+    response_data: dict[str, Any] = {
         "metadata": report.metadata,
         "network_health": report.network_health,
         "vulnerability_summary": report.vulnerability_summary,
         "worst_scenarios": _serialize_scenarios(report.worst_scenarios),
         "recommendations": _serialize_recommendations(report.recommendations),
         "visualization_data": _serialize_viz_data(report, session.graph),
-    })
+    }
+    if report.resilience_profile is not None:
+        response_data["resilience_profile"] = report.resilience_profile
+    return JSONResponse(response_data)
 
 
 # ---------------------------------------------------------------------------
@@ -662,7 +772,11 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
             from nexus_api.engine.weakpoint import run_full_analysis
             session.vulnerability_report = run_full_analysis(session.graph)
 
-        from nexus_api.briefing.briefing import create_all_agents, generate_all_briefs
+        from nexus_api.briefing.briefing import (
+            brief_monte_carlo,
+            create_all_agents,
+            generate_all_briefs,
+        )
         from nexus_api.engine.state_tree import ExplorationConfig, build_state_tree, tree_stats
         from nexus_api.results.ranking import build_final_report
 
@@ -673,8 +787,27 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
             worst_k=ws_config.get("worst_k", 10),
         )
 
+        # -- Monte Carlo configuration ------------------------------------
+        ws_mc_config = None
+        ws_mc_data = data.get("mc")
+        if ws_mc_data is not None:
+            from nexus_api.mc.config import MCConfig
+            try:
+                ws_mc_config = MCConfig.from_dict(ws_mc_data)
+            except (ValueError, TypeError) as e:
+                await websocket.send_json({"type": "error", "message": f"Invalid MC config: {e}"})
+                await websocket.close()
+                return
+
         briefs = generate_all_briefs(session.vulnerability_report, session.graph)
-        agents = create_all_agents(briefs)
+        if ws_mc_config is not None:
+            briefs.append(brief_monte_carlo(ws_mc_config))
+
+        ws_agent_filter = ws_config.get("agents")
+        if ws_agent_filter:
+            briefs = [b for b in briefs if b.agent_type in ws_agent_filter]
+
+        agents = create_all_agents(briefs, mc_config=ws_mc_config)
 
         for agent in agents:
             await websocket.send_json({
@@ -693,15 +826,31 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
                 "nodes_explored": astat.get("nodes_explored", 0),
             })
 
-        report = build_final_report(session.graph, tree, session.vulnerability_report)
+        # -- Post-tree resilience analysis ---------------------------------
+        ws_resilience_data = None
+        if ws_mc_config is not None:
+            from nexus_api.mc.resilience import run_resilience_analysis
+            ws_pristine = session.graph.deep_copy()
+            ws_pristine.reset()
+            ws_profile = run_resilience_analysis(ws_pristine, ws_mc_config)
+            ws_resilience_data = ws_profile.to_dict()
+
+        report = build_final_report(
+            session.graph, tree, session.vulnerability_report,
+            resilience_profile=ws_resilience_data,
+        )
         session.final_report = report
 
-        await websocket.send_json({
+        complete_msg: dict[str, Any] = {
             "type": "complete",
             "tree_stats": _serialize_tree_stats(stats),
             "worst_scenarios": _serialize_scenarios(report.worst_scenarios),
             "recommendations": _serialize_recommendations(report.recommendations),
-        })
+        }
+        if ws_resilience_data is not None:
+            complete_msg["resilience_profile"] = ws_resilience_data
+
+        await websocket.send_json(complete_msg)
 
     except WebSocketDisconnect:
         pass

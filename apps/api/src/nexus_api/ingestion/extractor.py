@@ -36,6 +36,7 @@ between them, and construct a network graph.
 OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
 
 {
+  "company": "Organization Name — brief description",
   "layers": ["People", "Technology", "Supply", ...],
   "nodes": [
     {
@@ -52,11 +53,16 @@ OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
     {
       "from": "node_id_1",
       "to": "node_id_2",
-      "weight": <float 0-1>
+      "weight": <float 0-1>,
+      "meta": "Brief description of why this dependency exists"
     }
   ],
   "r_unit": "days",
-  "confidence": <float 0-1>
+  "confidence": <float 0-1>,
+  "known_risks": [
+    "Risk description 1",
+    "Risk description 2"
+  ]
 }
 
 RULES FOR NODE VALUES:
@@ -109,7 +115,17 @@ Think about these dependency types:
 
 LAYERS: Create layers based on what you see in the data. Use the suggested \
 defaults (People, Technology, Supply, Financial, Facilities, Operations) \
-where applicable, but add or remove layers as the data warrants.\
+where applicable, but add or remove layers as the data warrants.
+
+COMPANY: Set to the organization name and a brief description (e.g. \
+"NovaTech Solutions — Digital Agency, Sofia, Bulgaria").
+
+EDGE META: For each edge, include a brief "meta" string explaining the \
+nature of the dependency (e.g. "CEO directs financial strategy").
+
+KNOWN RISKS: List any risks you identify from the data — single points \
+of failure, concentration risks, missing redundancy, undocumented \
+processes, etc.\
 """
 
 
@@ -134,6 +150,8 @@ class IngestResult:
         Targeted questions that could improve graph accuracy.
     files_parsed : list[dict]
         Per-file summary (``filename``, ``type``, ``chars_extracted``).
+    standard : StandardFormat | None
+        Validated standard format (for persistence).
     """
 
     __slots__ = (
@@ -143,6 +161,7 @@ class IngestResult:
         "gaps",
         "graph",
         "r_unit",
+        "standard",
     )
 
     def __init__(
@@ -153,6 +172,7 @@ class IngestResult:
         gaps: list[str] | None = None,
         follow_up_questions: list[str] | None = None,
         files_parsed: list[dict[str, Any]] | None = None,
+        standard: Any | None = None,
     ) -> None:
         self.graph: Graph = graph
         self.r_unit: str = r_unit
@@ -164,6 +184,7 @@ class IngestResult:
         self.files_parsed: list[dict[str, Any]] = (
             files_parsed if files_parsed is not None else []
         )
+        self.standard = standard
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -511,7 +532,10 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
             )
             continue
 
-        edges.append(Edge(from_id=from_id, to_id=to_id, weight=weight))
+        edges.append(Edge(
+            from_id=from_id, to_id=to_id, weight=weight,
+            meta=raw_edge.get("meta"),
+        ))
 
     return Graph(nodes=nodes, edges=edges, layers=layers)
 
@@ -639,12 +663,17 @@ async def ingest(
 ) -> IngestResult:
     """Run the complete ingestion pipeline.
 
-    1. Parse all uploaded files.
-    2. Concatenate context.
-    3. Call Gemini for graph extraction.
-    4. Build and validate the graph.
-    5. Detect gaps and generate follow-up questions.
-    6. Return :class:`IngestResult`.
+    Two paths:
+
+    **Fast path** — If any uploaded ``.json`` file is already in the NEXUS
+    standard format, skip AI extraction entirely and build the graph
+    directly from it.
+
+    **Slow path** — Parse all files, call Gemini for graph extraction,
+    normalise the output to the standard format, then build the graph.
+
+    In both cases the validated :class:`StandardFormat` is attached to the
+    result so the caller can persist it.
 
     Parameters
     ----------
@@ -658,6 +687,62 @@ async def ingest(
     IngestResult
     """
     from nexus_api.ingestion.parser import parse_files
+    from nexus_api.ingestion.standard import (
+        StandardFormat,
+        detect_standard_format,
+        normalize_ai_output,
+    )
+
+    # ------------------------------------------------------------------
+    # Fast path: check if any JSON file is already in standard format
+    # ------------------------------------------------------------------
+    standard: StandardFormat | None = None
+    standard_filename: str = ""
+    for filename, content in files:
+        if filename.lower().endswith(".json"):
+            standard = detect_standard_format(content)
+            if standard is not None:
+                standard_filename = filename
+                logger.info(
+                    "Detected standard format in %s — skipping AI extraction",
+                    filename,
+                )
+                break
+
+    if standard is not None:
+        graph = build_graph_from_dict(standard.model_dump(by_alias=True))
+
+        validation = graph.validate()
+        if validation.errors:
+            logger.warning(
+                "Graph validation errors (standard): %s", validation.errors
+            )
+        if validation.warnings:
+            logger.info(
+                "Graph validation warnings: %s", validation.warnings
+            )
+
+        gaps, follow_up_questions = detect_gaps(graph)
+
+        return IngestResult(
+            graph=graph,
+            r_unit=standard.r_unit,
+            confidence=1.0,
+            gaps=gaps,
+            follow_up_questions=follow_up_questions,
+            files_parsed=[{
+                "filename": standard_filename,
+                "type": "json",
+                "chars_extracted": len(
+                    standard.model_dump_json(by_alias=True)
+                ),
+            }],
+            standard=standard,
+        )
+
+    # ------------------------------------------------------------------
+    # Slow path: parse -> AI extraction -> normalise -> build graph
+    # ------------------------------------------------------------------
 
     # Step 1: Parse
     parsed = parse_files(files)
@@ -677,6 +762,13 @@ async def ingest(
         context,
         image_data=image_data if image_data else None,
     )
+
+    # Step 3b: Normalise AI output to standard format
+    standard = normalize_ai_output(
+        raw,
+        company=description,
+    )
+
     # Step 4: Build graph
     graph = build_graph_from_dict(raw)
 
@@ -708,4 +800,5 @@ async def ingest(
         gaps=gaps,
         follow_up_questions=follow_up_questions,
         files_parsed=files_parsed,
+        standard=standard,
     )
