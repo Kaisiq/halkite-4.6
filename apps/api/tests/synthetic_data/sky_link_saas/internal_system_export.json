@@ -1,0 +1,35 @@
+{
+  "system": "SkyNet_Internal_v4.2",
+  "export_date": "2024-03-28T10:00:00Z",
+  "infrastructure_nodes": [
+    {
+      "node_id": "srv_prod_001",
+      "label": "PostgresMain",
+      "type": "database",
+      "environment": "production",
+      "region": "us-east-1",
+      "criticality": 0.95,
+      "depends_on": ["aws_vpc_01"]
+    },
+    {
+      "node_id": "srv_prod_002",
+      "label": "AuthService",
+      "type": "microservice",
+      "environment": "production",
+      "criticality": 0.9,
+      "depends_on": ["srv_prod_001"]
+    },
+    {
+      "node_id": "srv_prod_003",
+      "label": "BillingService",
+      "type": "microservice",
+      "environment": "production",
+      "criticality": 0.85,
+      "depends_on": ["srv_prod_002"]
+    }
+  ],
+  "resource_limits": {
+    "cpu": "high",
+    "memory": "high"
+  }
+}

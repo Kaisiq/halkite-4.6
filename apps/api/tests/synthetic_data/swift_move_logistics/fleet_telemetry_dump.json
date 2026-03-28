@@ -1,0 +1,17 @@
+[
+  {
+    "route_id": "EU_WEST_01",
+    "vessel": "OceanExpress",
+    "ports": [
+      { "id": "ROT_01", "name": "Rotterdam", "load": 0.85 },
+      { "id": "SIN_01", "name": "Singapore", "load": 0.92 }
+    ],
+    "critical_path": true
+  },
+  {
+    "route_id": "US_EAST_01",
+    "vessel": "Truck_Alpha_Fleet",
+    "depot": "DEPOT_MAIN_01",
+    "capacity_utilization": 0.98
+  }
+]

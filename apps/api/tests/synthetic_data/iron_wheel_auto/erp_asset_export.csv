@@ -1,0 +1,11 @@
+# SAP-MES EXPORT - 2024-03-28 09:15:22
+# SYSTEM: IRON_WHEEL_CORE
+# --------------------------------------------------
+ASSET_ID,ASSET_NAME,TYPE,SECTOR,UPSTREAM_DEPENDENCY,STATUS,RECOVERY_TIME_HRS
+PRESS_A,Heavy Press 2000T,Machine,S1,GRID_SUB_01,OPERATIONAL,48
+WELD_B1,Robot Welder Alpha,Machine,S2,PRESS_A,OPERATIONAL,12
+WELD_B2,Robot Welder Beta,Machine,S2,PRESS_A,DEGRADED,12
+ASM_L1,Main Assembly Line,System,S2,WELD_B1|WELD_B2,OPERATIONAL,72
+SUB_GEN_01,Backup Generator,Power,S1,NONE,STANDBY,1
+# --------------------------------------------------
+EOF

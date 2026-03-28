@@ -1,0 +1,20 @@
+<InternalSystemReport>
+  <Metadata>
+    <SystemID>GC_OMS_01</SystemID>
+    <ExportTimestamp>2024-03-28T14:30:00</ExportTimestamp>
+  </Metadata>
+  <Components>
+    <Component id="WEB_FRONT" type="service">
+      <Dependencies>
+        <Dependency id="STRIPE_API" weight="1.0" />
+        <Dependency id="QUICKSHIP_API" weight="0.8" />
+      </Dependencies>
+    </Component>
+    <Component id="STRIPE_API" type="external_provider">
+      <FailoverOptions>
+        <Option id="PAYPAL_GATEWAY" priority="1" />
+        <Option id="ADYEN_GATEWAY" priority="2" />
+      </FailoverOptions>
+    </Component>
+  </Components>
+</InternalSystemReport>
