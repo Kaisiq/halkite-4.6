@@ -1,0 +1,176 @@
+{
+  "company": "MClimate",
+  "founded": "2015",
+  "headquarters": "Sofia Tech Park, Labs Building, 111J Tsarigradsko Shose, Sofia, Bulgaria",
+  "description": "MClimate is a Bulgarian IoT company building smart building technology for energy efficiency and sustainability. They design and manufacture LoRaWAN-based sensors and controllers for HVAC optimization, indoor air quality monitoring, water leak prevention, and energy management. With 400,000+ devices delivered across 2,500+ buildings in 60+ international markets, they serve commercial real estate, hospitality, social housing, and smart city sectors. Their product line includes hardware devices and MClimate Enterprise, a cloud SaaS platform for fleet management and analytics.",
+
+  "organizational_structure": {
+    "leadership": [
+      {"name": "Lyubomir Yanchev", "role": "Founder & Managing Partner", "responsibilities": "Company vision, fundraising, investor relations, key partnerships, overall strategy"},
+      {"name": "Blagovest Dimitrov", "role": "Founder & Chief Design Officer", "responsibilities": "Product design, industrial design, UX across hardware and software, brand identity"},
+      {"name": "Nickole Dimitrova", "role": "Chief Technical Officer", "responsibilities": "Technical architecture, firmware development, LoRaWAN protocol stack, R&D roadmap, hardware-software integration"},
+      {"name": "Violeta Mitsova", "role": "Chief Commercial Officer", "responsibilities": "Enterprise sales, channel partnerships, distributor network across 60+ markets, key account management"},
+      {"name": "Milan Stefanov", "role": "Chief Hardware Engineer", "responsibilities": "PCB design, component engineering, production oversight, CE/FCC certification, hardware QA across 2 EU production facilities"},
+      {"name": "Mirena Dimova", "role": "Chief Marketing Officer", "responsibilities": "Brand strategy, content, trade shows (ISE, IoT World Congress, Light+Building), developer community, PR"}
+    ],
+    "engineering_teams": [
+      {"team": "Firmware Team", "size": 6, "lead": "Nickole Dimitrova (direct)", "focus": "Embedded C/C++ for all LoRaWAN devices, LoRaMac-node stack, OTA firmware updates (FUOTA), power optimization for solar-powered devices"},
+      {"team": "Hardware Team", "size": 5, "lead": "Milan Stefanov", "focus": "PCB layout, component selection and sourcing, prototyping, DFM coordination with production facilities, certification testing"},
+      {"team": "Cloud Platform Team", "size": 8, "lead": "Nickole Dimitrova (shared)", "focus": "MClimate Enterprise SaaS — device fleet management, real-time dashboards, energy analytics, REST API, MQTT broker, integrations"},
+      {"team": "Mobile & Apps Team", "size": 3, "focus": "iOS/Android companion apps, BLE device provisioning, local control interface"},
+      {"team": "Data & Analytics", "size": 2, "focus": "Energy savings calculations, anomaly detection, occupancy analytics, reporting for ESG compliance"}
+    ],
+    "other_departments": [
+      {"dept": "Sales", "size": 6, "regions": ["DACH", "Nordics", "UK & Ireland", "Southern Europe", "Middle East", "Benelux"]},
+      {"dept": "Customer Success", "size": 4, "focus": "Enterprise onboarding, technical integrations support, ongoing account health"},
+      {"dept": "Marketing", "size": 3, "focus": "Content creation, trade show management, awards submissions, developer documentation"},
+      {"dept": "Finance & Admin", "size": 3, "focus": "Accounting, investor reporting, legal, HR, office management"},
+      {"dept": "Quality & Compliance", "size": 2, "focus": "ISO 9001, ISO 14001, ISO 27001 compliance (all certified 2024), production quality audits"}
+    ]
+  },
+
+  "product_portfolio": {
+    "climate_and_energy_control": [
+      {"product": "Vicki LoRaWAN", "type": "Smart Thermostatic Radiator Valve", "protocol": "LoRaWAN", "status": "Flagship product since 2019, world's first LoRaWAN TRV", "revenue_share": "40%", "note": "Primary revenue driver, deployed in thousands of buildings"},
+      {"product": "Melissa", "type": "Smart Wi-Fi A/C Controller", "protocol": "Wi-Fi + IR", "status": "Active, original product from 2017", "revenue_share": "8%", "note": "Only Wi-Fi product in lineup, different tech stack from rest of portfolio"},
+      {"product": "FCT LoRaWAN (Fan Coil Thermostat)", "type": "Fan Coil Unit Controller", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "10%"},
+      {"product": "Wireless Thermostat LoRaWAN", "type": "Smart Thermostat", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "7%"},
+      {"product": "16ASPM LoRaWAN", "type": "16A Switch & Power Meter", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "5%"},
+      {"product": "16ADS LoRaWAN", "type": "16A Dry Switch", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "3%"}
+    ],
+    "smart_sensing_and_automation": [
+      {"product": "CO2 Display LoRaWAN", "type": "5-in-1 Light Harvesting CO2 Display", "protocol": "LoRaWAN", "status": "Active, solar-powered (2023 series)", "revenue_share": "6%"},
+      {"product": "CO2 Display lite LoRaWAN", "type": "Light Harvesting CO2 Display (basic)", "protocol": "LoRaWAN", "status": "Active, solar-powered", "revenue_share": "3%"},
+      {"product": "CO2 Sensor LoRaWAN", "type": "Indoor CO2 Sensor", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "3%"},
+      {"product": "HT Sensor LoRaWAN", "type": "Temperature & Humidity Sensor", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "4%"},
+      {"product": "HT + PIR lite LoRaWAN", "type": "Motion + Temp/Humidity Sensor", "protocol": "LoRaWAN", "status": "Active, solar-powered", "revenue_share": "3%"},
+      {"product": "CO2 + PIR lite LoRaWAN", "type": "Motion + CO2 Sensor", "protocol": "LoRaWAN", "status": "Active, solar-powered", "revenue_share": "2%"},
+      {"product": "Multipurpose Button LoRaWAN", "type": "Smart Button/Trigger", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "1%"},
+      {"product": "Open/Close Sensor LoRaWAN", "type": "Door/Window Sensor with Temperature", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "1%"}
+    ],
+    "water_control": [
+      {"product": "Flood Sensor LoRaWAN", "type": "Water Leak Detector", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "2%"},
+      {"product": "T-Valve LoRaWAN", "type": "Motorized Water Valve", "protocol": "LoRaWAN", "status": "Active", "revenue_share": "2%"}
+    ],
+    "platform": [
+      {"product": "MClimate Enterprise", "type": "Cloud SaaS Platform", "protocol": "REST API + MQTT", "status": "Launched 2022, growing recurring revenue", "revenue_share": "SaaS component of all enterprise deals", "note": "Fleet management, real-time monitoring, energy analytics, automation rules, multi-tenant"}
+    ]
+  },
+
+  "technology_infrastructure": {
+    "cloud_platform": {
+      "description": "MClimate Enterprise — fleet management and analytics SaaS for all deployed devices",
+      "hosting": "Cloud-hosted (likely AWS EU region, serving pan-European customer base)",
+      "capabilities": ["Device fleet management", "Real-time dashboards", "Energy analytics & ESG reporting", "Automation rules engine", "Multi-tenant architecture", "REST API for third-party integrations", "MQTT for device communication"],
+      "dependency": "All enterprise customers depend on this platform for device management and monitoring"
+    },
+    "lorawan_ecosystem": {
+      "protocol": "LoRaWAN (LoRa Alliance member since 2020)",
+      "network_servers": [
+        {"name": "The Things Network / The Things Industries", "usage": "Common integration partner for LoRaWAN network server"},
+        {"name": "ChirpStack", "usage": "Open-source option for on-prem enterprise deployments"},
+        {"name": "Actility ThingPark", "usage": "Carrier-grade managed LoRaWAN for large deployments"},
+        {"name": "Kerlink iFemtocell", "usage": "Gateway hardware sold as accessory, critical for indoor deployments"}
+      ],
+      "dependency": "Entire hardware portfolio (except Melissa) depends on LoRaWAN protocol and Semtech radio chips"
+    },
+    "firmware_stack": {
+      "mcu": "STM32 (STMicroelectronics) — primary microcontroller across all LoRaWAN devices",
+      "radio": "Semtech SX1276/SX1262 LoRa transceiver — sole source, no alternative for LoRaWAN compliance",
+      "lorawan_stack": "LoRaMac-node (Semtech open-source reference implementation)",
+      "ota_updates": "FUOTA (Firmware Update Over The Air) via LoRaWAN multicast — custom implementation, limited documentation",
+      "solar_power_management": "Custom ultra-low-power firmware for 2023 solar-powered device series (CO2 Display, HT+PIR lite, CO2+PIR lite)"
+    },
+    "integrations": [
+      {"system": "KNX", "type": "Building automation standard", "importance": "Critical for DACH and large commercial projects"},
+      {"system": "BACnet", "type": "Building automation standard", "importance": "Required for enterprise building management systems"},
+      {"system": "Home Assistant", "type": "Open-source smart home", "importance": "Developer community channel, brand awareness"},
+      {"system": "Various BMS platforms", "type": "Building Management Systems", "importance": "Enterprise deployment requirement"}
+    ],
+    "certifications": ["CE marking (EU)", "LoRa Alliance certified", "ISO 9001:2015 (Quality)", "ISO 14001:2015 (Environment)", "ISO 27001:2022 (Information Security) — all achieved 2024"]
+  },
+
+  "supply_chain": {
+    "critical_components": [
+      {"supplier": "STMicroelectronics", "component": "STM32 MCU", "criticality": "CRITICAL — sole-source microcontroller for ALL LoRaWAN devices", "lead_time": "12-16 weeks standard, up to 52 weeks during shortages (2021-2022 precedent)", "alternatives": "Nordic nRF52 exists but would require complete firmware rewrite across entire product line", "affected_products": "All LoRaWAN products (16 devices)"},
+      {"supplier": "Semtech", "component": "SX1276/SX1262 LoRa Transceiver", "criticality": "CRITICAL — sole-source radio chip, NO alternative exists for LoRaWAN compliance", "lead_time": "14-20 weeks", "alternatives": "None — Semtech owns the LoRa modulation patent", "affected_products": "All LoRaWAN products (16 devices)"},
+      {"supplier": "Sensirion", "component": "SCD41 CO2 Sensor Module", "criticality": "High — used in CO2 Sensor, CO2 Display, CO2+PIR lite", "lead_time": "8-12 weeks", "alternatives": "SenseAir S8 (lower accuracy, different PCB footprint, requires redesign)"},
+      {"supplier": "Various (passive components)", "component": "Capacitors, inductors, resistors", "criticality": "Medium — commodity parts, multiple sources (Murata, TDK, Yageo)", "lead_time": "4-8 weeks", "alternatives": "Multiple interchangeable suppliers"},
+      {"supplier": "Enclosure manufacturers", "component": "Plastic housings, mechanical parts", "criticality": "Medium — custom tooling but multiple capable shops", "lead_time": "6-10 weeks initial tooling, 2-4 weeks reorder"}
+    ],
+    "production_facilities": [
+      {"name": "EU Production Facility 1 (Primary)", "location": "Bulgaria", "role": "Primary SMT assembly and production", "capacity": "High volume, handles majority of production", "dependency": "HIGH — primary manufacturing capacity"},
+      {"name": "EU Production Facility 2 (Secondary)", "location": "Bulgaria", "role": "Secondary assembly, prototyping, NPI (New Product Introduction)", "capacity": "Lower volume, specialized runs", "dependency": "Medium — backup capacity and R&D support"}
+    ],
+    "logistics": {
+      "warehousing": "Sofia, Bulgaria — central distribution hub",
+      "shipping": "DHL Express (EU), UPS (international), direct to distributors and enterprise customers",
+      "inventory_model": "Build-to-stock for standard products, build-to-order for large enterprise deployments"
+    }
+  },
+
+  "market_and_customers": {
+    "scale": {
+      "buildings_served": "2,500+",
+      "devices_delivered": "400,000+",
+      "international_markets": "60+",
+      "ranking": "#38 Deloitte Technology Fast 50 Central Europe (2024)"
+    },
+    "customer_segments": [
+      {"segment": "Commercial Real Estate", "share": "35%", "use_case": "Office HVAC optimization, energy cost reduction, ESG compliance reporting", "typical_deployment": "500-5000 devices per building portfolio"},
+      {"segment": "Hospitality", "share": "25%", "use_case": "Guest room climate control, energy savings during unoccupied periods, guest comfort", "typical_deployment": "200-2000 rooms per hotel chain"},
+      {"segment": "Social Housing", "share": "20%", "use_case": "Heating cost reduction for residents, mold prevention via humidity monitoring, regulatory compliance", "typical_deployment": "1000-10000 units per housing authority"},
+      {"segment": "System Integrators & Distributors", "share": "15%", "use_case": "Resale and integration into larger BMS projects", "typical_deployment": "Recurring orders"},
+      {"segment": "Smart City & Public Sector", "share": "5%", "use_case": "Municipal building efficiency, schools, public facilities", "typical_deployment": "Varies by tender"}
+    ],
+    "key_partnerships": [
+      "LoRa Alliance (member since 2020)",
+      "Kerlink (gateway hardware partner)",
+      "Various LoRaWAN network operators across Europe",
+      "Building automation integrators (KNX, BACnet ecosystems)"
+    ]
+  },
+
+  "financial_structure": {
+    "investors": ["Eleven Capital (early stage, 2015-2018)", "Rosslyn (early stage, 2015-2018)", "EBRD Green Innovation Programme (2022)"],
+    "revenue_model": {
+      "hardware": "One-time device sales (majority of revenue currently)",
+      "saas": "MClimate Enterprise subscriptions (recurring MRR, growing share since 2022 launch)",
+      "accessories": "Gateways, adapters, mounting hardware"
+    },
+    "key_cost_centers": ["Component procurement and manufacturing", "R&D salaries (engineering ~50% of headcount)", "Cloud infrastructure", "Sales & marketing (trade shows, travel)", "Facilities and operations"],
+    "revenue_concentration_risk": "Enterprise deals tend to be large — top accounts likely represent significant share of total revenue"
+  },
+
+  "facilities": {
+    "headquarters": {
+      "location": "Sofia Tech Park, Labs Building, 111J Tsarigradsko Shose, Sofia, Bulgaria",
+      "type": "Office + R&D Lab",
+      "functions": "Engineering, sales, marketing, management, prototyping, testing"
+    },
+    "production_sites": "2 EU-based production facilities (Bulgaria)",
+    "warehouse": "Sofia — central distribution and fulfillment hub"
+  },
+
+  "milestones": [
+    {"year": "2015-2018", "event": "Founded; initial investments from Eleven Capital & Rosslyn; launched Melissa (first product, Wi-Fi AC controller)"},
+    {"year": "2019", "event": "Launched Vicki — world's first smart LoRaWAN Thermostatic Radiator Valve. Pivotal moment establishing LoRaWAN as core protocol."},
+    {"year": "2020", "event": "Joined LoRa Alliance; participated in BeamUp Lab accelerator"},
+    {"year": "2022", "event": "Launched MClimate Enterprise SaaS platform; received EBRD Green Innovation Programme investment; won PwC ESG Award; Kickstart and Clean Cities ClimAccelerator programs"},
+    {"year": "2023", "event": "Introduced solar-powered smart device series (light-harvesting sensors requiring no battery replacement)"},
+    {"year": "2024", "event": "Achieved ISO 9001, ISO 14001, ISO 27001 certifications; #38 Deloitte Fast 50 CE; won IoT World Congress Best Smart Building & Smart Cities Solution; Global ESG Awards Finalist"}
+  ],
+
+  "risks_and_known_vulnerabilities": [
+    "CRITICAL: Single-source dependency on STMicroelectronics STM32 MCU — used in ALL 16 LoRaWAN products. 2021-2022 chip shortage caused industry-wide 6-12 month delivery delays. No drop-in alternative exists.",
+    "CRITICAL: Semtech LoRa transceiver has ZERO alternatives — Semtech holds the LoRa modulation patent. If Semtech has supply issues, the entire LoRaWAN product line stops.",
+    "HIGH: CTO (Nickole Dimitrova) likely holds deep knowledge of firmware architecture and LoRaWAN protocol implementation — bus factor risk for embedded systems expertise.",
+    "HIGH: Milan Stefanov (Chief Hardware Engineer) oversees all hardware design and 2 production facilities — concentration of hardware knowledge in one person.",
+    "HIGH: Primary production facility handles majority of manufacturing volume — disruption would severely impact delivery capacity with limited secondary facility backup.",
+    "MEDIUM: MClimate Enterprise cloud platform is single-region — outage would affect all 2,500+ buildings' monitoring and control capabilities.",
+    "MEDIUM: Vicki alone represents ~40% of revenue — product concentration risk if market shifts from radiator heating.",
+    "MEDIUM: Company is heavily dependent on LoRaWAN protocol standard — if market shifts to competing IoT protocols (Matter, Thread, 5G IoT), entire product strategy needs pivoting.",
+    "LOW-MEDIUM: 60+ international markets but sales team of 6 — key regional relationships may depend on individual salespeople.",
+    "LOW: Solar-powered device series (2023) uses novel light-harvesting technology — long-term field reliability not yet proven across all deployment conditions."
+  ]
+}
