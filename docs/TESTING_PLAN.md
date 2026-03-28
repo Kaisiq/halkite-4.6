@@ -1,4 +1,4 @@
-# NEXUS Testing Plan
+# Achilles Testing Plan
 
 Step-by-step quality assurance process for reviewing the entire application.
 
@@ -345,7 +345,7 @@ curl -s http://localhost:8000/docs | head -5
 
 Open http://localhost:3000 in a browser.
 
-- [ ] NEXUS landing page renders
+- [ ] Achilles landing page renders
 - [ ] Dark theme with gradient background
 - [ ] File drop zone visible
 - [ ] "Build Network" button visible
@@ -404,7 +404,7 @@ Open http://localhost:3000 in a browser.
 
 ## Phase 7 — Security Review Checklist
 
-- [ ] No hardcoded API keys in source (grep for `sk-`, `GEMINI_API_KEY=`)
+- [ ] No hardcoded API keys in source (grep for `sk-`, `ANTHROPIC_API_KEY=`)
 - [ ] `.env` files are in `.gitignore`
 - [ ] CORS is configured (currently `allow_origins=["*"]` — acceptable for hackathon)
 - [ ] File uploads are bounded (FastAPI default limits apply)

@@ -1,6 +1,5 @@
-# NEXUS API
+# Achilles API
 
-Backend package placeholder for the FastAPI implementation described in `docs/05_API.md`.
+Python 3.14 + FastAPI backend for the Achilles organizational stress-testing platform.
 
-No application code has been added yet. This directory currently contains only project metadata and placeholders so the backend can be implemented cleanly in the next step.
-
+Source: `src/nexus_api/`. Entry point: `main.py`. See `docs/05_API.md` for endpoint specs.

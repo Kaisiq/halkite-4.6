@@ -16,3 +16,4 @@ dist/
 coverage/
 pnpm-debug.log*
 *.log
+data/

@@ -186,17 +186,19 @@ class Edge:
     ``weight * theta_from * (1 - h_from)``.
     """
 
-    __slots__ = ("from_id", "to_id", "weight")
+    __slots__ = ("from_id", "meta", "to_id", "weight")
 
     def __init__(
         self,
         from_id: str,
         to_id: str,
         weight: float = 1.0,
+        meta: str | dict[str, Any] | None = None,
     ) -> None:
         self.from_id: str = from_id
         self.to_id: str = to_id
         self.weight: float = weight
+        self.meta: str | dict[str, Any] | None = meta
 
     def __repr__(self) -> str:
         return (
@@ -204,11 +206,14 @@ class Edge:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "from": self.from_id,
             "to": self.to_id,
             "weight": self.weight,
         }
+        if self.meta is not None:
+            d["meta"] = self.meta
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Edge:
@@ -217,6 +222,7 @@ class Edge:
             from_id=str(data["from"]),
             to_id=str(data["to"]),
             weight=float(data.get("weight", 1.0)),
+            meta=data.get("meta"),
         )
 
 
@@ -437,7 +443,7 @@ class Graph:
             for n in self.nodes
         ]
         new_edges = [
-            Edge(from_id=e.from_id, to_id=e.to_id, weight=e.weight)
+            Edge(from_id=e.from_id, to_id=e.to_id, weight=e.weight, meta=e.meta)
             for e in self.edges
         ]
         new_layers = list(self.layers)

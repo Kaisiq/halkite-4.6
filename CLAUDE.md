@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Summary
 
-NEXUS is a deterministic network survival analyzer. AI builds graphs from uploaded organization data, math computes graph health/weakpoints/cascades/state-tree exploration, and AI explains outputs and generates narratives after computation. The core principle: **AI generates. Math computes. AI explains.** — AI never touches the numbers.
+Achilles is an organizational stress-testing platform. Users upload documents about their organization, AI builds a dependency graph, deterministic math computes weakpoints/cascades/adversarial simulations, and AI explains outputs with narratives. The core principle: **AI generates. Math computes. AI explains.** — AI never touches the numbers. See `docs/BUSINESS_PLAN.md` for the full pitch kit.
 
 ## Docs as Source of Truth
 

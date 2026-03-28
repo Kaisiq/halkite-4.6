@@ -39,7 +39,7 @@ include it with conservative weights instead of omitting it.
 OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
 
 {
-  "company": "Organization Name",
+  "company": "Organization Name — brief description",
   "layers": ["People", "Technology", "Supply", ...],
   "nodes": [
     {
@@ -56,12 +56,16 @@ OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
     {
       "from": "node_id_1",
       "to": "node_id_2",
-      "weight": <float 0-1>
+      "weight": <float 0-1>,
+      "meta": "Brief description of why this dependency exists"
     }
   ],
   "r_unit": "days",
   "confidence": <float 0-1>,
-  "known_risks": ["Short risk statement", "..."]
+  "known_risks": [
+    "Risk description 1",
+    "Risk description 2"
+  ]
 }
 
 RULES FOR NODE VALUES:
@@ -114,13 +118,24 @@ Think about these dependency types:
 
 LAYERS: Create layers based on what you see in the data. Use the suggested \
 defaults (People, Technology, Supply, Financial, Facilities, Operations) \
-where applicable, but add or remove layers as the data warrants.\
+where applicable, but add or remove layers as the data warrants.
+
+COMPANY: Set to the organization name and a brief description (e.g. \
+"NovaTech Solutions — Digital Agency, Sofia, Bulgaria").
+
+EDGE META: For each edge, include a brief "meta" string explaining the \
+nature of the dependency (e.g. "CEO directs financial strategy").
+
+KNOWN RISKS: List any risks you identify from the data — single points \
+of failure, concentration risks, missing redundancy, undocumented \
+processes, etc.\
 """
 
 
 # ---------------------------------------------------------------------------
 # IngestResult
 # ---------------------------------------------------------------------------
+
 
 class IngestResult:
     """Outcome of the full ingestion pipeline.
@@ -139,6 +154,8 @@ class IngestResult:
         Targeted questions that could improve graph accuracy.
     files_parsed : list[dict]
         Per-file summary (``filename``, ``type``, ``chars_extracted``).
+    standard : StandardFormat | None
+        Validated standard format (for persistence).
     """
 
     __slots__ = (
@@ -148,6 +165,7 @@ class IngestResult:
         "gaps",
         "graph",
         "r_unit",
+        "standard",
     )
 
     def __init__(
@@ -158,6 +176,7 @@ class IngestResult:
         gaps: list[str] | None = None,
         follow_up_questions: list[str] | None = None,
         files_parsed: list[dict[str, Any]] | None = None,
+        standard: Any | None = None,
     ) -> None:
         self.graph: Graph = graph
         self.r_unit: str = r_unit
@@ -166,9 +185,8 @@ class IngestResult:
         self.follow_up_questions: list[str] = (
             follow_up_questions if follow_up_questions is not None else []
         )
-        self.files_parsed: list[dict[str, Any]] = (
-            files_parsed if files_parsed is not None else []
-        )
+        self.files_parsed: list[dict[str, Any]] = files_parsed if files_parsed is not None else []
+        self.standard = standard
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -193,6 +211,7 @@ class IngestResult:
 # Step 2: Build context
 # ---------------------------------------------------------------------------
 
+
 def build_context(parsed_files: list[ParsedFile], description: str = "") -> str:
     """Concatenate parsed file contents and user description into a single
     context block for the AI extraction prompt.
@@ -212,21 +231,15 @@ def build_context(parsed_files: list[ParsedFile], description: str = "") -> str:
     sections: list[str] = []
 
     if description.strip():
-        sections.append(
-            f"=== USER DESCRIPTION ===\n{description.strip()}"
-        )
+        sections.append(f"=== USER DESCRIPTION ===\n{description.strip()}")
 
     for pf in parsed_files:
         # Skip image-only entries (they will be sent as vision content blocks)
         if pf.raw_bytes is not None:
-            sections.append(
-                f"=== FILE: {pf.filename} (image — sent separately) ==="
-            )
+            sections.append(f"=== FILE: {pf.filename} (image — sent separately) ===")
             continue
 
-        sections.append(
-            f"=== FILE: {pf.filename} ({pf.file_type}) ===\n{pf.content}"
-        )
+        sections.append(f"=== FILE: {pf.filename} ({pf.file_type}) ===\n{pf.content}")
 
     return "\n\n".join(sections)
 
@@ -234,6 +247,7 @@ def build_context(parsed_files: list[ParsedFile], description: str = "") -> str:
 # ---------------------------------------------------------------------------
 # Step 3: AI graph extraction
 # ---------------------------------------------------------------------------
+
 
 def _image_media_type(filename: str) -> str:
     """Return the MIME type for an image filename."""
@@ -277,10 +291,7 @@ def _build_user_content(
 
     # Main text context block
     blocks.append(
-        (
-            "Analyze the following documents and extract a complete "
-            "dependency graph:\n\n" + context
-        )
+        ("Analyze the following documents and extract a complete dependency graph:\n\n" + context)
     )
 
     return blocks
@@ -327,8 +338,7 @@ def _extract_json_from_response(text: str) -> dict[str, Any]:
                         break
 
     raise ValueError(
-        f"Could not extract valid JSON from AI response. "
-        f"Response starts with: {stripped[:200]!r}"
+        f"Could not extract valid JSON from AI response. Response starts with: {stripped[:200]!r}"
     )
 
 
@@ -404,6 +414,7 @@ async def extract_graph(
 # Step 4: Build and validate Graph
 # ---------------------------------------------------------------------------
 
+
 def _clamp(value: float, lo: float, hi: float) -> float:
     """Clamp *value* into ``[lo, hi]``."""
     if value < lo:
@@ -465,15 +476,17 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
         if not isinstance(meta, dict):
             meta = {}
 
-        nodes.append(Node(
-            id=node_id,
-            name=name,
-            layer=layer,
-            h=h,
-            theta=theta,
-            r=r,
-            meta=meta,
-        ))
+        nodes.append(
+            Node(
+                id=node_id,
+                name=name,
+                layer=layer,
+                h=h,
+                theta=theta,
+                r=r,
+                meta=meta,
+            )
+        )
 
     # --- Edges ---
     node_id_set = {n.id for n in nodes}
@@ -486,14 +499,10 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
 
         # Skip invalid references
         if from_id not in node_id_set:
-            logger.warning(
-                "Dropping edge: from_id %r not in graph nodes", from_id
-            )
+            logger.warning("Dropping edge: from_id %r not in graph nodes", from_id)
             continue
         if to_id not in node_id_set:
-            logger.warning(
-                "Dropping edge: to_id %r not in graph nodes", to_id
-            )
+            logger.warning("Dropping edge: to_id %r not in graph nodes", to_id)
             continue
 
         # No self-loops
@@ -511,12 +520,17 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
         # Clamp weight into (0, 1]; drop zero-weight edges
         weight = _clamp(float(raw_edge.get("weight", 1.0)), 0.0, 1.0)
         if weight <= 0.0:
-            logger.warning(
-                "Dropping zero-weight edge %r -> %r", from_id, to_id
-            )
+            logger.warning("Dropping zero-weight edge %r -> %r", from_id, to_id)
             continue
 
-        edges.append(Edge(from_id=from_id, to_id=to_id, weight=weight))
+        edges.append(
+            Edge(
+                from_id=from_id,
+                to_id=to_id,
+                weight=weight,
+                meta=raw_edge.get("meta"),
+            )
+        )
 
     return Graph(nodes=nodes, edges=edges, layers=layers)
 
@@ -524,6 +538,7 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
 # ---------------------------------------------------------------------------
 # Step 4 (cont.): Gap detection
 # ---------------------------------------------------------------------------
+
 
 def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
     """Scan the graph for suspicious patterns and generate follow-up
@@ -567,9 +582,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
             peers = [
                 n
                 for n in graph.nodes
-                if n.layer == node.layer
-                and n.id != node.id
-                and n.theta >= node.theta - 0.3
+                if n.layer == node.layer and n.id != node.id and n.theta >= node.theta - 0.3
             ]
             if not peers:
                 gaps.append(
@@ -597,10 +610,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
         for j in range(i + 1, len(all_layers)):
             pair = tuple(sorted([all_layers[i], all_layers[j]]))
             if pair not in cross_layer_pairs:
-                gaps.append(
-                    f"No cross-layer edges between '{all_layers[i]}' "
-                    f"and '{all_layers[j]}'"
-                )
+                gaps.append(f"No cross-layer edges between '{all_layers[i]}' and '{all_layers[j]}'")
                 questions.append(
                     f"I don't see how '{all_layers[i]}' and "
                     f"'{all_layers[j]}' are connected. "
@@ -614,8 +624,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
     # Anything significantly below n is suspicious.
     if n_nodes >= 3 and n_edges < n_nodes - 1:
         gaps.append(
-            f"Very few edges ({n_edges}) relative to nodes ({n_nodes}). "
-            f"Network seems sparse."
+            f"Very few edges ({n_edges}) relative to nodes ({n_nodes}). Network seems sparse."
         )
         questions.append(
             "Your network seems sparse. Are there dependencies I "
@@ -626,10 +635,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
     depended_on: set[str] = {e.from_id for e in graph.edges}
     for node in graph.nodes:
         if node.theta > 0.3 and node.id not in depended_on:
-            gaps.append(
-                f"'{node.name}' has high theta={node.theta:.2f} "
-                f"but nothing depends on it"
-            )
+            gaps.append(f"'{node.name}' has high theta={node.theta:.2f} but nothing depends on it")
 
     return gaps, questions
 
@@ -638,18 +644,24 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
 # Step 5: Full pipeline
 # ---------------------------------------------------------------------------
 
+
 async def ingest(
     files: list[tuple[str, bytes]],
     description: str = "",
 ) -> IngestResult:
     """Run the complete ingestion pipeline.
 
-    1. Parse all uploaded files.
-    2. Concatenate context.
-    3. Call Gemini for graph extraction.
-    4. Build and validate the graph.
-    5. Detect gaps and generate follow-up questions.
-    6. Return :class:`IngestResult`.
+    Two paths:
+
+    **Fast path** — If any uploaded ``.json`` file is already in the NEXUS
+    standard format, skip AI extraction entirely and build the graph
+    directly from it.
+
+    **Slow path** — Parse all files, call Gemini for graph extraction,
+    normalise the output to the standard format, then build the graph.
+
+    In both cases the validated :class:`StandardFormat` is attached to the
+    result so the caller can persist it.
 
     Parameters
     ----------
@@ -663,6 +675,58 @@ async def ingest(
     IngestResult
     """
     from nexus_api.ingestion.parser import parse_files
+    from nexus_api.ingestion.standard import (
+        StandardFormat,
+        detect_standard_format,
+        normalize_ai_output,
+    )
+
+    # ------------------------------------------------------------------
+    # Fast path: check if any JSON file is already in standard format
+    # ------------------------------------------------------------------
+    standard: StandardFormat | None = None
+    standard_filename: str = ""
+    for filename, content in files:
+        if filename.lower().endswith(".json"):
+            standard = detect_standard_format(content)
+            if standard is not None:
+                standard_filename = filename
+                logger.info(
+                    "Detected standard format in %s — skipping AI extraction",
+                    filename,
+                )
+                break
+
+    if standard is not None:
+        graph = build_graph_from_dict(standard.model_dump(by_alias=True))
+
+        validation = graph.validate()
+        if validation.errors:
+            logger.warning("Graph validation errors (standard): %s", validation.errors)
+        if validation.warnings:
+            logger.info("Graph validation warnings: %s", validation.warnings)
+
+        gaps, follow_up_questions = detect_gaps(graph)
+
+        return IngestResult(
+            graph=graph,
+            r_unit=standard.r_unit,
+            confidence=1.0,
+            gaps=gaps,
+            follow_up_questions=follow_up_questions,
+            files_parsed=[
+                {
+                    "filename": standard_filename,
+                    "type": "json",
+                    "chars_extracted": len(standard.model_dump_json(by_alias=True)),
+                }
+            ],
+            standard=standard,
+        )
+
+    # ------------------------------------------------------------------
+    # Slow path: parse -> AI extraction -> normalise -> build graph
+    # ------------------------------------------------------------------
 
     # Step 1: Parse
     parsed = parse_files(files)
@@ -672,9 +736,7 @@ async def ingest(
 
     # Collect image data for vision
     image_data: list[tuple[str, bytes]] = [
-        (pf.filename, pf.raw_bytes)
-        for pf in parsed
-        if pf.raw_bytes is not None
+        (pf.filename, pf.raw_bytes) for pf in parsed if pf.raw_bytes is not None
     ]
 
     # Step 3: AI extraction
@@ -682,19 +744,22 @@ async def ingest(
         context,
         image_data=image_data if image_data else None,
     )
+
+    # Step 3b: Normalise AI output to standard format
+    standard = normalize_ai_output(
+        raw,
+        company=description,
+    )
+
     # Step 4: Build graph
     graph = build_graph_from_dict(raw)
 
     # Run validation and log warnings
     validation = graph.validate()
     if validation.errors:
-        logger.warning(
-            "Graph validation errors (post-build): %s", validation.errors
-        )
+        logger.warning("Graph validation errors (post-build): %s", validation.errors)
     if validation.warnings:
-        logger.info(
-            "Graph validation warnings: %s", validation.warnings
-        )
+        logger.info("Graph validation warnings: %s", validation.warnings)
 
     # Step 4 (cont.): Detect gaps
     gaps, follow_up_questions = detect_gaps(graph)
@@ -713,4 +778,5 @@ async def ingest(
         gaps=gaps,
         follow_up_questions=follow_up_questions,
         files_parsed=files_parsed,
+        standard=standard,
     )

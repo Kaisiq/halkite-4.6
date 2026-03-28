@@ -25,7 +25,7 @@ API calls: fetch or axios
 **Layout:**
 ```
 ┌─────────────────────────────────────────────────┐
-│  NEXUS — Network Survival Analyzer              │
+│  Achilles — Organizational Stress Testing              │
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  ┌───────────────────────────────────────────┐  │
@@ -73,7 +73,7 @@ API calls: fetch or axios
 **Layout:**
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  NEXUS    [Network] [Simulate] [Scenarios] [Report]         │
+│  Achilles [Network] [Simulate] [Scenarios] [Report]         │
 ├──────────────────────────────────────────────────────────────┤
 │                                          │                   │
 │                                          │  ANALYSIS PANEL   │
@@ -141,7 +141,7 @@ Interactions:
 **Layout:**
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  NEXUS    [Network] [Simulate] [Scenarios] [Report]         │
+│  Achilles [Network] [Simulate] [Scenarios] [Report]         │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  AGENT CONTROL                                               │
@@ -193,7 +193,7 @@ Interactions:
 **Layout:**
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  NEXUS    [Network] [Simulate] [Scenarios] [Report]         │
+│  Achilles [Network] [Simulate] [Scenarios] [Report]         │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  WORST-CASE SCENARIOS                                        │
