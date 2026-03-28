@@ -42,11 +42,18 @@ loadEnvFile(path.join(webDir, ".env.local"));
 const apiInternalBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? "http://127.0.0.1:8000";
 
+// When NEXT_PUBLIC_API_BASE_URL is set, the frontend calls the API
+// directly — no rewrites needed. Only proxy in local dev.
+const hasDirectApi = !!process.env.NEXT_PUBLIC_API_BASE_URL;
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
   serverExternalPackages: [],
   async rewrites() {
+    if (hasDirectApi) {
+      return [];
+    }
     return [
       {
         source: "/api/:path*",
