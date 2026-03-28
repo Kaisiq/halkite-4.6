@@ -20,7 +20,7 @@ def _float_or_none(value: Any) -> float | None:
         return None
     try:
         return float(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return None
 
 

@@ -93,7 +93,7 @@ def detect_standard_format(data: bytes) -> StandardFormat | None:
     """
     try:
         parsed = json.loads(data.decode("utf-8", errors="replace"))
-    except json.JSONDecodeError, UnicodeDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return None
 
     if not isinstance(parsed, dict):

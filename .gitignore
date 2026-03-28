@@ -17,3 +17,6 @@ coverage/
 pnpm-debug.log*
 *.log
 data/
+.turbo/
+*.egg-info/
+tsconfig.tsbuildinfo

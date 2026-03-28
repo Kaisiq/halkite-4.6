@@ -249,13 +249,20 @@ async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResp
             import_drive_folder,
         )
 
+        import asyncio
+
         folder_id = extract_folder_id(body.folder_id)
-        drive_bundle = import_drive_folder(body.access_token, folder_id)
+        drive_bundle = await asyncio.to_thread(
+            import_drive_folder, body.access_token, folder_id
+        )
         result = await ingest(drive_bundle.files, body.description)
 
         session = store.create()
         session.graph = result.graph
         session.r_unit = result.r_unit
+
+        if result.standard is not None:
+            save_standard(session.session_id, result.standard)
 
         return JSONResponse(
             {
