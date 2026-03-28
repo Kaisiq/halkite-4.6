@@ -109,7 +109,7 @@ class ParsedFile:
 
 def _parse_pdf(data: bytes) -> str:
     """Extract text from a PDF using PyPDF2."""
-    from PyPDF2 import PdfReader  # type: ignore[import-untyped]
+    from PyPDF2 import PdfReader
 
     reader = PdfReader(io.BytesIO(data))
     pages: list[str] = []
@@ -124,7 +124,7 @@ def _parse_pdf(data: bytes) -> str:
 
 def _parse_docx(data: bytes) -> str:
     """Extract paragraphs and tables from a DOCX."""
-    from docx import Document  # type: ignore[import-untyped]
+    from docx import Document
 
     doc = Document(io.BytesIO(data))
     parts: list[str] = []
@@ -149,7 +149,7 @@ def _parse_docx(data: bytes) -> str:
 
 def _parse_xlsx(data: bytes) -> str:
     """Extract all sheets from an XLSX workbook."""
-    from openpyxl import load_workbook  # type: ignore[import-untyped]
+    from openpyxl import load_workbook
 
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     parts: list[str] = []

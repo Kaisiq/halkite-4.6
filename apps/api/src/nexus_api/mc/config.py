@@ -71,7 +71,7 @@ class MCConfig:
         )
 
     @classmethod
-    def from_dict(cls, d: dict) -> MCConfig:
+    def from_dict(cls, d: dict[str, object]) -> MCConfig:
         """Parse an ``MCConfig`` from a JSON-compatible dict.
 
         Unknown keys are silently ignored so the API can evolve without

@@ -16,7 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ def _authorized_get_json(url: str, access_token: str) -> dict[str, Any]:
     except urllib.error.URLError as exc:
         raise GoogleDriveImportError(f"Google Drive request failed: {exc.reason}") from exc
 
-    return json.loads(payload)
+    return cast("dict[str, Any]", json.loads(payload))
 
 
 def _authorized_get_bytes(url: str, access_token: str) -> bytes:
@@ -143,7 +143,7 @@ def _authorized_get_bytes(url: str, access_token: str) -> bytes:
     )
     try:
         with urllib.request.urlopen(request, timeout=120) as response:
-            return response.read()
+            return cast("bytes", response.read())
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         logger.warning("Google Drive download failed: %s", body)

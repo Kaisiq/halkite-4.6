@@ -75,7 +75,7 @@ class Event:
         # dict for cut_edge
         return [self.target["from"], self.target["to"]]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Serialize to a plain dict (JSON-safe)."""
         return {
             "target": self.target,

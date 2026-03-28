@@ -13,7 +13,7 @@ Reference: docs/03A_AGENT_STRATEGIES.md conventions.
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from nexus_api.agents.base import Agent, AgentBrief
 from nexus_api.mc.config import MCConfig
@@ -63,7 +63,8 @@ class MonteCarloAgent(Agent):
                 continue
 
             if event.action == "cut_edge":
-                key = f"cut_edge:{event.target['from']}:{event.target['to']}"
+                edge_target = cast("dict[str, str]", event.target)
+                key = f"cut_edge:{edge_target['from']}:{edge_target['to']}"
             else:
                 key = f"{event.action}:{event.target}"
             if key in seen:

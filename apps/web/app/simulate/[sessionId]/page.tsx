@@ -574,7 +574,7 @@ export default function SimulatePage() {
       .data(root.descendants().filter((node) => node.depth > 0))
       .join("line")
       .attr("x1", (d) => d.x ?? 0)
-      .attr("y1", (d) => 0)
+      .attr("y1", () => 0)
       .attr("x2", (d) => d.x ?? 0)
       .attr("y2", (d) => (d.y ?? 0) - 16)
       .attr("stroke", "rgba(255,255,255,0.03)");

@@ -12,7 +12,7 @@ import json
 import logging
 import os
 import re
-from typing import Any
+from typing import Any, cast
 
 from google import genai
 from google.genai import types
@@ -377,7 +377,7 @@ def _response_text(response: types.GenerateContentResponse) -> str:
     """Extract plain text from a Gemini response."""
     text = getattr(response, "text", None)
     if text:
-        return text
+        return cast("str", text)
 
     parts: list[str] = []
     for candidate in response.candidates or []:
@@ -425,7 +425,7 @@ async def extract_graph(
 
     response = await client.aio.models.generate_content(
         model=_MODEL,
-        contents=user_content,
+        contents=cast("Any", user_content),
         config=types.GenerateContentConfig(
             system_instruction=_SYSTEM_PROMPT,
             temperature=0,

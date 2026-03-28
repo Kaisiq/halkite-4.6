@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import type { GraphData, GraphNode, Recommendation, Scenario } from "@/lib/types";
 
 interface RiskDocumentsPanelProps {
@@ -69,16 +69,6 @@ export function RiskDocumentsPanel({
   );
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (documents.length === 0) {
-      setActiveDocumentId(null);
-      return;
-    }
-    if (!activeDocumentId || !documents.some((doc) => doc.id === activeDocumentId)) {
-      setActiveDocumentId(documents[0].id);
-    }
-  }, [activeDocumentId, documents]);
 
   const activeDocument =
     documents.find((doc) => doc.id === activeDocumentId) ?? documents[0] ?? null;

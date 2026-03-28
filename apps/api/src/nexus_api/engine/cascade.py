@@ -61,7 +61,7 @@ class CascadeStep:
         repr=False,
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """JSON-safe serialisation."""
         return {
             "step": self.step,
@@ -90,7 +90,7 @@ class CascadeMetrics:
     layer_damage: dict[str, float]
     total_recovery_cost: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """JSON-safe serialisation."""
         return {
             "cascade_size": self.cascade_size,
@@ -194,7 +194,7 @@ def apply_event(
 def _propagate_step(
     graph: Graph,
     changed_node_ids: set[str],
-) -> tuple[set[str], set[str], dict[str, float]]:
+) -> tuple[set[str], set[str], dict[str, float], dict[str, set[str]]]:
     """Run one propagation step from the set of recently changed nodes.
 
     For every node *v* in *changed_node_ids*, compute the damage it
