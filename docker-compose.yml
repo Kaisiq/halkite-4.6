@@ -6,14 +6,14 @@ services:
       MONGO_INITDB_DATABASE: halkantir
     volumes:
       - mongo_data:/data/db
-    ports:
-      - "${MONGO_EXTERNAL_PORT:-27017}:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - internal
 
   api:
     build:
@@ -23,6 +23,7 @@ services:
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       MONGODB_URI: mongodb://mongo:27017/halkantir
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       API_HOST: 0.0.0.0
       API_PORT: 8000
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -32,8 +33,6 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    ports:
-      - "${API_EXTERNAL_PORT:-8000}:8000"
     restart: unless-stopped
     healthcheck:
       test:
@@ -47,6 +46,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    networks:
+      - internal
 
   web:
     build:
@@ -58,13 +59,20 @@ services:
       PORT: 3000
       API_INTERNAL_BASE_URL: http://api:8000
       NEXT_PUBLIC_API_BASE_URL: ""
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - "${WEB_EXTERNAL_PORT:-3000}:3000"
+      - "${PORT:-3000}:3000"
     restart: unless-stopped
+    networks:
+      - internal
 
 volumes:
   mongo_data:
   api_data:
+
+networks:
+  internal:
+    driver: bridge
