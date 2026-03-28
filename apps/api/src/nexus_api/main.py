@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -10,7 +11,7 @@ from typing import Any
 from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from nexus_api.session import SessionNotFoundError, store
 
@@ -72,11 +73,16 @@ app = FastAPI(
     description="Backend for the Halkantir organizational stress-testing platform.",
 )
 
+_ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:3001,http://localhost:3003,http://127.0.0.1:3000",
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -136,6 +142,15 @@ class ReingestRequest(BaseModel):
 class ChatRequest(BaseModel):
     session_id: str
     message: str
+
+    @field_validator("message")
+    @classmethod
+    def validate_message_length(cls, v: str) -> str:
+        if len(v) > 5000:
+            raise ValueError("Message exceeds 5000 character limit")
+        if not v.strip():
+            raise ValueError("Message cannot be empty")
+        return v
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +230,7 @@ async def upload_files(
     if not files:
         return error_response("INVALID_REQUEST", "No files provided", 400)
 
+    max_file_bytes = 50 * 1024 * 1024  # 50 MB per file
     try:
         from nexus_api.ingestion.extractor import ingest
         from nexus_api.ingestion.standard import save_standard
@@ -222,6 +238,12 @@ async def upload_files(
         raw_files: list[tuple[str, bytes]] = []
         for f in files:
             content = await f.read()
+            if len(content) > max_file_bytes:
+                return error_response(
+                    "FILE_TOO_LARGE",
+                    f"File {f.filename} exceeds 50 MB limit",
+                    413,
+                )
             raw_files.append((f.filename or "unknown", content))
 
         result = await ingest(raw_files, description)
@@ -664,7 +686,7 @@ async def explore(body: ExploreRequest) -> JSONResponse:
         briefs = [b for b in briefs if b.agent_type in agent_filter]
 
     agents = create_all_agents(briefs, mc_config=mc_config)
-    tree = build_state_tree(session.graph, agents, config)
+    tree = await asyncio.to_thread(build_state_tree, session.graph, agents, config)
     session.state_tree = tree
 
     # -- Post-tree resilience analysis -------------------------------------
