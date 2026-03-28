@@ -15,4 +15,3 @@
   "ruff.nativeServer": "on",
   "tailwindCSS.experimental.configFile": "apps/web/postcss.config.mjs"
 }
-

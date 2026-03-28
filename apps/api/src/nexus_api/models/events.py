@@ -42,28 +42,21 @@ class Event:
     def __post_init__(self) -> None:
         if self.action not in self._VALID_ACTIONS:
             raise ValueError(
-                f"Invalid action {self.action!r}. "
-                f"Must be one of {sorted(self._VALID_ACTIONS)}."
+                f"Invalid action {self.action!r}. Must be one of {sorted(self._VALID_ACTIONS)}."
             )
         if not (0.0 <= self.magnitude <= 1.0):
-            raise ValueError(
-                f"Magnitude must be in [0, 1], got {self.magnitude}."
-            )
+            raise ValueError(f"Magnitude must be in [0, 1], got {self.magnitude}.")
         if self.action == "cut_edge":
             if not isinstance(self.target, dict):
                 raise ValueError(
-                    "cut_edge events require target to be a dict "
-                    "with 'from' and 'to' keys."
+                    "cut_edge events require target to be a dict with 'from' and 'to' keys."
                 )
             if "from" not in self.target or "to" not in self.target:
-                raise ValueError(
-                    "cut_edge target dict must contain 'from' and 'to' keys."
-                )
+                raise ValueError("cut_edge target dict must contain 'from' and 'to' keys.")
         else:
             if isinstance(self.target, dict):
                 raise ValueError(
-                    f"{self.action} events require target to be a str "
-                    f"or list[str], not dict."
+                    f"{self.action} events require target to be a str or list[str], not dict."
                 )
 
     # ------------------------------------------------------------------
@@ -82,7 +75,7 @@ class Event:
         # dict for cut_edge
         return [self.target["from"], self.target["to"]]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Serialize to a plain dict (JSON-safe)."""
         return {
             "target": self.target,

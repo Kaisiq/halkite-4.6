@@ -13,6 +13,8 @@ from pydantic import BaseModel
 
 from nexus_api.session import SessionNotFoundError, store
 
+_REQUIRED_ENV_VARS = ("GEMINI_API_KEY",)
+
 
 def _load_env_files() -> None:
     """Load simple KEY=VALUE pairs from repo env files into os.environ.
@@ -45,12 +47,26 @@ def _load_env_files() -> None:
                 os.environ.setdefault(key, value)
 
 
+def _validate_required_env() -> None:
+    """Fail fast when required runtime configuration is missing."""
+    missing = [key for key in _REQUIRED_ENV_VARS if not os.environ.get(key, "").strip()]
+    if not missing:
+        return
+
+    missing_list = ", ".join(missing)
+    raise RuntimeError(
+        "Missing required API environment variables: "
+        f"{missing_list}. Set them before starting the API."
+    )
+
+
 _load_env_files()
+_validate_required_env()
 
 app = FastAPI(
-    title="NEXUS API",
+    title="Halkantir API",
     version="0.1.0",
-    description="Backend for the NEXUS network survival analyzer.",
+    description="Backend for the Halkantir organizational stress-testing platform.",
 )
 
 app.add_middleware(
@@ -65,6 +81,7 @@ app.add_middleware(
 # Error helpers
 # ---------------------------------------------------------------------------
 
+
 def error_response(code: str, message: str, status: int = 400) -> JSONResponse:
     return JSONResponse({"error": message, "code": code}, status_code=status)
 
@@ -77,6 +94,7 @@ async def _handle_session_not_found(request: Any, exc: SessionNotFoundError) -> 
 # ---------------------------------------------------------------------------
 # Pydantic request bodies
 # ---------------------------------------------------------------------------
+
 
 class GraphUpdateRequest(BaseModel):
     session_id: str
@@ -102,6 +120,12 @@ class ResetRequest(BaseModel):
     session_id: str
 
 
+class GoogleDriveImportRequest(BaseModel):
+    access_token: str
+    folder_id: str
+    description: str = ""
+
+
 class ReingestRequest(BaseModel):
     session_id: str
 
@@ -110,8 +134,10 @@ class ReingestRequest(BaseModel):
 # Serialization helpers
 # ---------------------------------------------------------------------------
 
+
 def _serialize_graph(graph: Any) -> dict[str, Any]:
     from nexus_api.models.graph import Graph
+
     g: Graph = graph
     return {
         "layers": list(g.layers),
@@ -142,6 +168,7 @@ def _serialize_graph(graph: Any) -> dict[str, Any]:
 
 def _serialize_state(state: Any) -> dict[str, Any]:
     from nexus_api.models.graph import State
+
     s: State = state
     return {
         "h": [round(v, 6) for v in s.h],
@@ -155,6 +182,7 @@ def _serialize_state(state: Any) -> dict[str, Any]:
 # Health check
 # ---------------------------------------------------------------------------
 
+
 @app.get("/api/health")
 def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
@@ -163,6 +191,7 @@ def healthcheck() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # POST /api/upload
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/upload")
 async def upload_files(
@@ -210,9 +239,54 @@ async def upload_files(
         return error_response("AI_ERROR", f"Graph extraction failed: {e}", 500)
 
 
+@app.post("/api/google-drive/import")
+async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResponse:
+    try:
+        from nexus_api.ingestion.extractor import ingest
+        from nexus_api.ingestion.google_drive import (
+            GoogleDriveImportError,
+            extract_folder_id,
+            import_drive_folder,
+        )
+
+        import asyncio
+
+        folder_id = extract_folder_id(body.folder_id)
+        drive_bundle = await asyncio.to_thread(
+            import_drive_folder, body.access_token, folder_id
+        )
+        result = await ingest(drive_bundle.files, body.description)
+
+        session = store.create()
+        session.graph = result.graph
+        session.r_unit = result.r_unit
+
+        if result.standard is not None:
+            save_standard(session.session_id, result.standard)
+
+        return JSONResponse(
+            {
+                "session_id": session.session_id,
+                "files_parsed": result.files_parsed,
+                "graph": _serialize_graph(result.graph),
+                "r_unit": result.r_unit,
+                "confidence": result.confidence,
+                "gaps": result.gaps,
+                "follow_up_questions": result.follow_up_questions,
+                "drive_folder": drive_bundle.folder.to_dict(),
+            }
+        )
+    except GoogleDriveImportError as exc:
+        return error_response("GOOGLE_DRIVE_ERROR", str(exc), 400)
+    except Exception as exc:
+        traceback.print_exc()
+        return error_response("AI_ERROR", f"Graph extraction failed: {exc}", 500)
+
+
 # ---------------------------------------------------------------------------
 # GET /api/standard/{session_id}
 # ---------------------------------------------------------------------------
+
 
 @app.get("/api/standard/{session_id}")
 async def get_standard(session_id: str) -> JSONResponse:
@@ -231,6 +305,7 @@ async def get_standard(session_id: str) -> JSONResponse:
 # ---------------------------------------------------------------------------
 # POST /api/reingest
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/reingest")
 async def reingest(body: ReingestRequest) -> JSONResponse:
@@ -256,20 +331,23 @@ async def reingest(body: ReingestRequest) -> JSONResponse:
     session.state_tree = None
     session.final_report = None
 
-    return JSONResponse({
-        "session_id": body.session_id,
-        "graph": _serialize_graph(graph),
-        "r_unit": r_unit,
-        "company": standard.company,
-        "known_risks": standard.known_risks,
-        "gaps": gaps,
-        "follow_up_questions": follow_up_questions,
-    })
+    return JSONResponse(
+        {
+            "session_id": body.session_id,
+            "graph": _serialize_graph(graph),
+            "r_unit": r_unit,
+            "company": standard.company,
+            "known_risks": standard.known_risks,
+            "gaps": gaps,
+            "follow_up_questions": follow_up_questions,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # POST /api/graph/update
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/graph/update")
 async def update_graph(body: GraphUpdateRequest) -> JSONResponse:
@@ -288,9 +366,13 @@ async def update_graph(body: GraphUpdateRequest) -> JSONResponse:
             if op_type == "add_node":
                 nd = op["node"]
                 node = Node(
-                    id=nd["id"], name=nd["name"], layer=nd["layer"],
-                    h=nd.get("h", 1.0), theta=nd.get("theta", 0.5),
-                    r=nd.get("r", 0.0), meta=nd.get("meta", {}),
+                    id=nd["id"],
+                    name=nd["name"],
+                    layer=nd["layer"],
+                    h=nd.get("h", 1.0),
+                    theta=nd.get("theta", 0.5),
+                    r=nd.get("r", 0.0),
+                    meta=nd.get("meta", {}),
                 )
                 if node.layer not in graph.layers:
                     graph.layers.append(node.layer)
@@ -329,15 +411,18 @@ async def update_graph(body: GraphUpdateRequest) -> JSONResponse:
     graph.rebuild()
     session.graph = graph
 
-    return JSONResponse({
-        "graph": _serialize_graph(graph),
-        "validation_warnings": warnings,
-    })
+    return JSONResponse(
+        {
+            "graph": _serialize_graph(graph),
+            "validation_warnings": warnings,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # POST /api/analyze
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/analyze")
 async def analyze(body: AnalyzeRequest) -> JSONResponse:
@@ -353,10 +438,12 @@ async def analyze(body: AnalyzeRequest) -> JSONResponse:
 
     session.vulnerability_report = report
 
-    return JSONResponse({
-        "vulnerability_report": _serialize_vulnerability_report(report),
-        "computation_time_ms": elapsed_ms,
-    })
+    return JSONResponse(
+        {
+            "vulnerability_report": _serialize_vulnerability_report(report),
+            "computation_time_ms": elapsed_ms,
+        }
+    )
 
 
 def _serialize_vulnerability_report(report: Any) -> dict[str, Any]:
@@ -397,8 +484,7 @@ def _serialize_vulnerability_report(report: Any) -> dict[str, Any]:
                 "nodes": cl.nodes,
                 "size": cl.size,
                 "isolation_risk": (
-                    round(cl.isolation_risk, 6)
-                    if cl.isolation_risk != float("inf") else 999.0
+                    round(cl.isolation_risk, 6) if cl.isolation_risk != float("inf") else 999.0
                 ),
                 "boundary_nodes": cl.boundary_nodes,
                 "cluster_impact": round(cl.cluster_impact, 6),
@@ -438,7 +524,8 @@ def _serialize_vulnerability_report(report: Any) -> dict[str, Any]:
             "most_critical_node": report.summary_stats.most_critical_node,
             "most_fragile_layer": report.summary_stats.most_fragile_layer,
             "highest_synergy_pair": list(report.summary_stats.highest_synergy_pair)
-            if report.summary_stats.highest_synergy_pair else None,
+            if report.summary_stats.highest_synergy_pair
+            else None,
             "bridge_count": report.summary_stats.bridge_count,
             "cluster_count": report.summary_stats.cluster_count,
         },
@@ -448,6 +535,7 @@ def _serialize_vulnerability_report(report: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # POST /api/cascade
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/cascade")
 async def run_cascade(body: CascadeRequest) -> JSONResponse:
@@ -474,41 +562,41 @@ async def run_cascade(body: CascadeRequest) -> JSONResponse:
     except ValueError as e:
         return error_response("INVALID_EVENT", str(e), 400)
 
-    return JSONResponse({
-        "cascade_log": [
-            {
-                "step": step.step,
-                "trigger": step.trigger,
-                "new_failures": step.new_failures,
-                "new_degraded": step.new_degraded,
-                "damages": {k: round(v, 6) for k, v in step.damages.items()},
-            }
-            for step in cascade_log
-        ],
-        "final_state": {
-            "nodes": [
-                {"id": n.id, "h": round(n.h, 6), "phi": n.phi}
-                for n in graph.nodes
+    return JSONResponse(
+        {
+            "cascade_log": [
+                {
+                    "step": step.step,
+                    "trigger": step.trigger,
+                    "new_failures": step.new_failures,
+                    "new_degraded": step.new_degraded,
+                    "damages": {k: round(v, 6) for k, v in step.damages.items()},
+                }
+                for step in cascade_log
             ],
-            "H": round(final_state.H, 6),
-            "H_per_layer": {k: round(v, 6) for k, v in final_state.H_per_layer.items()},
-        },
-        "metrics": {
-            "cascade_size": round(metrics.cascade_size, 6),
-            "cascade_depth": metrics.cascade_depth,
-            "health_loss": round(metrics.health_loss, 6),
-            "nodes_failed": metrics.nodes_failed,
-            "nodes_degraded": metrics.nodes_degraded,
-            "cross_layer_failures": metrics.cross_layer_failures,
-            "layer_damage": {k: round(v, 6) for k, v in metrics.layer_damage.items()},
-            "total_recovery_cost": round(metrics.total_recovery_cost, 4),
-        },
-    })
+            "final_state": {
+                "nodes": [{"id": n.id, "h": round(n.h, 6), "phi": n.phi} for n in graph.nodes],
+                "H": round(final_state.H, 6),
+                "H_per_layer": {k: round(v, 6) for k, v in final_state.H_per_layer.items()},
+            },
+            "metrics": {
+                "cascade_size": round(metrics.cascade_size, 6),
+                "cascade_depth": metrics.cascade_depth,
+                "health_loss": round(metrics.health_loss, 6),
+                "nodes_failed": metrics.nodes_failed,
+                "nodes_degraded": metrics.nodes_degraded,
+                "cross_layer_failures": metrics.cross_layer_failures,
+                "layer_damage": {k: round(v, 6) for k, v in metrics.layer_damage.items()},
+                "total_recovery_cost": round(metrics.total_recovery_cost, 4),
+            },
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # POST /api/explore
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/explore")
 async def explore(body: ExploreRequest) -> JSONResponse:
@@ -537,6 +625,7 @@ async def explore(body: ExploreRequest) -> JSONResponse:
     mc_config = None
     if body.mc is not None:
         from nexus_api.mc.config import MCConfig
+
         try:
             mc_config = MCConfig.from_dict(body.mc)
         except (ValueError, TypeError) as e:
@@ -563,13 +652,16 @@ async def explore(body: ExploreRequest) -> JSONResponse:
     resilience_data = None
     if mc_config is not None:
         from nexus_api.mc.resilience import run_resilience_analysis
+
         pristine = session.graph.deep_copy()
         pristine.reset()
         profile = run_resilience_analysis(pristine, mc_config)
         resilience_data = profile.to_dict()
 
     report = build_final_report(
-        session.graph, tree, session.vulnerability_report,
+        session.graph,
+        tree,
+        session.vulnerability_report,
         resilience_profile=resilience_data,
     )
     session.final_report = report
@@ -611,34 +703,44 @@ def _serialize_tree_stats(stats: dict[str, Any]) -> dict[str, Any]:
 def _serialize_scenarios(scenarios: list[Any]) -> list[dict[str, Any]]:
     result = []
     for s in scenarios:
-        result.append({
-            "rank": s.rank,
-            "severity": round(s.severity, 6),
-            "severity_label": s.severity_label,
-            "title": s.title,
-            "summary": s.summary,
-            "health_remaining": round(s.health_remaining, 6),
-            "failed_nodes": s.failed_nodes,
-            "recovery_cost": round(s.recovery_cost, 4),
-            "depth": s.depth,
-            "agent": s.agent,
-            "path": [
-                {
-                    "step": step.get("step", 0),
-                    "event": _serialize_event(step.get("event")),
-                    "H_before": round(step.get("H_before", 1.0), 6),
-                    "H_after": round(step.get("H_after", 1.0), 6),
-                    "new_failures": step.get("new_failures", []),
-                }
-                for step in (s.path or [])
-            ],
-            "narrative": s.narrative,
-            "recommendations": [
-                {"action": r.get("action", "") if isinstance(r, dict) else getattr(r, "action", ""),
-                 "reason": r.get("reason", "") if isinstance(r, dict) else getattr(r, "reason", "")}
-                for r in (s.recommendations or [])
-            ] if s.recommendations else [],
-        })
+        result.append(
+            {
+                "rank": s.rank,
+                "severity": round(s.severity, 6),
+                "severity_label": s.severity_label,
+                "title": s.title,
+                "summary": s.summary,
+                "health_remaining": round(s.health_remaining, 6),
+                "failed_nodes": s.failed_nodes,
+                "recovery_cost": round(s.recovery_cost, 4),
+                "depth": s.depth,
+                "agent": s.agent,
+                "path": [
+                    {
+                        "step": step.get("step", 0),
+                        "event": _serialize_event(step.get("event")),
+                        "H_before": round(step.get("H_before", 1.0), 6),
+                        "H_after": round(step.get("H_after", 1.0), 6),
+                        "new_failures": step.get("new_failures", []),
+                    }
+                    for step in (s.path or [])
+                ],
+                "narrative": s.narrative,
+                "recommendations": [
+                    {
+                        "action": r.get("action", "")
+                        if isinstance(r, dict)
+                        else getattr(r, "action", ""),
+                        "reason": r.get("reason", "")
+                        if isinstance(r, dict)
+                        else getattr(r, "reason", ""),
+                    }
+                    for r in (s.recommendations or [])
+                ]
+                if s.recommendations
+                else [],
+            }
+        )
     return result
 
 
@@ -682,13 +784,15 @@ def _serialize_viz_data(report: Any, graph: Any) -> dict[str, Any]:
             "edges": tree_edges,
         },
         "cascade_animations": report.visualization_data.get("cascade_animations", [])
-        if report.visualization_data else [],
+        if report.visualization_data
+        else [],
     }
 
 
 # ---------------------------------------------------------------------------
 # POST /api/reset
 # ---------------------------------------------------------------------------
+
 
 @app.post("/api/reset")
 async def reset_graph(body: ResetRequest) -> JSONResponse:
@@ -708,6 +812,7 @@ async def reset_graph(body: ResetRequest) -> JSONResponse:
 # GET /api/graph/{session_id}
 # ---------------------------------------------------------------------------
 
+
 @app.get("/api/graph/{session_id}")
 async def get_graph(session_id: str) -> JSONResponse:
     session = store.require(session_id)
@@ -719,6 +824,7 @@ async def get_graph(session_id: str) -> JSONResponse:
 # ---------------------------------------------------------------------------
 # GET /api/report/{session_id}
 # ---------------------------------------------------------------------------
+
 
 @app.get("/api/report/{session_id}")
 async def get_report(session_id: str) -> JSONResponse:
@@ -748,6 +854,7 @@ async def get_report(session_id: str) -> JSONResponse:
 # WebSocket /ws/explore/{session_id}
 # ---------------------------------------------------------------------------
 
+
 @app.websocket("/ws/explore/{session_id}")
 async def ws_explore(websocket: WebSocket, session_id: str) -> None:
     await websocket.accept()
@@ -770,6 +877,7 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
 
         if session.vulnerability_report is None:
             from nexus_api.engine.weakpoint import run_full_analysis
+
             session.vulnerability_report = run_full_analysis(session.graph)
 
         from nexus_api.briefing.briefing import (
@@ -792,6 +900,7 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
         ws_mc_data = data.get("mc")
         if ws_mc_data is not None:
             from nexus_api.mc.config import MCConfig
+
             try:
                 ws_mc_config = MCConfig.from_dict(ws_mc_data)
             except (ValueError, TypeError) as e:
@@ -810,33 +919,40 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
         agents = create_all_agents(briefs, mc_config=ws_mc_config)
 
         for agent in agents:
-            await websocket.send_json({
-                "type": "agent_started",
-                "agent": agent.brief.agent_type,
-            })
+            await websocket.send_json(
+                {
+                    "type": "agent_started",
+                    "agent": agent.brief.agent_type,
+                }
+            )
 
         tree = build_state_tree(session.graph, agents, config)
         session.state_tree = tree
 
         stats = tree_stats(tree)
         for agent_type, astat in stats.get("agent_stats", {}).items():
-            await websocket.send_json({
-                "type": "agent_finished",
-                "agent": agent_type,
-                "nodes_explored": astat.get("nodes_explored", 0),
-            })
+            await websocket.send_json(
+                {
+                    "type": "agent_finished",
+                    "agent": agent_type,
+                    "nodes_explored": astat.get("nodes_explored", 0),
+                }
+            )
 
         # -- Post-tree resilience analysis ---------------------------------
         ws_resilience_data = None
         if ws_mc_config is not None:
             from nexus_api.mc.resilience import run_resilience_analysis
+
             ws_pristine = session.graph.deep_copy()
             ws_pristine.reset()
             ws_profile = run_resilience_analysis(ws_pristine, ws_mc_config)
             ws_resilience_data = ws_profile.to_dict()
 
         report = build_final_report(
-            session.graph, tree, session.vulnerability_report,
+            session.graph,
+            tree,
+            session.vulnerability_report,
             resilience_profile=ws_resilience_data,
         )
         session.final_report = report

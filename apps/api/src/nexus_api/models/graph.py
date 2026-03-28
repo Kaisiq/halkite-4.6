@@ -1,6 +1,6 @@
 """Module 1A — Graph Model.
 
-Core data structures for the NEXUS network survival analyzer.
+Core data structures for the Halkantir organizational stress-testing platform.
 Implements Node, Edge, Graph, State, and ValidationResult with numpy-backed
 adjacency matrices and vector operations. Pure, deterministic — no AI.
 
@@ -27,6 +27,7 @@ _EPSILON: float = 1e-6
 # ValidationResult
 # ---------------------------------------------------------------------------
 
+
 class ValidationResult:
     """Accumulates warnings and errors produced during graph validation."""
 
@@ -45,15 +46,13 @@ class ValidationResult:
         return len(self.errors) == 0
 
     def __repr__(self) -> str:
-        return (
-            f"ValidationResult(errors={len(self.errors)}, "
-            f"warnings={len(self.warnings)})"
-        )
+        return f"ValidationResult(errors={len(self.errors)}, warnings={len(self.warnings)})"
 
 
 # ---------------------------------------------------------------------------
 # State (immutable snapshot)
 # ---------------------------------------------------------------------------
+
 
 class State:
     """Frozen snapshot of network health at a single point in time.
@@ -102,6 +101,7 @@ class State:
 # ---------------------------------------------------------------------------
 # Node
 # ---------------------------------------------------------------------------
+
 
 class Node:
     """A single entity in the dependency network.
@@ -159,9 +159,7 @@ class Node:
         Raises ``KeyError`` when ``"id"`` or ``"layer"`` is missing.
         """
         if "layer" not in data:
-            raise KeyError(
-                f"Node {data.get('id', '?')!r} is missing required 'layer' field"
-            )
+            raise KeyError(f"Node {data.get('id', '?')!r} is missing required 'layer' field")
         return cls(
             id=str(data["id"]),
             name=str(data.get("name", data["id"])),
@@ -177,6 +175,7 @@ class Node:
 # ---------------------------------------------------------------------------
 # Edge
 # ---------------------------------------------------------------------------
+
 
 class Edge:
     """Directed dependency between two nodes.
@@ -201,9 +200,7 @@ class Edge:
         self.meta: str | dict[str, Any] | None = meta
 
     def __repr__(self) -> str:
-        return (
-            f"Edge({self.from_id!r} -> {self.to_id!r}, w={self.weight:.2f})"
-        )
+        return f"Edge({self.from_id!r} -> {self.to_id!r}, w={self.weight:.2f})"
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -230,6 +227,7 @@ class Edge:
 # Graph
 # ---------------------------------------------------------------------------
 
+
 class Graph:
     """Complete dependency network with numpy-backed linear algebra.
 
@@ -250,10 +248,14 @@ class Graph:
         nodes: list[Node] | None = None,
         edges: list[Edge] | None = None,
         layers: list[str] | None = None,
+        scoring_policy: dict[str, Any] | None = None,
     ) -> None:
         self.nodes: list[Node] = nodes if nodes is not None else []
         self.edges: list[Edge] = edges if edges is not None else []
         self.layers: list[str] = layers if layers is not None else []
+        self.scoring_policy: dict[str, Any] = (
+            scoring_policy if isinstance(scoring_policy, dict) else {}
+        )
 
         # Internal numpy representations — populated by build_adjacency_matrix.
         self._A: npt.NDArray[np.float64] = np.empty((0, 0), dtype=np.float64)
@@ -329,9 +331,7 @@ class Graph:
 
         self._A = np.zeros((n, n), dtype=np.float64)
         self._h = np.array([node.h for node in self.nodes], dtype=np.float64)
-        self._theta = np.array(
-            [node.theta for node in self.nodes], dtype=np.float64
-        )
+        self._theta = np.array([node.theta for node in self.nodes], dtype=np.float64)
         self._r = np.array([node.r for node in self.nodes], dtype=np.float64)
 
         for edge in self.edges:
@@ -391,9 +391,7 @@ class Graph:
         Returns 0.0 if the layer has no nodes or all its theta values are zero.
         """
         self._sync_nodes_to_vectors()
-        mask = np.array(
-            [node.layer == layer for node in self.nodes], dtype=np.bool_
-        )
+        mask = np.array([node.layer == layer for node in self.nodes], dtype=np.bool_)
         theta_layer = self._theta[mask]
         h_layer = self._h[mask]
         theta_sum: float = float(np.sum(theta_layer))
@@ -443,11 +441,15 @@ class Graph:
             for n in self.nodes
         ]
         new_edges = [
-            Edge(from_id=e.from_id, to_id=e.to_id, weight=e.weight, meta=e.meta)
-            for e in self.edges
+            Edge(from_id=e.from_id, to_id=e.to_id, weight=e.weight, meta=e.meta) for e in self.edges
         ]
         new_layers = list(self.layers)
-        g = Graph(nodes=new_nodes, edges=new_edges, layers=new_layers)
+        g = Graph(
+            nodes=new_nodes,
+            edges=new_edges,
+            layers=new_layers,
+            scoring_policy=copy.deepcopy(self.scoring_policy),
+        )
         return g
 
     def reset(self) -> None:
@@ -499,9 +501,7 @@ class Graph:
                 self.edges.pop(i)
                 self.build_adjacency_matrix()
                 return
-        raise ValueError(
-            f"Edge ({from_id!r} -> {to_id!r}) not found in graph"
-        )
+        raise ValueError(f"Edge ({from_id!r} -> {to_id!r}) not found in graph")
 
     # ------------------------------------------------------------------
     # Validation
@@ -532,37 +532,43 @@ class Graph:
         for node in self.nodes:
             # Uniqueness
             if node.id in seen_ids:
-                result.errors.append(
-                    f"Duplicate node id: {node.id!r}"
-                )
+                result.errors.append(f"Duplicate node id: {node.id!r}")
             seen_ids.add(node.id)
 
             # Range checks
             if not (0.0 <= node.h <= 1.0):
-                result.errors.append(
-                    f"Node {node.id!r}: h={node.h} out of [0, 1]"
-                )
+                result.errors.append(f"Node {node.id!r}: h={node.h} out of [0, 1]")
             if not (0.0 <= node.theta <= 1.0):
-                result.errors.append(
-                    f"Node {node.id!r}: theta={node.theta} out of [0, 1]"
-                )
+                result.errors.append(f"Node {node.id!r}: theta={node.theta} out of [0, 1]")
             if node.r < 0.0:
-                result.errors.append(
-                    f"Node {node.id!r}: r={node.r} must be >= 0"
-                )
+                result.errors.append(f"Node {node.id!r}: r={node.r} must be >= 0")
 
             # Layer membership
             if node.layer not in self.layers:
                 result.errors.append(
-                    f"Node {node.id!r}: layer {node.layer!r} not in "
-                    f"graph layers {self.layers}"
+                    f"Node {node.id!r}: layer {node.layer!r} not in graph layers {self.layers}"
                 )
 
             # Isolated node (warning, not error)
             if node.id not in connected_ids:
-                result.warnings.append(
-                    f"Node {node.id!r} is isolated (no edges connect to it)"
-                )
+                result.warnings.append(f"Node {node.id!r} is isolated (no edges connect to it)")
+
+            if self.scoring_policy:
+                if not isinstance(node.meta, dict):
+                    result.errors.append(
+                        f"Node {node.id!r}: meta must be a dict for evidence-backed graphs"
+                    )
+                    continue
+
+                if not node.meta.get("type"):
+                    result.errors.append(
+                        f"Node {node.id!r}: meta.type is required when scoring_policy is present"
+                    )
+                if not node.meta.get("function"):
+                    result.warnings.append(f"Node {node.id!r}: meta.function is missing")
+                evidence = node.meta.get("evidence")
+                if not isinstance(evidence, list) or len(evidence) == 0:
+                    result.warnings.append(f"Node {node.id!r}: no evidence entries provided")
 
     def _validate_edges(self, result: ValidationResult) -> None:
         """Check every edge against the spec constraints."""
@@ -572,58 +578,68 @@ class Graph:
         for edge in self.edges:
             # Endpoints exist
             if edge.from_id not in node_ids:
-                result.errors.append(
-                    f"Edge from {edge.from_id!r}: node does not exist"
-                )
+                result.errors.append(f"Edge from {edge.from_id!r}: node does not exist")
             if edge.to_id not in node_ids:
-                result.errors.append(
-                    f"Edge to {edge.to_id!r}: node does not exist"
-                )
+                result.errors.append(f"Edge to {edge.to_id!r}: node does not exist")
 
             # No self-loops
             if edge.from_id == edge.to_id:
-                result.errors.append(
-                    f"Self-loop on node {edge.from_id!r}"
-                )
+                result.errors.append(f"Self-loop on node {edge.from_id!r}")
 
             # Weight range: (0, 1]
             if not (0.0 < edge.weight <= 1.0):
                 result.errors.append(
-                    f"Edge ({edge.from_id!r} -> {edge.to_id!r}): "
-                    f"weight={edge.weight} out of (0, 1]"
+                    f"Edge ({edge.from_id!r} -> {edge.to_id!r}): weight={edge.weight} out of (0, 1]"
                 )
 
             # Duplicate check
             pair = (edge.from_id, edge.to_id)
             if pair in seen_pairs:
-                result.errors.append(
-                    f"Duplicate edge ({edge.from_id!r} -> {edge.to_id!r})"
-                )
+                result.errors.append(f"Duplicate edge ({edge.from_id!r} -> {edge.to_id!r})")
             seen_pairs.add(pair)
+
+            if self.scoring_policy:
+                if not isinstance(edge.meta, dict):
+                    result.errors.append(
+                        "Edge "
+                        f"({edge.from_id!r} -> {edge.to_id!r}): "
+                        "meta must be a dict for evidence-backed graphs"
+                    )
+                    continue
+
+                if not edge.meta.get("dependency_type"):
+                    result.errors.append(
+                        "Edge "
+                        f"({edge.from_id!r} -> {edge.to_id!r}): "
+                        "meta.dependency_type is required"
+                    )
+                evidence = edge.meta.get("evidence")
+                if not isinstance(evidence, list) or len(evidence) == 0:
+                    result.warnings.append(
+                        f"Edge ({edge.from_id!r} -> {edge.to_id!r}): no evidence entries provided"
+                    )
 
     def _validate_graph(self, result: ValidationResult) -> None:
         """Check graph-level invariants."""
         # Minimum cardinality
         if len(self.nodes) < 2:
-            result.errors.append(
-                f"Graph needs at least 2 nodes (has {len(self.nodes)})"
-            )
+            result.errors.append(f"Graph needs at least 2 nodes (has {len(self.nodes)})")
         if len(self.edges) < 1:
-            result.errors.append(
-                f"Graph needs at least 1 edge (has {len(self.edges)})"
-            )
+            result.errors.append(f"Graph needs at least 1 edge (has {len(self.edges)})")
         if len(self.layers) < 1:
-            result.errors.append(
-                "Graph needs at least 1 layer"
-            )
+            result.errors.append("Graph needs at least 1 layer")
 
         # Theta check — at least one node must matter.
         theta_sum = sum(n.theta for n in self.nodes)
         if theta_sum <= 0.0:
             result.errors.append(
-                "Sum of theta across all nodes is 0 — at least one node "
-                "must have theta > 0"
+                "Sum of theta across all nodes is 0 — at least one node must have theta > 0"
             )
+
+        if self.scoring_policy:
+            for field in ("version", "theta_formula", "edge_formula", "recovery_unit"):
+                if field not in self.scoring_policy:
+                    result.errors.append(f"scoring_policy missing required field {field!r}")
 
         # Weak connectivity (warning only).
         if len(self.nodes) >= 2 and len(self.edges) >= 1:
@@ -649,6 +665,7 @@ class Graph:
             "nodes": [n.to_dict() for n in self.nodes],
             "edges": [e.to_dict() for e in self.edges],
             "layers": list(self.layers),
+            "scoring_policy": copy.deepcopy(self.scoring_policy),
         }
 
     @classmethod
@@ -684,7 +701,12 @@ class Graph:
         for ed in data.get("edges", []):
             edges.append(Edge.from_dict(ed))
 
-        graph = cls(nodes=nodes, edges=edges, layers=layers)
+        graph = cls(
+            nodes=nodes,
+            edges=edges,
+            layers=layers,
+            scoring_policy=copy.deepcopy(data.get("scoring_policy", {})),
+        )
         return graph
 
     # ------------------------------------------------------------------
@@ -692,7 +714,4 @@ class Graph:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        return (
-            f"Graph(nodes={len(self.nodes)}, edges={len(self.edges)}, "
-            f"layers={self.layers})"
-        )
+        return f"Graph(nodes={len(self.nodes)}, edges={len(self.edges)}, layers={self.layers})"

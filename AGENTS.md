@@ -8,7 +8,7 @@
 
 ## Product Constraints
 
-- Achilles is a deterministic organizational stress-testing platform.
+- Halkantir is a deterministic organizational stress-testing platform.
 - AI may build the initial graph from user data and generate human-readable narrative.
 - AI must not invent or modify mathematical outputs once the graph is built.
 - Backend is Python + FastAPI.

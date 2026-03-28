@@ -37,6 +37,7 @@ For each node u where edge (v → u) exists:
 ```
 
 Breaking this down:
+
 - `edge_weight(v, u)`: how much u depends on v (from adjacency matrix)
 - `θ_v`: how important v is to the network
 - `(1 - h_v)`: how much health v has lost (1 - h_v = 0 if v is fully healthy, = 1 if v is dead)
@@ -71,7 +72,7 @@ A node that hits zero health is permanently dead for the rest of this simulation
 
 ```
 function CASCADE(G, event):
-    
+
     Input:  G = graph (nodes with h, θ, r, φ; edges with weight)
             event = {target, action, magnitude}
     Output: cascade_log, final_state, metrics
@@ -80,12 +81,12 @@ function CASCADE(G, event):
     state_before = snapshot(G)
     cascade_log = []
     step = 0
-    
+
     // Step 1: Apply initial event
     apply_event(G, event)
     new_failures = {nodes where φ just became true}
     new_degraded = {nodes where h decreased but φ is still false}
-    
+
     cascade_log.append({
         step: 0,
         trigger: "initial_event",
@@ -93,37 +94,37 @@ function CASCADE(G, event):
         new_failures: new_failures,
         new_degraded: new_degraded
     })
-    
+
     // Step 2: Propagate cascade
     while true:
         step += 1
         changed_nodes = new_failures ∪ new_degraded
-        
+
         if changed_nodes is empty:
             break    // Fixed point reached
-        
+
         next_failures = {}
         next_degraded = {}
-        
+
         // For each node that changed in the previous step
         for v in changed_nodes:
-            
+
             // Find all nodes that depend on v
             for u where A[u][v] > 0 and φ_u == false:
-                
+
                 damage = A[u][v] × θ_v × (1 - h_v)
                 h_u = max(0, h_u - damage)
-                
+
                 if h_u <= 0:
                     h_u = 0
                     φ_u = true
                     next_failures.add(u)
                 elif damage > 0:
                     next_degraded.add(u)
-        
+
         if next_failures is empty and next_degraded is empty:
             break    // No further propagation
-        
+
         cascade_log.append({
             step: step,
             trigger: "cascade",
@@ -131,18 +132,18 @@ function CASCADE(G, event):
             new_degraded: next_degraded,
             damages: {u: damage_value for each affected u}
         })
-        
+
         new_failures = next_failures
         new_degraded = next_degraded
-        
+
         // Safety: prevent infinite loops
         if step > len(G.nodes):
             break
-    
+
     // Step 3: Compute metrics
     state_after = snapshot(G)
     metrics = compute_cascade_metrics(state_before, state_after, cascade_log)
-    
+
     return cascade_log, state_after, metrics
 ```
 
@@ -168,7 +169,7 @@ nodes_failed = list of all nodes where φ = true
 nodes_degraded = list of nodes where h decreased but φ = false
     — which nodes were damaged but survived
 
-cross_layer_failures = count of failures where the causing node 
+cross_layer_failures = count of failures where the causing node
     and the failed node are in different layers
     — how much the cascade crossed layer boundaries
 
@@ -194,6 +195,7 @@ The cascade is guaranteed to terminate because:
 **Worst case complexity:** O(n² × E) where n = number of nodes, E = number of edges.
 
 In practice, cascades terminate much faster because:
+
 - Most nodes don't fail
 - Damage attenuates as it propagates (multiplied by weights < 1)
 - The `θ × weight` product is usually << 1
@@ -208,7 +210,7 @@ Multiple events can be applied before running the cascade:
 function CASCADE_COMPOUND(G, events: [Event]):
     for event in events:
         apply_event(G, event)    // Apply all events FIRST
-    
+
     // THEN run single cascade propagation
     // This captures interaction effects between simultaneous failures
     return CASCADE(G, null)  // cascade from current state
@@ -251,8 +253,8 @@ function RESET(G):
    → But it still shows as failed in the log.
 
 6. Circular dependencies (A depends on B depends on A):
-   → Handled correctly. A's failure damages B, B's failure 
-   → damages A further, but since A is already damaged, 
+   → Handled correctly. A's failure damages B, B's failure
+   → damages A further, but since A is already damaged,
    → the additional damage is smaller (multiplicative).
    → Converges because damage attenuates.
 ```

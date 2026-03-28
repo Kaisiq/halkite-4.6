@@ -13,7 +13,7 @@ Reference: docs/03A_AGENT_STRATEGIES.md conventions.
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from nexus_api.agents.base import Agent, AgentBrief
 from nexus_api.mc.config import MCConfig
@@ -33,6 +33,7 @@ class MonteCarloAgent(Agent):
     def __init__(self, brief: AgentBrief, mc_config: MCConfig) -> None:
         super().__init__(brief)
         self.mc_config: MCConfig = mc_config
+        self._rng = random.SystemRandom()
 
     # ------------------------------------------------------------------
     # Public interface
@@ -50,7 +51,7 @@ class MonteCarloAgent(Agent):
         events: list[Event] = []
         seen: set[str] = set()
 
-        # Attempt up to 3× branching factor draws to fill the quota
+        # Attempt up to 3x branching factor draws to fill the quota
         # (some draws may collide or produce invalid events).
         max_attempts = bf * 3
         for _ in range(max_attempts):
@@ -62,7 +63,8 @@ class MonteCarloAgent(Agent):
                 continue
 
             if event.action == "cut_edge":
-                key = f"cut_edge:{event.target['from']}:{event.target['to']}"
+                edge_target = cast("dict[str, str]", event.target)
+                key = f"cut_edge:{edge_target['from']}:{edge_target['to']}"
             else:
                 key = f"{event.action}:{event.target}"
             if key in seen:
@@ -70,6 +72,12 @@ class MonteCarloAgent(Agent):
 
             seen.add(key)
             events.append(event)
+
+        # Ensure root exploration always includes one low-probability surprise
+        # branch so Monte Carlo contributes a distinct subtree alongside
+        # deterministic agents.
+        if depth == 0 and self.mc_config.kill_prob + self.mc_config.damage_prob > 0.0:
+            self._ensure_root_diversity(events, seen, surviving)
 
         return events
 
@@ -85,7 +93,8 @@ class MonteCarloAgent(Agent):
     def _candidate_edges(graph: Graph) -> list[Edge]:
         node_index = graph.node_index
         return [
-            e for e in graph.edges
+            e
+            for e in graph.edges
             if (
                 not graph.nodes[node_index[e.from_id]].phi
                 and not graph.nodes[node_index[e.to_id]].phi
@@ -115,7 +124,7 @@ class MonteCarloAgent(Agent):
     def _pick_action(self, has_edges: bool) -> str:
         """Sample an action type based on configured probabilities."""
         cfg = self.mc_config
-        roll = random.random()
+        roll = self._rng.random()
 
         if roll < cfg.kill_prob:
             return "kill"
@@ -125,7 +134,7 @@ class MonteCarloAgent(Agent):
         # cut_edge — fall back to kill/damage if no edges available
         if has_edges:
             return "cut_edge"
-        return "kill" if random.random() < 0.5 else "damage"
+        return "kill" if self._rng.random() < 0.5 else "damage"
 
     def _build_event(
         self,
@@ -142,7 +151,7 @@ class MonteCarloAgent(Agent):
         if action == "cut_edge":
             if not alive_edges:
                 return None
-            edge = random.choice(alive_edges)
+            edge = self._rng.choice(alive_edges)
             return Event(
                 target={"from": edge.from_id, "to": edge.to_id},
                 action="cut_edge",
@@ -150,13 +159,34 @@ class MonteCarloAgent(Agent):
 
         # kill or damage — pick a node
         weights = self._node_weights(candidates)
-        node = random.choices(candidates, weights=weights, k=1)[0]
+        node = self._rng.choices(candidates, weights=weights, k=1)[0]
 
         if action == "kill":
             return Event(target=node.id, action="kill")
 
         # damage
-        magnitude = random.uniform(
-            cfg.damage_magnitude_min, cfg.damage_magnitude_max,
+        magnitude = self._rng.uniform(
+            cfg.damage_magnitude_min,
+            cfg.damage_magnitude_max,
         )
         return Event(target=node.id, action="damage", magnitude=magnitude)
+
+    def _ensure_root_diversity(
+        self,
+        events: list[Event],
+        seen: set[str],
+        candidates: list[Node],
+    ) -> None:
+        if not candidates:
+            return
+
+        fallback = min(candidates, key=lambda node: (node.theta, node.id))
+        key = f"kill:{fallback.id}"
+        if key in seen:
+            return
+
+        event = Event(target=fallback.id, action="kill")
+        if len(events) < self.brief.branching_factor:
+            events.append(event)
+        else:
+            events[-1] = event

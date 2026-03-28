@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NEXUS API – shared TypeScript types
+// Halkantir API – shared TypeScript types
 // Mirrors the shapes defined in docs/05_API.md
 // ---------------------------------------------------------------------------
 
@@ -48,6 +48,17 @@ export interface UploadResponse {
   confidence: number;
   gaps: string[];
   follow_up_questions: string[];
+}
+
+export interface DriveFolderSummary {
+  id: string;
+  name: string;
+  file_count: number;
+  files_skipped: number;
+}
+
+export interface DriveImportResponse extends UploadResponse {
+  drive_folder: DriveFolderSummary;
 }
 
 // ---- Graph update ---------------------------------------------------------

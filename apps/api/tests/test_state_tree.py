@@ -1,4 +1,4 @@
-"""Tests for the NEXUS state tree engine (Module 4).
+"""Tests for the Halkantir state tree engine (Module 4).
 
 Covers build_state_tree, explore, backpropagate, extract_path, duplicate
 pruning, ExplorationConfig, and TreeNode / StateTree data classes from
@@ -92,7 +92,9 @@ class TestBuildStateTree:
             branching=2,
         )
         config = ExplorationConfig(
-            max_depth=max_depth, max_tree_nodes=500, worst_k=5,
+            max_depth=max_depth,
+            max_tree_nodes=500,
+            worst_k=5,
         )
 
         tree = build_state_tree(medium_graph, [agent], config)
@@ -107,7 +109,9 @@ class TestBuildStateTree:
             branching=3,
         )
         config = ExplorationConfig(
-            max_depth=10, max_tree_nodes=limit, worst_k=5,
+            max_depth=10,
+            max_tree_nodes=limit,
+            worst_k=5,
         )
 
         tree = build_state_tree(medium_graph, [agent], config)
@@ -200,10 +204,7 @@ class TestDuplicateStatePruning:
 
         # Count how many tree nodes have ceo killed (phi[0] = True) at depth 1.
         ceo_idx = medium_graph.get_node_index("ceo")
-        depth_1_ceo_killed = [
-            n for n in tree.all_nodes
-            if n.depth == 1 and n.state.phi[ceo_idx]
-        ]
+        depth_1_ceo_killed = [n for n in tree.all_nodes if n.depth == 1 and n.state.phi[ceo_idx]]
         # Should be exactly 1 (second agent's duplicate is pruned).
         assert len(depth_1_ceo_killed) == 1
 

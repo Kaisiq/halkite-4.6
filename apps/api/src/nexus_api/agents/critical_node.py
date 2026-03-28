@@ -59,7 +59,4 @@ class CriticalNodeAttacker(Agent):
 
         scored.sort(key=lambda pair: pair[1], reverse=True)
 
-        return [
-            Event(target=node_id, action="kill")
-            for node_id, _ in scored[:bf]
-        ]
+        return [Event(target=node_id, action="kill") for node_id, _ in scored[:bf]]

@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
+import { RiskDocumentsPanel } from "./risk-documents";
 import { useNexusStore } from "@/lib/store";
 import type { ExploreConfig, Scenario } from "@/lib/types";
 
@@ -105,6 +106,7 @@ export default function SimulatePage() {
   const exploring = useNexusStore((s) => s.exploring);
   const graph = useNexusStore((s) => s.graph);
   const scenarios = useNexusStore((s) => s.scenarios);
+  const recommendations = useNexusStore((s) => s.recommendations);
   const treeStats = useNexusStore((s) => s.treeStats);
   const vizData = useNexusStore((s) => s.vizData);
   const exploreError = useNexusStore((s) => s.exploreError);
@@ -124,8 +126,7 @@ export default function SimulatePage() {
     node: TreeNode;
   } | null>(null);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-  const [hoveredTreeNodeId, setHoveredTreeNodeId] = useState<string | null>(null);
-  const [revealedPathIds, setRevealedPathIds] = useState<Set<string>>(new Set());
+  const [, setHoveredTreeNodeId] = useState<string | null>(null);
 
   // -- Refs --
   const svgRef = useRef<SVGSVGElement>(null);
@@ -170,7 +171,10 @@ export default function SimulatePage() {
     const edges = (vizData.state_tree.edges ?? []) as TreeEdge[];
     const parentByNodeId = new Map(edges.map((edge) => [edge.to, edge.from]));
     const rawNodes = (vizData.state_tree.nodes ?? []) as Array<
-      Omit<TreeNode, "delta_H" | "failed_count" | "event_summary" | "parent_id"> & {
+      Omit<
+        TreeNode,
+        "delta_H" | "failed_count" | "event_summary" | "parent_id"
+      > & {
         event_summary?: string;
         failed_count?: number;
       }
@@ -229,11 +233,13 @@ export default function SimulatePage() {
   }, [childrenByNodeId, treeNodes]);
 
   const scenarioFocusNode = useMemo(() => {
-    if (activeScenarioIndex === null || !leafNodes[activeScenarioIndex]) return null;
+    if (activeScenarioIndex === null || !leafNodes[activeScenarioIndex])
+      return null;
     return leafNodes[activeScenarioIndex];
   }, [activeScenarioIndex, leafNodes]);
 
-  const focusTargetId = focusedNodeId ?? scenarioFocusNode?.id ?? rootTreeNode?.id ?? null;
+  const focusTargetId =
+    focusedNodeId ?? scenarioFocusNode?.id ?? rootTreeNode?.id ?? null;
 
   const ancestorIds = useMemo(() => {
     if (!focusTargetId || !treeNodeMap.size) return new Set<string>();
@@ -241,38 +247,34 @@ export default function SimulatePage() {
     let current = treeNodeMap.get(focusTargetId) ?? null;
     while (current) {
       ids.add(current.id);
-      current = current.parent_id ? (treeNodeMap.get(current.parent_id) ?? null) : null;
+      current = current.parent_id
+        ? (treeNodeMap.get(current.parent_id) ?? null)
+        : null;
     }
     return ids;
   }, [focusTargetId, treeNodeMap]);
 
-  useEffect(() => {
-    if (ancestorIds.size === 0) return;
-    setRevealedPathIds((prev) => {
-      const next = new Set(prev);
-      for (const id of ancestorIds) next.add(id);
-      return next;
-    });
-  }, [ancestorIds]);
-
-  useEffect(() => {
-    if (!rootTreeNode) return;
-    setRevealedPathIds((prev) => {
-      if (prev.has(rootTreeNode.id)) return prev;
-      const next = new Set(prev);
-      next.add(rootTreeNode.id);
-      return next;
-    });
-  }, [rootTreeNode]);
+  const revealedPathIds = useMemo(() => {
+    const ids = new Set<string>(ancestorIds);
+    if (rootTreeNode) {
+      ids.add(rootTreeNode.id);
+    }
+    return ids;
+  }, [ancestorIds, rootTreeNode]);
 
   const visibleTreeIds = useMemo(() => {
     if (!treeNodes?.length || !rootTreeNode) return new Set<string>();
 
     const ids = new Set<string>();
-    const seedIds = new Set<string>([...revealedPathIds, focusTargetId ?? rootTreeNode.id]);
+    const seedIds = new Set<string>([
+      ...revealedPathIds,
+      focusTargetId ?? rootTreeNode.id,
+    ]);
 
     for (const seedId of seedIds) {
-      const queue: Array<{ id: string; distance: number }> = [{ id: seedId, distance: 0 }];
+      const queue: Array<{ id: string; distance: number }> = [
+        { id: seedId, distance: 0 },
+      ];
 
       while (queue.length > 0) {
         const item = queue.shift()!;
@@ -294,15 +296,27 @@ export default function SimulatePage() {
     }
 
     return ids;
-  }, [ancestorIds, childrenByNodeId, focusTargetId, revealedPathIds, rootTreeNode, treeNodes]);
+  }, [
+    ancestorIds,
+    childrenByNodeId,
+    focusTargetId,
+    revealedPathIds,
+    rootTreeNode,
+    treeNodes,
+  ]);
 
   const previewTreeIds = useMemo(() => {
     if (!rootTreeNode) return new Set<string>();
     const preview = new Set<string>();
-    const seedIds = new Set<string>([...revealedPathIds, focusTargetId ?? rootTreeNode.id]);
+    const seedIds = new Set<string>([
+      ...revealedPathIds,
+      focusTargetId ?? rootTreeNode.id,
+    ]);
 
     for (const seedId of seedIds) {
-      const queue: Array<{ id: string; distance: number }> = [{ id: seedId, distance: 0 }];
+      const queue: Array<{ id: string; distance: number }> = [
+        { id: seedId, distance: 0 },
+      ];
 
       while (queue.length > 0) {
         const item = queue.shift()!;
@@ -323,7 +337,13 @@ export default function SimulatePage() {
     }
 
     return preview;
-  }, [childrenByNodeId, focusTargetId, revealedPathIds, rootTreeNode, visibleTreeIds]);
+  }, [
+    childrenByNodeId,
+    focusTargetId,
+    revealedPathIds,
+    rootTreeNode,
+    visibleTreeIds,
+  ]);
 
   // -- Compute highlighted path ids for the current focus target --
   const highlightedPathIds = useMemo<Set<string>>(() => {
@@ -339,7 +359,10 @@ export default function SimulatePage() {
   }, [focusTargetId, treeNodes]);
 
   useEffect(() => {
-    if (scenarios.length > 0 && (activeScenarioIndex === null || activeScenarioIndex >= scenarios.length)) {
+    if (
+      scenarios.length > 0 &&
+      (activeScenarioIndex === null || activeScenarioIndex >= scenarios.length)
+    ) {
       setActiveScenario(0);
     }
   }, [activeScenarioIndex, scenarios.length, setActiveScenario]);
@@ -350,7 +373,9 @@ export default function SimulatePage() {
     let current = treeNodeMap.get(focusTargetId) ?? null;
     while (current) {
       path.push(current);
-      current = current.parent_id ? (treeNodeMap.get(current.parent_id) ?? null) : null;
+      current = current.parent_id
+        ? (treeNodeMap.get(current.parent_id) ?? null)
+        : null;
     }
     return path.reverse();
   }, [focusTargetId, treeNodeMap]);
@@ -358,11 +383,13 @@ export default function SimulatePage() {
   const selectedScenario: Scenario | null =
     activeScenarioIndex !== null && scenarios[activeScenarioIndex]
       ? scenarios[activeScenarioIndex]
-      : scenarios[0] ?? null;
+      : (scenarios[0] ?? null);
 
   const nextBranchCandidates = useMemo(() => {
     if (!focusTargetId) return [] as TreeNode[];
-    return [...(childrenByNodeId.get(focusTargetId) ?? [])].sort((a, b) => a.H - b.H);
+    return [...(childrenByNodeId.get(focusTargetId) ?? [])].sort(
+      (a, b) => a.H - b.H,
+    );
   }, [childrenByNodeId, focusTargetId]);
 
   const currentPathBriefing = useMemo(() => {
@@ -370,7 +397,8 @@ export default function SimulatePage() {
 
     const terminalNode = focusedPathNodes[focusedPathNodes.length - 1];
     const failedNodeIds = new Set(selectedScenario?.failed_nodes ?? []);
-    const failedNodes = graph?.nodes.filter((node) => failedNodeIds.has(node.id)) ?? [];
+    const failedNodes =
+      graph?.nodes.filter((node) => failedNodeIds.has(node.id)) ?? [];
     const failedPeople = failedNodes.filter((node) => node.layer === "People");
     const failedOps = failedNodes.filter((node) => node.layer !== "People");
     const estimatedImpact = Math.max(
@@ -379,15 +407,13 @@ export default function SimulatePage() {
       selectedScenario ? 1 - selectedScenario.health_remaining : 0,
     );
 
-    const events = focusedPathNodes
-      .slice(1)
-      .map((node, index) => ({
-        step: index + 1,
-        event: node.event_summary,
-        deltaH: node.delta_H,
-        H: node.H,
-        failures: node.failed_count,
-      }));
+    const events = focusedPathNodes.slice(1).map((node, index) => ({
+      step: index + 1,
+      event: node.event_summary,
+      deltaH: node.delta_H,
+      H: node.H,
+      failures: node.failed_count,
+    }));
 
     const summary =
       selectedScenario?.summary ??
@@ -401,19 +427,20 @@ export default function SimulatePage() {
         ? `The branch compounds through ${events.length} event${events.length === 1 ? "" : "s"}, with each step reducing resilience and widening the failure set around the focused path.`
         : "No event has been applied yet. The tree is waiting for the first branch selection.");
 
-    const forecast = nextBranchCandidates.length > 0
-      ? (() => {
-          const worstNext = nextBranchCandidates[0];
-          const alternatives = nextBranchCandidates.slice(1, 3);
-          const altText =
-            alternatives.length > 0
-              ? `Other immediate continuations remain less severe, bottoming near H ${alternatives
-                  .map((node) => node.H.toFixed(2))
-                  .join(" / ")}.`
-              : "There are no materially softer immediate continuations from this node.";
-          return `If this branch continues, the most likely damaging next step is ${worstNext.event_summary}, which would push the state to roughly H ${worstNext.H.toFixed(2)} with ${worstNext.failed_count} failed nodes. ${altText}`;
-        })()
-      : `This branch currently terminates here. Based on the explored state space, this is an end-state candidate with network health at H ${focusedPathNodes.at(-1)?.H.toFixed(2)}.`;
+    const forecast =
+      nextBranchCandidates.length > 0
+        ? (() => {
+            const worstNext = nextBranchCandidates[0];
+            const alternatives = nextBranchCandidates.slice(1, 3);
+            const altText =
+              alternatives.length > 0
+                ? `Other immediate continuations remain less severe, bottoming near H ${alternatives
+                    .map((node) => node.H.toFixed(2))
+                    .join(" / ")}.`
+                : "There are no materially softer immediate continuations from this node.";
+            return `If this branch continues, the most likely damaging next step is ${worstNext.event_summary}, which would push the state to roughly H ${worstNext.H.toFixed(2)} with ${worstNext.failed_count} failed nodes. ${altText}`;
+          })()
+        : `This branch currently terminates here. Based on the explored state space, this is an end-state candidate with network health at H ${focusedPathNodes.at(-1)?.H.toFixed(2)}.`;
 
     const terminalBusinessOutlook =
       nextBranchCandidates.length > 0
@@ -429,10 +456,9 @@ export default function SimulatePage() {
                 ? `${failedOps.length} non-people dependencies are down, which implies disrupted systems, supplier relationships, or operating capabilities that the business will struggle to route around quickly.`
                 : "Operational dependencies remain partly intact, but the remaining network health still indicates a severely constrained operating posture.";
 
-            const recoverySentence =
-              selectedScenario
-                ? `The current scenario projects recovery cost around ${selectedScenario.recovery_cost.toLocaleString()}, so management should treat this as a continuity event rather than a temporary incident.`
-                : "Treat this as a sustained continuity failure, not a short-lived disturbance.";
+            const recoverySentence = selectedScenario
+              ? `The current scenario projects recovery cost around ${selectedScenario.recovery_cost.toLocaleString()}, so management should treat this as a continuity event rather than a temporary incident.`
+              : "Treat this as a sustained continuity failure, not a short-lived disturbance.";
 
             return `${peopleSentence} ${opsSentence} ${recoverySentence}`;
           })();
@@ -511,8 +537,14 @@ export default function SimulatePage() {
     const innerHeight = height - margin.top - margin.bottom;
     const innerWidth = width - margin.left - margin.right;
     const leaves = root.leaves();
-    const leafGap = Math.max(92, Math.min(160, innerWidth / Math.max(leaves.length, 1)));
-    const depthGap = Math.max(116, Math.min(180, innerHeight / Math.max(root.height + 1, 2)));
+    const leafGap = Math.max(
+      92,
+      Math.min(160, innerWidth / Math.max(leaves.length, 1)),
+    );
+    const depthGap = Math.max(
+      116,
+      Math.min(180, innerHeight / Math.max(root.height + 1, 2)),
+    );
 
     leaves.forEach((leaf, index) => {
       leaf.x = index * leafGap;
@@ -537,13 +569,12 @@ export default function SimulatePage() {
 
     const g = svg.append("g");
 
-    const canopy = g
-      .append("g")
+    g.append("g")
       .selectAll("line")
       .data(root.descendants().filter((node) => node.depth > 0))
       .join("line")
       .attr("x1", (d) => d.x ?? 0)
-      .attr("y1", (d) => 0)
+      .attr("y1", () => 0)
       .attr("x2", (d) => d.x ?? 0)
       .attr("y2", (d) => (d.y ?? 0) - 16)
       .attr("stroke", "rgba(255,255,255,0.03)");
@@ -554,31 +585,30 @@ export default function SimulatePage() {
       .join("path")
       .attr("class", "tree-link")
       .attr("fill", "none")
-      .attr(
-        "stroke",
-        (d) =>
-          highlightedPathIds.has(d.source.data.id) &&
-          highlightedPathIds.has(d.target.data.id)
-            ? "#ef4444"
-            : "rgba(156, 176, 197, 0.25)",
+      .attr("stroke", (d) =>
+        highlightedPathIds.has(d.source.data.id) &&
+        highlightedPathIds.has(d.target.data.id)
+          ? "#ef4444"
+          : "rgba(156, 176, 197, 0.25)",
       )
-      .attr(
-        "stroke-width",
-        (d) =>
-          highlightedPathIds.has(d.source.data.id) &&
-          highlightedPathIds.has(d.target.data.id)
-            ? 2.5
-            : 1.2,
+      .attr("stroke-width", (d) =>
+        highlightedPathIds.has(d.source.data.id) &&
+        highlightedPathIds.has(d.target.data.id)
+          ? 2.5
+          : 1.2,
       )
       .attr("stroke-linecap", "round")
       .attr(
         "d",
-        d3.linkVertical<
-          d3.HierarchyLink<HierarchyDatum>,
-          d3.HierarchyPointNode<HierarchyDatum>
-        >()
+        d3
+          .linkVertical<
+            d3.HierarchyLink<HierarchyDatum>,
+            d3.HierarchyPointNode<HierarchyDatum>
+          >()
           .x((d) => d.x ?? 0)
-          .y((d) => d.y ?? 0) as unknown as (d: d3.HierarchyLink<HierarchyDatum>) => string,
+          .y((d) => d.y ?? 0) as unknown as (
+          _linkDatum: d3.HierarchyLink<HierarchyDatum>,
+        ) => string,
       );
 
     // -- Nodes --
@@ -595,7 +625,9 @@ export default function SimulatePage() {
     nodeGroups
       .append("circle")
       .attr("class", "tree-node-halo")
-      .attr("r", (d) => Math.max(12, Math.min(10 + d.data.data.failed_count * 1.3, 24)))
+      .attr("r", (d) =>
+        Math.max(12, Math.min(10 + d.data.data.failed_count * 1.3, 24)),
+      )
       .attr("fill", "rgba(123, 220, 198, 0.08)")
       .attr("opacity", 0);
 
@@ -608,9 +640,13 @@ export default function SimulatePage() {
       })
       .attr("fill", (d) => healthColor(d.data.data.H))
       .attr("stroke", (d) =>
-        highlightedPathIds.has(d.data.id) ? "#ef4444" : "rgba(255,255,255,0.15)",
+        highlightedPathIds.has(d.data.id)
+          ? "#ef4444"
+          : "rgba(255,255,255,0.15)",
       )
-      .attr("stroke-width", (d) => (highlightedPathIds.has(d.data.id) ? 2.5 : 1));
+      .attr("stroke-width", (d) =>
+        highlightedPathIds.has(d.data.id) ? 2.5 : 1,
+      );
 
     nodeGroups
       .append("text")
@@ -638,15 +674,15 @@ export default function SimulatePage() {
           ? "rgba(156, 176, 197, 0.06)"
           : "rgba(123, 220, 198, 0.08)",
       )
-      .attr("opacity", (d) =>
-        previewTreeIds.has(d.data.id) ? 0.7 : 0
-      );
+      .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.7 : 0));
 
     nodeGroups
       .select("circle.tree-node-core")
       .attr("opacity", (d) => (previewTreeIds.has(d.data.id) ? 0.28 : 1))
       .attr("fill", (d) =>
-        previewTreeIds.has(d.data.id) ? "rgba(156, 176, 197, 0.65)" : healthColor(d.data.data.H)
+        previewTreeIds.has(d.data.id)
+          ? "rgba(156, 176, 197, 0.65)"
+          : healthColor(d.data.data.H),
       );
 
     nodeGroups
@@ -671,7 +707,9 @@ export default function SimulatePage() {
       const scale = zoomTransformRef.current.k || 1;
       const targetX = width / 2 - (baseX + (node.x ?? 0)) * scale;
       const targetY = height / 2 - (baseY + (node.y ?? 0)) * scale;
-      const transform = d3.zoomIdentity.translate(targetX, targetY).scale(scale);
+      const transform = d3.zoomIdentity
+        .translate(targetX, targetY)
+        .scale(scale);
       zoomTransformRef.current = transform;
 
       if (options?.animate === false) {
@@ -704,13 +742,13 @@ export default function SimulatePage() {
                 ? 0.32
                 : nodeDatum.data.id === focusTargetId
                   ? 0.95
-                  : 0
+                  : 0,
           );
       })
       .on("mouseleave", () => {
         setHoveredTreeNodeId(null);
         setTooltip((current) =>
-          focusTargetId && current?.node.id === focusTargetId ? current : null
+          focusTargetId && current?.node.id === focusTargetId ? current : null,
         );
         nodeGroups
           .select<SVGCircleElement>("circle.tree-node-halo")
@@ -719,7 +757,7 @@ export default function SimulatePage() {
               ? 0.95
               : previewTreeIds.has(nodeDatum.data.id)
                 ? 0.32
-                : 0
+                : 0,
           );
       })
       .on("click", (event, d) => {
@@ -740,17 +778,17 @@ export default function SimulatePage() {
     svg.on("click", () => {
       setHoveredTreeNodeId(null);
       setTooltip((current) =>
-        focusTargetId && current?.node.id === focusTargetId ? current : null
+        focusTargetId && current?.node.id === focusTargetId ? current : null,
       );
-      nodeGroups.select<SVGCircleElement>("circle.tree-node-halo").attr(
-        "opacity",
-        (nodeDatum) =>
+      nodeGroups
+        .select<SVGCircleElement>("circle.tree-node-halo")
+        .attr("opacity", (nodeDatum) =>
           nodeDatum.data.id === focusTargetId
             ? 0.95
             : previewTreeIds.has(nodeDatum.data.id)
               ? 0.32
               : 0,
-      );
+        );
     });
 
     // -- Zoom --
@@ -769,7 +807,8 @@ export default function SimulatePage() {
       .descendants()
       .find((node) => node.data.id === focusTargetId);
     if (centeredNode) {
-      const shouldAnimate = lastCenteredNodeRef.current !== centeredNode.data.id;
+      const shouldAnimate =
+        lastCenteredNodeRef.current !== centeredNode.data.id;
       lastCenteredNodeRef.current = centeredNode.data.id;
       requestAnimationFrame(() => {
         centerOnNode(centeredNode, { animate: shouldAnimate });
@@ -789,7 +828,10 @@ export default function SimulatePage() {
   ]);
 
   // -- Top 3 worst scenarios --
-  const topScenarios = useMemo(() => (scenarios ?? []).slice(0, 5), [scenarios]);
+  const topScenarios = useMemo(
+    () => (scenarios ?? []).slice(0, 5),
+    [scenarios],
+  );
 
   // -- Agent stats from treeStats --
   const agentStatEntries = useMemo(() => {
@@ -977,7 +1019,10 @@ export default function SimulatePage() {
               {/* Spinner */}
               <div
                 className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+                style={{
+                  borderColor: "var(--accent)",
+                  borderTopColor: "transparent",
+                }}
               />
               <p className="text-sm" style={{ color: "var(--muted)" }}>
                 Building state tree...
@@ -990,8 +1035,7 @@ export default function SimulatePage() {
             ref={svgRef}
             className="w-full h-full"
             style={{
-              display:
-                vizData?.state_tree && !exploring ? "block" : "none",
+              display: vizData?.state_tree && !exploring ? "block" : "none",
             }}
           />
 
@@ -1009,7 +1053,10 @@ export default function SimulatePage() {
               }}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-semibold" style={{ color: "var(--foreground)" }}>
+                <span
+                  className="font-semibold"
+                  style={{ color: "var(--foreground)" }}
+                >
                   H = {tooltip.node.H.toFixed(3)}
                 </span>
                 <span
@@ -1046,11 +1093,7 @@ export default function SimulatePage() {
             className="text-xs font-semibold tracking-widest uppercase"
             style={{ color: "var(--accent)" }}
           >
-            {exploring
-              ? "Exploring..."
-              : treeStats
-                ? "Results"
-                : "Progress"}
+            {exploring ? "Exploring..." : treeStats ? "Results" : "Progress"}
           </h3>
 
           {/* -- Before exploration -- */}
@@ -1122,10 +1165,7 @@ export default function SimulatePage() {
                   label="Compute Time"
                   value={`${(treeStats.computation_time_ms / 1000).toFixed(1)}s`}
                 />
-                <StatCard
-                  label="Scenarios"
-                  value={String(scenarios.length)}
-                />
+                <StatCard label="Scenarios" value={String(scenarios.length)} />
               </div>
 
               {currentPathBriefing && (
@@ -1173,7 +1213,9 @@ export default function SimulatePage() {
                       <div className="grid grid-cols-2 gap-2">
                         <MiniMetric
                           label="Health loss"
-                          value={currentPathBriefing.impact.healthLoss.toFixed(2)}
+                          value={currentPathBriefing.impact.healthLoss.toFixed(
+                            2,
+                          )}
                           tone="#ef4444"
                         />
                         <MiniMetric
@@ -1188,7 +1230,9 @@ export default function SimulatePage() {
                         />
                         <MiniMetric
                           label="Impact score"
-                          value={currentPathBriefing.impact.estimatedImpact.toFixed(2)}
+                          value={currentPathBriefing.impact.estimatedImpact.toFixed(
+                            2,
+                          )}
                           tone="var(--accent)"
                         />
                       </div>
@@ -1238,8 +1282,12 @@ export default function SimulatePage() {
                                   -{event.deltaH.toFixed(2)} H
                                 </span>
                               </div>
-                              <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
-                                State settles at H {event.H.toFixed(2)} with {event.failures} failed nodes.
+                              <p
+                                className="mt-1 text-xs"
+                                style={{ color: "var(--muted)" }}
+                              >
+                                State settles at H {event.H.toFixed(2)} with{" "}
+                                {event.failures} failed nodes.
                               </p>
                             </div>
                           ))}
@@ -1282,21 +1330,28 @@ export default function SimulatePage() {
                           Recommended intervention
                         </p>
                         <ul className="space-y-2">
-                          {currentPathBriefing.recommendations.slice(0, 2).map((rec) => (
-                            <li
-                              key={`${rec.action}-${rec.reason}`}
-                              className="rounded-xl border px-3 py-2"
-                              style={{
-                                borderColor: "rgba(110, 231, 200, 0.14)",
-                                background: "rgba(110, 231, 200, 0.05)",
-                              }}
-                            >
-                              <p style={{ color: "var(--foreground)" }}>{rec.action}</p>
-                              <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
-                                {rec.reason}
-                              </p>
-                            </li>
-                          ))}
+                          {currentPathBriefing.recommendations
+                            .slice(0, 2)
+                            .map((rec) => (
+                              <li
+                                key={`${rec.action}-${rec.reason}`}
+                                className="rounded-xl border px-3 py-2"
+                                style={{
+                                  borderColor: "rgba(110, 231, 200, 0.14)",
+                                  background: "rgba(110, 231, 200, 0.05)",
+                                }}
+                              >
+                                <p style={{ color: "var(--foreground)" }}>
+                                  {rec.action}
+                                </p>
+                                <p
+                                  className="mt-1 text-xs"
+                                  style={{ color: "var(--muted)" }}
+                                >
+                                  {rec.reason}
+                                </p>
+                              </li>
+                            ))}
                         </ul>
                       </div>
                     )}
@@ -1326,9 +1381,14 @@ export default function SimulatePage() {
                         >
                           {formatAgentName(name)}
                         </span>
-                        <div className="flex gap-3" style={{ color: "var(--muted)" }}>
+                        <div
+                          className="flex gap-3"
+                          style={{ color: "var(--muted)" }}
+                        >
                           <span>{stats.nodes_explored} nodes</span>
-                          <span style={{ color: healthColor(stats.worst_H_found) }}>
+                          <span
+                            style={{ color: healthColor(stats.worst_H_found) }}
+                          >
                             H={stats.worst_H_found.toFixed(2)}
                           </span>
                         </div>
@@ -1420,6 +1480,12 @@ export default function SimulatePage() {
           )}
         </section>
       </div>
+
+      <RiskDocumentsPanel
+        graph={graph}
+        scenarios={scenarios}
+        recommendations={recommendations}
+      />
     </div>
   );
 }
@@ -1488,7 +1554,5 @@ function MiniMetric({
 // ---------------------------------------------------------------------------
 
 function formatAgentName(raw: string): string {
-  return raw
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

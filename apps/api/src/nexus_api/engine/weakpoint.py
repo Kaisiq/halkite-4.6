@@ -149,8 +149,9 @@ class VulnerabilityReport:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _to_nx_undirected(graph: Graph) -> nx.Graph:
-    """Convert the NEXUS *Graph* to an undirected NetworkX graph.
+    """Convert the Halkantir *Graph* to an undirected NetworkX graph.
 
     Edge weights are preserved.  When two directed edges exist between the
     same pair of nodes (a->b and b->a), the maximum weight is kept.
@@ -190,6 +191,7 @@ def _cluster_membership(clusters: list[ClusterInfo]) -> dict[str, int]:
 # Algorithm 1: Node Impact Ranking
 # ---------------------------------------------------------------------------
 
+
 def node_impact_ranking(graph: Graph) -> list[NodeImpact]:
     """Kill each node one at a time, run cascade, measure damage.
 
@@ -223,6 +225,7 @@ def node_impact_ranking(graph: Graph) -> list[NodeImpact]:
 # Algorithm 2: Critical Edge Detection
 # ---------------------------------------------------------------------------
 
+
 def critical_edge_detection(graph: Graph) -> list[EdgeImpact]:
     """For each edge, remove it, compute resulting damage.
 
@@ -251,8 +254,7 @@ def critical_edge_detection(graph: Graph) -> list[EdgeImpact]:
 
         # Remove edge from the edges list.
         g_copy.edges = [
-            e for e in g_copy.edges
-            if not (e.from_id == edge.from_id and e.to_id == edge.to_id)
+            e for e in g_copy.edges if not (e.from_id == edge.from_id and e.to_id == edge.to_id)
         ]
 
         # Compute damage to v: weight * theta_u
@@ -293,6 +295,7 @@ def critical_edge_detection(graph: Graph) -> list[EdgeImpact]:
 # ---------------------------------------------------------------------------
 # Algorithm 3: Bridge Node Detection
 # ---------------------------------------------------------------------------
+
 
 def bridge_node_detection(graph: Graph) -> list[BridgeNode]:
     """Detect nodes whose removal increases the number of connected components.
@@ -343,6 +346,7 @@ def bridge_node_detection(graph: Graph) -> list[BridgeNode]:
 # Algorithm 4: Cluster Detection (Louvain)
 # ---------------------------------------------------------------------------
 
+
 def cluster_detection(graph: Graph) -> list[ClusterInfo]:
     """Detect tightly-connected communities via Louvain and assess isolation risk.
 
@@ -358,16 +362,12 @@ def cluster_detection(graph: Graph) -> list[ClusterInfo]:
         # Treat every node as its own cluster.
         communities: list[set[str]] = [{n.id} for n in graph.nodes]
     else:
-        communities = nx.community.louvain_communities(
-            g_undirected, weight="weight", seed=42
-        )
+        communities = nx.community.louvain_communities(g_undirected, weight="weight", seed=42)
 
     # Build look-ups for efficient edge classification.
     node_map: dict[str, Node] = {n.id: n for n in graph.nodes}
     tv = graph.theta_vector
-    total_theta = float(np.sum(tv)) if tv is not None else sum(
-        n.theta for n in graph.nodes
-    )
+    total_theta = float(np.sum(tv)) if tv is not None else sum(n.theta for n in graph.nodes)
     if total_theta == 0.0:
         total_theta = 1.0  # avoid division by zero
 
@@ -445,6 +445,7 @@ def cluster_detection(graph: Graph) -> list[ClusterInfo]:
 # Algorithm 5: Compound Vulnerability Pairs
 # ---------------------------------------------------------------------------
 
+
 def compound_vulnerability_pairs(
     graph: Graph,
     top_k: int = 20,
@@ -493,7 +494,7 @@ def compound_vulnerability_pairs(
 
             impact_a = individual[ni_a.node_id]
             impact_b = individual[ni_b.node_id]
-            expected = impact_a + impact_b
+            expected = max(impact_a, impact_b)
             synergy = impact_combined - expected
             synergy_ratio = impact_combined / max(expected, 1e-3)
 
@@ -526,6 +527,7 @@ def compound_vulnerability_pairs(
 # Algorithm 6: Layer Dependency Analysis
 # ---------------------------------------------------------------------------
 
+
 def layer_dependency_analysis(graph: Graph) -> dict[str, LayerAnalysis]:
     """Analyse inter-layer dependency patterns.
 
@@ -535,9 +537,7 @@ def layer_dependency_analysis(graph: Graph) -> dict[str, LayerAnalysis]:
 
     # Pre-compute total external edge weight once.
     all_external_weight = sum(
-        e.weight
-        for e in graph.edges
-        if node_map[e.from_id].layer != node_map[e.to_id].layer
+        e.weight for e in graph.edges if node_map[e.from_id].layer != node_map[e.to_id].layer
     )
 
     analysis: dict[str, LayerAnalysis] = {}
@@ -598,6 +598,7 @@ def layer_dependency_analysis(graph: Graph) -> dict[str, LayerAnalysis]:
 # ---------------------------------------------------------------------------
 # Combined report
 # ---------------------------------------------------------------------------
+
 
 def run_full_analysis(graph: Graph) -> VulnerabilityReport:
     """Execute all six weakpoint algorithms and assemble the vulnerability report.

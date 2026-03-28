@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from nexus_api.models.graph import Graph
 
 logger = logging.getLogger(__name__)
+_RNG = random.SystemRandom()
 
 
 @dataclass(slots=True)
@@ -58,12 +59,8 @@ class ResilienceProfile:
             "per_node_failure_prob": {
                 k: round(v, 6) for k, v in self.per_node_failure_prob.items()
             },
-            "H_percentiles": {
-                k: round(v, 6) for k, v in self.H_percentiles.items()
-            },
-            "layer_mean_damage": {
-                k: round(v, 6) for k, v in self.layer_mean_damage.items()
-            },
+            "H_percentiles": {k: round(v, 6) for k, v in self.H_percentiles.items()},
+            "layer_mean_damage": {k: round(v, 6) for k, v in self.layer_mean_damage.items()},
             "sample_H_values": [round(v, 6) for v in self.sample_H_values],
         }
 
@@ -81,15 +78,13 @@ def _sample_event(graph: Graph, mc_config: MCConfig) -> Event | None:
 
     node_index = graph.node_index
     alive_edges = [
-        e for e in graph.edges
-        if (
-            not graph.nodes[node_index[e.from_id]].phi
-            and not graph.nodes[node_index[e.to_id]].phi
-        )
+        e
+        for e in graph.edges
+        if (not graph.nodes[node_index[e.from_id]].phi and not graph.nodes[node_index[e.to_id]].phi)
     ]
 
     # Pick action
-    roll = random.random()
+    roll = _RNG.random()
     if roll < mc_config.kill_prob:
         action = "kill"
     elif roll < mc_config.kill_prob + mc_config.damage_prob:
@@ -97,10 +92,10 @@ def _sample_event(graph: Graph, mc_config: MCConfig) -> Event | None:
     elif alive_edges:
         action = "cut_edge"
     else:
-        action = "kill" if random.random() < 0.5 else "damage"
+        action = "kill" if _RNG.random() < 0.5 else "damage"
 
     if action == "cut_edge":
-        edge = random.choice(alive_edges)
+        edge = _RNG.choice(alive_edges)
         return Event(
             target={"from": edge.from_id, "to": edge.to_id},
             action="cut_edge",
@@ -118,13 +113,14 @@ def _sample_event(graph: Graph, mc_config: MCConfig) -> Event | None:
         if sum(weights) == 0.0:
             weights = [1.0] * len(surviving)
 
-    node = random.choices(surviving, weights=weights, k=1)[0]
+    node = _RNG.choices(surviving, weights=weights, k=1)[0]
 
     if action == "kill":
         return Event(target=node.id, action="kill")
 
-    magnitude = random.uniform(
-        mc_config.damage_magnitude_min, mc_config.damage_magnitude_max,
+    magnitude = _RNG.uniform(
+        mc_config.damage_magnitude_min,
+        mc_config.damage_magnitude_max,
     )
     return Event(target=node.id, action="damage", magnitude=magnitude)
 
@@ -160,17 +156,16 @@ def run_resilience_analysis(
     """
     n = mc_config.n_resilience_samples
     node_ids = [node.id for node in graph.nodes]
-    n_nodes = len(node_ids)
     layers = list(graph.layers)
 
     h_values: list[float] = []
-    failure_counts: dict[str, int] = {nid: 0 for nid in node_ids}
-    layer_damage_accum: dict[str, float] = {layer: 0.0 for layer in layers}
+    failure_counts: dict[str, int] = dict.fromkeys(node_ids, 0)
+    layer_damage_accum: dict[str, float] = dict.fromkeys(layers, 0.0)
     baseline_H = graph.network_health()
     baseline_layer_H = {layer: graph.layer_health(layer) for layer in layers}
 
     skipped = 0
-    for i in range(n):
+    for _i in range(n):
         g_copy = graph.deep_copy()
         event = _sample_event(g_copy, mc_config)
         if event is None:
@@ -179,7 +174,7 @@ def run_resilience_analysis(
 
         try:
             _log, final_state, _metrics = cascade(g_copy, event)
-        except (ValueError, KeyError):
+        except ValueError, KeyError:
             skipped += 1
             continue
 
@@ -205,10 +200,15 @@ def run_resilience_analysis(
             max_H=baseline_H,
             p_catastrophic=0.0,
             p_severe=0.0,
-            per_node_failure_prob={nid: 0.0 for nid in node_ids},
-            H_percentiles={"p5": baseline_H, "p25": baseline_H, "p50": baseline_H,
-                           "p75": baseline_H, "p95": baseline_H},
-            layer_mean_damage={layer: 0.0 for layer in layers},
+            per_node_failure_prob=dict.fromkeys(node_ids, 0.0),
+            H_percentiles={
+                "p5": baseline_H,
+                "p25": baseline_H,
+                "p50": baseline_H,
+                "p75": baseline_H,
+                "p95": baseline_H,
+            },
+            layer_mean_damage=dict.fromkeys(layers, 0.0),
             sample_H_values=[],
         )
 
@@ -229,13 +229,9 @@ def run_resilience_analysis(
         "p95": float(np.percentile(h_arr, 95)),
     }
 
-    per_node_prob = {
-        nid: count / actual_n for nid, count in failure_counts.items()
-    }
+    per_node_prob = {nid: count / actual_n for nid, count in failure_counts.items()}
 
-    layer_mean = {
-        layer: dmg / actual_n for layer, dmg in layer_damage_accum.items()
-    }
+    layer_mean = {layer: dmg / actual_n for layer, dmg in layer_damage_accum.items()}
 
     # Cap sample values at 1000 for response size
     sample_values = h_values[:1000]
@@ -243,7 +239,11 @@ def run_resilience_analysis(
     logger.info(
         "Resilience analysis complete: %d samples (skipped %d), "
         "mean_H=%.4f, std=%.4f, P(catastrophic)=%.4f",
-        actual_n, skipped, mean_H, std_H, p_catastrophic,
+        actual_n,
+        skipped,
+        mean_H,
+        std_H,
+        p_catastrophic,
     )
 
     return ResilienceProfile(

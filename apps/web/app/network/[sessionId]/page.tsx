@@ -131,13 +131,20 @@ export default function NetworkPage({ params }: PageProps) {
 
   // Keep a ref to hiddenLayers so D3 callbacks can read latest value
   const hiddenLayersRef = useRef(hiddenLayers);
-  hiddenLayersRef.current = hiddenLayers;
-
   const selectedNodeRef = useRef(selectedNodeId);
-  selectedNodeRef.current = selectedNodeId;
-
   const hoveredNodeRef = useRef(hoveredNodeId);
-  hoveredNodeRef.current = hoveredNodeId;
+
+  useEffect(() => {
+    hiddenLayersRef.current = hiddenLayers;
+  }, [hiddenLayers]);
+
+  useEffect(() => {
+    selectedNodeRef.current = selectedNodeId;
+  }, [selectedNodeId]);
+
+  useEffect(() => {
+    hoveredNodeRef.current = hoveredNodeId;
+  }, [hoveredNodeId]);
 
   useEffect(() => {
     if (!graph || !svgRef.current) return;
@@ -159,7 +166,10 @@ export default function NetworkPage({ params }: PageProps) {
       .attr("width", "340%")
       .attr("height", "340%");
 
-    glow.append("feGaussianBlur").attr("stdDeviation", 6).attr("result", "blur");
+    glow
+      .append("feGaussianBlur")
+      .attr("stdDeviation", 6)
+      .attr("result", "blur");
     glow
       .append("feMerge")
       .selectAll("feMergeNode")
@@ -312,7 +322,7 @@ export default function NetworkPage({ params }: PageProps) {
         .attr("display", (link) =>
           hidden.has(link.source.layer) || hidden.has(link.target.layer)
             ? "none"
-            : "inline"
+            : "inline",
         )
         .attr("stroke", (link) => {
           const connected =
@@ -338,9 +348,13 @@ export default function NetworkPage({ params }: PageProps) {
 
       edgeSel.sort((a, b) => {
         const az =
-          ((projected.get(a.source.id)?.z ?? 0) + (projected.get(a.target.id)?.z ?? 0)) / 2;
+          ((projected.get(a.source.id)?.z ?? 0) +
+            (projected.get(a.target.id)?.z ?? 0)) /
+          2;
         const bz =
-          ((projected.get(b.source.id)?.z ?? 0) + (projected.get(b.target.id)?.z ?? 0)) / 2;
+          ((projected.get(b.source.id)?.z ?? 0) +
+            (projected.get(b.target.id)?.z ?? 0)) /
+          2;
         return az - bz;
       });
 
@@ -358,15 +372,15 @@ export default function NetworkPage({ params }: PageProps) {
       nodeSel
         .select("circle.node-halo")
         .attr("opacity", (node) =>
-          hovered === node.id || selected === node.id ? 0.95 : 0
+          hovered === node.id || selected === node.id ? 0.95 : 0,
         )
         .attr("fill", (node) =>
           hovered === node.id || selected === node.id
             ? `${impactColor(node.impact, node.phi)}33`
-            : "transparent"
+            : "transparent",
         )
         .attr("filter", (node) =>
-          hovered === node.id || selected === node.id ? "url(#nodeGlow)" : null
+          hovered === node.id || selected === node.id ? "url(#nodeGlow)" : null,
         );
 
       nodeSel
@@ -383,14 +397,14 @@ export default function NetworkPage({ params }: PageProps) {
           return "rgba(255,255,255,0.16)";
         })
         .attr("stroke-width", (node) =>
-          hovered === node.id || selected === node.id || node.phi ? 2.4 : 1.4
+          hovered === node.id || selected === node.id || node.phi ? 2.4 : 1.4,
         );
 
       nodeSel
         .select("text.node-label")
         .attr("y", -16)
         .attr("opacity", (node) =>
-          hovered === node.id || selected === node.id ? 1 : 0
+          hovered === node.id || selected === node.id ? 1 : 0,
         );
 
       frameId = window.requestAnimationFrame(render);
@@ -416,17 +430,17 @@ export default function NetworkPage({ params }: PageProps) {
 
   // ---- Derived data ----
   const layers = graph?.layers ?? [];
-  const selectedNode = graph?.nodes.find((n) => n.id === selectedNodeId) ?? null;
+  const selectedNode =
+    graph?.nodes.find((n) => n.id === selectedNodeId) ?? null;
   const selectedEdges =
     graph && selectedNodeId
       ? graph.edges.filter(
-          (e) => e.from === selectedNodeId || e.to === selectedNodeId
+          (e) => e.from === selectedNodeId || e.to === selectedNodeId,
         )
       : [];
 
   const topRisks = vulnerabilityReport?.node_rankings.slice(0, 5) ?? [];
-  const highestSynergy =
-    vulnerabilityReport?.compound_pairs?.[0] ?? null;
+  const highestSynergy = vulnerabilityReport?.compound_pairs?.[0] ?? null;
   const impactByNodeId = new Map(
     (vulnerabilityReport?.node_rankings ?? []).map((entry) => [
       entry.node_id,
@@ -588,7 +602,7 @@ export default function NetworkPage({ params }: PageProps) {
                         />
                       </div>
                     </div>
-                  )
+                  ),
                 )}
               </div>
             </section>
@@ -619,9 +633,7 @@ export default function NetworkPage({ params }: PageProps) {
                       onClick={() => setSelectedNode(r.node_id)}
                     >
                       <span>
-                        <span style={{ color: "var(--muted)" }}>
-                          {i + 1}.{" "}
-                        </span>
+                        <span style={{ color: "var(--muted)" }}>{i + 1}. </span>
                         {node?.name ?? r.node_id}
                       </span>
                       <span
@@ -681,9 +693,7 @@ export default function NetworkPage({ params }: PageProps) {
                 color: "var(--accent)",
                 background: "transparent",
               }}
-              onClick={() =>
-                router.push(`/simulate/${sessionId}` as Route)
-              }
+              onClick={() => router.push(`/simulate/${sessionId}` as Route)}
             >
               Start Simulation
             </button>
@@ -738,7 +748,9 @@ export default function NetworkPage({ params }: PageProps) {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <NodeStat
                   label="Impact"
-                  value={(impactByNodeId.get(selectedNode.id) ?? selectedNode.theta).toFixed(3)}
+                  value={(
+                    impactByNodeId.get(selectedNode.id) ?? selectedNode.theta
+                  ).toFixed(3)}
                   accentColor={impactColor(
                     impactByNodeId.get(selectedNode.id) ?? selectedNode.theta,
                     selectedNode.phi,
@@ -807,10 +819,7 @@ function StatCard({
       </p>
       <p className="text-lg font-bold tabular-nums">{value}</p>
       {sub && (
-        <p
-          className="text-xs mt-0.5"
-          style={{ color: "var(--accent)" }}
-        >
+        <p className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
           {sub}
         </p>
       )}
@@ -839,7 +848,9 @@ function NodeStat({
       </p>
       <p
         className="font-semibold tabular-nums"
-        style={{ color: alert ? "#EF4444" : accentColor ?? "var(--foreground)" }}
+        style={{
+          color: alert ? "#EF4444" : (accentColor ?? "var(--foreground)"),
+        }}
       >
         {value}
       </p>

@@ -1,4 +1,4 @@
-"""Tests for the NEXUS results ranking module (Module 4A).
+"""Tests for the Halkantir results ranking module (Module 4A).
 
 Covers extract_scenarios, generate_recommendations, precompute_animation,
 build_final_report, and the Scenario / Recommendation / FinalReport data
@@ -107,8 +107,7 @@ class TestExtractScenarios:
 
         for sc in scenarios:
             assert 0.0 <= sc.severity <= 1.0, (
-                f"Scenario rank={sc.rank} has severity={sc.severity} "
-                f"outside [0, 1]"
+                f"Scenario rank={sc.rank} has severity={sc.severity} outside [0, 1]"
             )
 
     def test_scenario_deduplication(self, medium_graph: Graph) -> None:
@@ -120,9 +119,7 @@ class TestExtractScenarios:
         failure_sets_seen: list[frozenset[str]] = []
         for sc in scenarios:
             key = frozenset(sc.failed_nodes)
-            assert key not in failure_sets_seen, (
-                f"Duplicate failure set found: {sorted(key)}"
-            )
+            assert key not in failure_sets_seen, f"Duplicate failure set found: {sorted(key)}"
             failure_sets_seen.append(key)
 
 

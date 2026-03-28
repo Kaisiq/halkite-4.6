@@ -1,8 +1,8 @@
-# Achilles
+# Halkantir
 
 **Prevent the predictable. Then move faster.**
 
-Achilles is an organizational stress-testing platform. Upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists — and Achilles maps your dependencies, finds your blind spots, and simulates worst-case failure scenarios before they happen.
+Halkantir is an organizational stress-testing platform. Upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists — and Halkantir maps your dependencies, finds your blind spots, and simulates worst-case failure scenarios before they happen.
 
 **AI generates. Math computes. AI explains.** — AI never touches the numbers.
 
@@ -37,10 +37,10 @@ demo/     Sample datasets for showcase
 
 Monorepo managed by **pnpm workspaces** + **Turbo**:
 
-| App | Stack | Purpose |
-|-----|-------|---------|
-| `apps/api` | Python 3.14, FastAPI, NetworkX, NumPy | Ingestion, graph engine, cascade simulation, adversarial agents, ranking |
-| `apps/web` | Next.js 16, React 19, D3.js, Zustand, Tailwind | Upload, network graph visualization, simulation controls, report |
+| App        | Stack                                          | Purpose                                                                  |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| `apps/api` | Python 3.14, FastAPI, NetworkX, NumPy          | Ingestion, graph engine, cascade simulation, adversarial agents, ranking |
+| `apps/web` | Next.js 16, React 19, D3.js, Zustand, Tailwind | Upload, network graph visualization, simulation controls, report         |
 
 ### Module Pipeline
 
@@ -54,8 +54,8 @@ See `docs/00_ARCHITECTURE.md` for full details and `docs/BUSINESS_PLAN.md` for t
 
 ```bash
 ./bin/dev                              # run both apps
-pnpm --filter @halkite/api dev         # API only
-pnpm --filter @halkite/web dev         # frontend only
+pnpm --filter @halkantir/api dev         # API only
+pnpm --filter @halkantir/web dev         # frontend only
 pnpm build                             # build all
 pnpm lint                              # lint all
 pnpm typecheck                         # typecheck all
@@ -68,6 +68,11 @@ Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`. App-specific tem
 
 - `apps/web/.env.local.example`
 - `apps/api/.env.example`
+
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID` is only needed if you want Google Drive folder import in the web app.
+For Google Drive import, use a Google OAuth "Web application" client and add
+the exact frontend origin to Authorized JavaScript origins, such as
+`http://localhost:3000`.
 
 ## Docker Deployment
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NEXUS – global Zustand store
+// Halkantir – global Zustand store
 // ---------------------------------------------------------------------------
 
 import { create } from "zustand";
@@ -7,6 +7,7 @@ import * as api from "./api";
 import type {
   CascadeEvent,
   CascadeResponse,
+  DriveFolderSummary,
   ExploreConfig,
   ExploreResponse,
   GraphData,
@@ -35,6 +36,7 @@ export interface NexusState {
   gaps: string[];
   followUpQuestions: string[];
   confidence: number | null;
+  driveFolder: DriveFolderSummary | null;
 
   // Analysis
   vulnerabilityReport: VulnerabilityReport | null;
@@ -60,6 +62,11 @@ export interface NexusState {
   setSessionId: (id: string) => void;
   setGraph: (g: GraphData) => void;
   uploadFiles: (files: File[], description?: string) => Promise<void>;
+  importGoogleDriveFolder: (
+    accessToken: string,
+    folderId: string,
+    description?: string,
+  ) => Promise<boolean>;
   runAnalysis: () => Promise<void>;
   runExploration: (config?: ExploreConfig) => Promise<void>;
   runCascade: (event: CascadeEvent) => Promise<CascadeResponse | null>;
@@ -80,6 +87,7 @@ const INITIAL_UPLOAD = {
   gaps: [] as string[],
   followUpQuestions: [] as string[],
   confidence: null as number | null,
+  driveFolder: null as DriveFolderSummary | null,
 };
 
 const INITIAL_ANALYSIS = {
@@ -181,6 +189,58 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
     }
   },
 
+  importGoogleDriveFolder: async (accessToken, folderId, description) => {
+    set({
+      ...INITIAL_UPLOAD,
+      ...INITIAL_ANALYSIS,
+      ...INITIAL_EXPLORE,
+      uploading: true,
+      uploadProgress: "Connecting to Google Drive...",
+      cascadeError: null,
+      selectedNodeId: null,
+      activeScenarioIndex: null,
+    });
+
+    const t1 = setTimeout(
+      () => set({ uploadProgress: "Scanning Google Drive files..." }),
+      1_500,
+    );
+    const t2 = setTimeout(
+      () => set({ uploadProgress: "Building dependency graph from Drive..." }),
+      4_000,
+    );
+
+    try {
+      const res = await api.importGoogleDriveFolder(
+        accessToken,
+        folderId,
+        description,
+      );
+
+      set({
+        sessionId: res.session_id,
+        graph: res.graph,
+        uploading: false,
+        uploadProgress: null,
+        confidence: res.confidence,
+        gaps: res.gaps,
+        followUpQuestions: res.follow_up_questions,
+        driveFolder: res.drive_folder,
+      });
+      return true;
+    } catch (err: unknown) {
+      set({
+        uploading: false,
+        uploadProgress: null,
+        uploadError: api.extractErrorMessage(err),
+      });
+      return false;
+    } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    }
+  },
+
   /**
    * Run weakpoint analysis (Module 2) on the current graph.
    */
@@ -248,14 +308,10 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       // Apply post-cascade node states to the local graph.
       const currentGraph = get().graph;
       if (currentGraph && res.final_state?.nodes) {
-        const nodeMap = new Map(
-          res.final_state.nodes.map((n) => [n.id, n]),
-        );
+        const nodeMap = new Map(res.final_state.nodes.map((n) => [n.id, n]));
         const updatedNodes = currentGraph.nodes.map((n) => {
           const updated = nodeMap.get(n.id);
-          return updated
-            ? { ...n, h: updated.h, phi: updated.phi }
-            : n;
+          return updated ? { ...n, h: updated.h, phi: updated.phi } : n;
         });
         set({ graph: { ...currentGraph, nodes: updatedNodes } });
       }
@@ -316,7 +372,10 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       set({ graph: res.graph });
 
       if (res.validation_warnings.length > 0) {
-        console.warn("[NEXUS] Graph update warnings:", res.validation_warnings);
+        console.warn(
+          "[Halkantir] Graph update warnings:",
+          res.validation_warnings,
+        );
       }
     } catch (err: unknown) {
       set({ uploadError: api.extractErrorMessage(err) });

@@ -192,6 +192,29 @@ textarea {
   animation: signal-track 3.2s linear infinite;
 }
 
+.drive-import-spinner {
+  animation: drive-spin 1s linear infinite;
+}
+
+.drive-progress-bar {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(120 226 201 / 0.22) 0%,
+      rgb(120 226 201 / 0.95) 38%,
+      rgb(121 174 240 / 0.9) 62%,
+      rgb(120 226 201 / 0.22) 100%
+    );
+  background-size: 200% 100%;
+  animation: drive-progress 1.6s ease-in-out infinite;
+}
+
+.drive-import-overlay {
+  background:
+    linear-gradient(180deg, rgb(8 12 20 / 0.58), rgb(8 12 20 / 0.78)),
+    radial-gradient(circle at 20% 20%, rgb(120 226 201 / 0.12), transparent 32%);
+}
+
 .fade-rise {
   animation: fade-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -237,6 +260,30 @@ textarea {
   }
 }
 
+@keyframes drive-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes drive-progress {
+  0% {
+    transform: translateX(-35%);
+    background-position: 0% 50%;
+  }
+  50% {
+    transform: translateX(0%);
+    background-position: 60% 50%;
+  }
+  100% {
+    transform: translateX(35%);
+    background-position: 100% 50%;
+  }
+}
+
 @keyframes fade-rise {
   from {
     opacity: 0;
@@ -251,6 +298,8 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .signal-pulse,
   .signal-track,
+  .drive-import-spinner,
+  .drive-progress-bar,
   .fade-rise,
   .fade-rise-delay {
     animation: none;

@@ -57,10 +57,11 @@ class CascadeStep:
     new_degraded: list[str] = field(default_factory=list)
     damages: dict[str, float] = field(default_factory=dict)
     damage_sources: dict[str, set[str]] = field(
-        default_factory=dict, repr=False,
+        default_factory=dict,
+        repr=False,
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """JSON-safe serialisation."""
         return {
             "step": self.step,
@@ -89,7 +90,7 @@ class CascadeMetrics:
     layer_damage: dict[str, float]
     total_recovery_cost: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """JSON-safe serialisation."""
         return {
             "cascade_size": self.cascade_size,
@@ -193,7 +194,7 @@ def apply_event(
 def _propagate_step(
     graph: Graph,
     changed_node_ids: set[str],
-) -> tuple[set[str], set[str], dict[str, float]]:
+) -> tuple[set[str], set[str], dict[str, float], dict[str, set[str]]]:
     """Run one propagation step from the set of recently changed nodes.
 
     For every node *v* in *changed_node_ids*, compute the damage it
@@ -288,20 +289,13 @@ def _compute_metrics(
     n = len(graph.nodes)
 
     # -- nodes_failed: all nodes where phi is True in the final state
-    nodes_failed = [
-        graph.nodes[i].id
-        for i in range(n)
-        if state_after.phi[i]
-    ]
+    nodes_failed = [graph.nodes[i].id for i in range(n) if state_after.phi[i]]
 
     # -- nodes_degraded: health decreased but still alive
     nodes_degraded = [
         graph.nodes[i].id
         for i in range(n)
-        if (
-            not state_after.phi[i]
-            and state_after.h[i] < state_before.h[i] - 1e-12
-        )
+        if (not state_after.phi[i] and state_after.h[i] < state_before.h[i] - 1e-12)
     ]
 
     # -- cascade_size: fraction of nodes that died
@@ -341,9 +335,7 @@ def _compute_metrics(
                     break  # count each failure at most once
 
     # -- total_recovery_cost
-    total_recovery_cost = sum(
-        graph.get_node(nid).r for nid in nodes_failed
-    )
+    total_recovery_cost = sum(graph.get_node(nid).r for nid in nodes_failed)
 
     return CascadeMetrics(
         cascade_size=cascade_size,
@@ -418,9 +410,7 @@ def cascade(
 
     while changed and step < max_steps:
         step += 1
-        next_failures, next_degraded, damages, dsources = _propagate_step(
-            graph, changed
-        )
+        next_failures, next_degraded, damages, dsources = _propagate_step(graph, changed)
 
         if not next_failures and not next_degraded:
             break  # fixed point
@@ -523,9 +513,7 @@ def cascade_compound(
 
     while changed and step < max_steps:
         step += 1
-        next_failures, next_degraded, damages, dsources = _propagate_step(
-            graph, changed
-        )
+        next_failures, next_degraded, damages, dsources = _propagate_step(graph, changed)
 
         if not next_failures and not next_degraded:
             break

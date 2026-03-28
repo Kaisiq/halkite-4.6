@@ -95,14 +95,9 @@ class ClusterIsolator(Agent):
             return events
 
         # -- No boundary edges: kill boundary nodes ------------------------
-        boundary_node_ids = _find_boundary_nodes(
-            graph, nxg, target_cluster, surviving_ids
-        )
+        boundary_node_ids = _find_boundary_nodes(graph, nxg, target_cluster, surviving_ids)
         if boundary_node_ids:
-            return [
-                Event(target=nid, action="kill")
-                for nid in boundary_node_ids[:bf]
-            ]
+            return [Event(target=nid, action="kill") for nid in boundary_node_ids[:bf]]
 
         # Ultimate fallback
         return _fallback_critical_node(graph, bf)
@@ -125,9 +120,7 @@ def _build_surviving_subgraph(
         if edge.from_id in surviving_ids and edge.to_id in surviving_ids:
             if nxg.has_edge(edge.from_id, edge.to_id):
                 existing_w = nxg[edge.from_id][edge.to_id].get("weight", 0.0)
-                nxg[edge.from_id][edge.to_id]["weight"] = max(
-                    existing_w, edge.weight
-                )
+                nxg[edge.from_id][edge.to_id]["weight"] = max(existing_w, edge.weight)
             else:
                 nxg.add_edge(edge.from_id, edge.to_id, weight=edge.weight)
     return nxg
@@ -153,33 +146,19 @@ def _cluster_info(
         elif u_in or v_in:
             external_weights.append(w)
 
-    internal_strength = (
-        sum(internal_weights) / len(internal_weights)
-        if internal_weights
-        else 0.0
-    )
-    external_strength = (
-        sum(external_weights) / len(external_weights)
-        if external_weights
-        else 0.0
-    )
+    internal_strength = sum(internal_weights) / len(internal_weights) if internal_weights else 0.0
+    external_strength = sum(external_weights) / len(external_weights) if external_weights else 0.0
 
     isolation_risk = (
-        (internal_strength / external_strength)
-        if external_strength > 0
-        else float("inf")
+        (internal_strength / external_strength) if external_strength > 0 else float("inf")
     )
     # Clamp to a large finite value for sorting stability
     if isolation_risk == float("inf"):
         isolation_risk = 1e6
 
     # Cluster impact: sum of theta in cluster / total theta
-    cluster_theta = sum(
-        graph.get_node(nid).theta for nid in cluster_nodes
-    )
-    total_theta = sum(
-        n.theta for n in graph.nodes if n.id in surviving_ids
-    )
+    cluster_theta = sum(graph.get_node(nid).theta for nid in cluster_nodes)
+    total_theta = sum(n.theta for n in graph.nodes if n.id in surviving_ids)
     cluster_impact = cluster_theta / total_theta if total_theta > 0 else 0.0
 
     return {
@@ -244,7 +223,4 @@ def _fallback_critical_node(graph: Graph, bf: int) -> list[Event]:
     if not surviving:
         return []
     surviving.sort(key=lambda n: n.theta, reverse=True)
-    return [
-        Event(target=n.id, action="kill")
-        for n in surviving[:bf]
-    ]
+    return [Event(target=n.id, action="kill") for n in surviving[:bf]]

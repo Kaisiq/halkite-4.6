@@ -1,4 +1,4 @@
-"""Tests for the NEXUS graph model (Module 1A).
+"""Tests for the Halkantir graph model (Module 1A).
 
 Covers Node, Edge, Graph, State, and ValidationResult from
 ``nexus_api.models.graph``.
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from nexus_api.ingestion.scoring import build_default_scoring_policy
 from nexus_api.models.graph import Edge, Graph, Node
 
 # ======================================================================
@@ -238,6 +239,110 @@ class TestValidation:
         assert not result.is_valid
         assert any("at least 2 nodes" in e for e in result.errors)
 
+    def test_validate_evidence_backed_graph(self):
+        g = Graph(
+            nodes=[
+                Node(
+                    "ceo",
+                    "CEO",
+                    "People",
+                    theta=0.8,
+                    r=10,
+                    meta={
+                        "type": "person",
+                        "function": "leadership",
+                        "evidence": [{"kind": "document", "source": "org.pdf", "confidence": 0.9}],
+                    },
+                ),
+                Node(
+                    "erp",
+                    "ERP",
+                    "Technology",
+                    theta=0.4,
+                    r=3,
+                    meta={
+                        "type": "service",
+                        "function": "planning",
+                        "evidence": [
+                            {
+                                "kind": "diagram",
+                                "source": "arch.drawio",
+                                "confidence": 0.8,
+                            }
+                        ],
+                    },
+                ),
+            ],
+            edges=[
+                Edge(
+                    "ceo",
+                    "erp",
+                    0.5,
+                    meta={
+                        "dependency_type": "operational",
+                        "evidence": [
+                            {
+                                "kind": "document",
+                                "source": "runbook.md",
+                                "confidence": 0.8,
+                            }
+                        ],
+                    },
+                )
+            ],
+            layers=["People", "Technology"],
+            scoring_policy=build_default_scoring_policy(),
+        )
+        result = g.validate()
+        assert result.is_valid
+
+    def test_validate_evidence_backed_graph_missing_type(self):
+        g = Graph(
+            nodes=[
+                Node("ceo", "CEO", "People", theta=0.8, r=10, meta={"evidence": []}),
+                Node(
+                    "erp",
+                    "ERP",
+                    "Technology",
+                    theta=0.4,
+                    r=3,
+                    meta={
+                        "type": "service",
+                        "function": "planning",
+                        "evidence": [
+                            {
+                                "kind": "diagram",
+                                "source": "arch.drawio",
+                                "confidence": 0.8,
+                            }
+                        ],
+                    },
+                ),
+            ],
+            edges=[
+                Edge(
+                    "ceo",
+                    "erp",
+                    0.5,
+                    meta={
+                        "dependency_type": "operational",
+                        "evidence": [
+                            {
+                                "kind": "document",
+                                "source": "runbook.md",
+                                "confidence": 0.8,
+                            }
+                        ],
+                    },
+                )
+            ],
+            layers=["People", "Technology"],
+            scoring_policy=build_default_scoring_policy(),
+        )
+        result = g.validate()
+        assert not result.is_valid
+        assert any("meta.type" in e for e in result.errors)
+
 
 # ======================================================================
 # Rebuild
@@ -248,9 +353,7 @@ class TestRebuild:
     def test_rebuild(self, small_graph: Graph):
         """After adding a node and rebuilding, adjacency matrix should grow."""
         old_shape = small_graph.A.shape
-        small_graph.nodes.append(
-            Node("new_node", "New", "People", theta=0.1)
-        )
+        small_graph.nodes.append(Node("new_node", "New", "People", theta=0.1))
         small_graph.rebuild()
         assert small_graph.A.shape == (old_shape[0] + 1, old_shape[1] + 1)
         assert "new_node" in small_graph.node_index

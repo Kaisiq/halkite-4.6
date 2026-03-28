@@ -94,17 +94,13 @@ class Scenario:
         self.summary: str = summary
         self.health_remaining: float = health_remaining
         self.health_lost: float = health_lost
-        self.failed_nodes: list[str] = (
-            failed_nodes if failed_nodes is not None else []
-        )
+        self.failed_nodes: list[str] = failed_nodes if failed_nodes is not None else []
         self.failed_fraction: float = failed_fraction
         self.recovery_cost: float = recovery_cost
         self.depth: int = depth
         self.agent: str = agent
         self.path: list[dict[str, Any]] = path if path is not None else []
-        self.layers_affected: list[str] = (
-            layers_affected if layers_affected is not None else []
-        )
+        self.layers_affected: list[str] = layers_affected if layers_affected is not None else []
         self.cross_layer_events: int = cross_layer_events
         self.narrative: dict[str, Any] | None = narrative
         self.recommendations: list[dict[str, Any]] | None = recommendations
@@ -131,10 +127,7 @@ class Scenario:
             "depth": self.depth,
             "agent": self.agent,
             "path": [
-                {
-                    k: (v.to_dict() if hasattr(v, "to_dict") else v)
-                    for k, v in step.items()
-                }
+                {k: (v.to_dict() if hasattr(v, "to_dict") else v) for k, v in step.items()}
                 for step in self.path
             ],
             "layers_affected": self.layers_affected,
@@ -183,8 +176,7 @@ class Recommendation:
 
     def __repr__(self) -> str:
         return (
-            f"Recommendation(priority={self.priority}, type={self.type!r}, "
-            f"target={self.target!r})"
+            f"Recommendation(priority={self.priority}, type={self.type!r}, target={self.target!r})"
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -257,9 +249,7 @@ class FinalReport:
         resilience_profile: dict[str, Any] | None = None,
     ) -> None:
         self.metadata: dict[str, Any] = metadata if metadata is not None else {}
-        self.network_health: dict[str, Any] = (
-            network_health if network_health is not None else {}
-        )
+        self.network_health: dict[str, Any] = network_health if network_health is not None else {}
         self.vulnerability_summary: dict[str, Any] = (
             vulnerability_summary if vulnerability_summary is not None else {}
         )
@@ -310,9 +300,7 @@ def _severity_label(severity: float) -> str:
 
 def _failed_node_ids(state_phi: list[bool], graph: Graph) -> list[str]:
     """Return a list of node ids for all nodes marked as failed in *state_phi*."""
-    return [
-        graph.nodes[i].id for i, phi in enumerate(state_phi) if phi
-    ]
+    return [graph.nodes[i].id for i, phi in enumerate(state_phi) if phi]
 
 
 def _layers_affected(state_phi: list[bool], graph: Graph) -> list[str]:
@@ -352,7 +340,7 @@ def _count_cross_layer_events(path: list[dict[str, Any]], graph: Graph) -> int:
             try:
                 fid_int = int(fid_str)
                 failed_layer = graph.nodes[fid_int].layer
-            except (ValueError, IndexError):
+            except ValueError, IndexError:
                 try:
                     failed_layer = graph.get_node(fid_str).layer
                 except KeyError:
@@ -392,9 +380,7 @@ def extract_scenarios(
     if max_possible_recovery <= 0.0:
         max_possible_recovery = 1.0  # Avoid division by zero.
 
-    leaves: list[TreeNode] = [
-        n for n in tree.all_nodes if not n.children
-    ]
+    leaves: list[TreeNode] = [n for n in tree.all_nodes if not n.children]
 
     scored: list[Scenario] = []
 
@@ -464,9 +450,8 @@ def _is_bridge_node(node_id: str, vulnerability_report: VulnerabilityReport) -> 
     """Check whether *node_id* appears in the vulnerability report's bridge nodes."""
     for bridge in vulnerability_report.bridge_nodes:
         # BridgeNode dataclass uses ``node_id``; fall back to dict access.
-        bridge_id = (
-            getattr(bridge, "node_id", None)
-            or (bridge.get("node") if isinstance(bridge, dict) else None)
+        bridge_id = getattr(bridge, "node_id", None) or (
+            bridge.get("node") if isinstance(bridge, dict) else None
         )
         if bridge_id == node_id:
             return True
@@ -524,14 +509,12 @@ def generate_recommendations(
                 try:
                     fid_int = int(fid_str)
                     node_id = graph.nodes[fid_int].id
-                except (ValueError, IndexError):
+                except ValueError, IndexError:
                     node_id = fid_str
                 failure_freq[node_id] = failure_freq.get(node_id, 0) + 1
 
     # Top-10 most frequently failing nodes.
-    priority_nodes = sorted(
-        failure_freq.items(), key=lambda kv: kv[1], reverse=True
-    )[:10]
+    priority_nodes = sorted(failure_freq.items(), key=lambda kv: kv[1], reverse=True)[:10]
 
     recommendations: list[Recommendation] = []
     num_scenarios = max(len(scenarios), 1)
@@ -564,13 +547,8 @@ def generate_recommendations(
                 Recommendation(
                     type="add_bypass",
                     target=node_id,
-                    action=(
-                        f"Create alternative connections that bypass {node.name}"
-                    ),
-                    reason=(
-                        f"{node.name} is a bridge node -- removing it "
-                        f"fragments the network"
-                    ),
+                    action=(f"Create alternative connections that bypass {node.name}"),
+                    reason=(f"{node.name} is a bridge node -- removing it fragments the network"),
                     estimated_resilience_gain="High",
                     scenarios_prevented=frequency,
                 )
@@ -584,13 +562,9 @@ def generate_recommendations(
                 Recommendation(
                     type="reduce_recovery_time",
                     target=node_id,
-                    action=(
-                        f"Prepare contingency plan to speed up "
-                        f"recovery of {node.name}"
-                    ),
+                    action=(f"Prepare contingency plan to speed up recovery of {node.name}"),
                     reason=(
-                        f"{node.name} has recovery cost of {node.r:.1f} -- "
-                        f"too slow to restore"
+                        f"{node.name} has recovery cost of {node.r:.1f} -- too slow to restore"
                     ),
                     estimated_resilience_gain="Medium",
                     scenarios_prevented=frequency,
@@ -598,9 +572,7 @@ def generate_recommendations(
             )
 
     # -- Layer-level recommendations ---------------------------------------
-    layer_analysis: dict[str, Any] = getattr(
-        vulnerability_report, "layer_analysis", {}
-    )
+    layer_analysis: dict[str, Any] = getattr(vulnerability_report, "layer_analysis", {})
     if isinstance(layer_analysis, dict):
         for layer_name, analysis in layer_analysis.items():
             autonomy = (
@@ -692,9 +664,7 @@ def precompute_animation(
 
         while changed and cascade_step < max_cascade_steps:
             cascade_step += 1
-            next_failures, next_degraded, _damages, _ = _propagate_step(
-                g_anim, changed
-            )
+            next_failures, next_degraded, _damages, _ = _propagate_step(g_anim, changed)
             if not next_failures and not next_degraded:
                 break
 
@@ -777,8 +747,9 @@ def build_final_report(
         top_node = node_rankings[0]
         # NodeImpact dataclass uses ``node_id``; dict uses ``id``.
         node_id = (
-            top_node.get("id") if isinstance(top_node, dict) else
-            getattr(top_node, "node_id", None) or getattr(top_node, "id", None)
+            top_node.get("id")
+            if isinstance(top_node, dict)
+            else getattr(top_node, "node_id", None) or getattr(top_node, "id", None)
         )
         node_theta = None
         node_impact = None
@@ -808,18 +779,21 @@ def build_final_report(
         fragile_layer = min(
             layer_analysis.items(),
             key=lambda kv: (
-                kv[1].get("autonomy", 1.0) if isinstance(kv[1], dict)
+                kv[1].get("autonomy", 1.0)
+                if isinstance(kv[1], dict)
                 else getattr(kv[1], "autonomy", 1.0)
             ),
         )
         fl_name = fragile_layer[0]
         fl_data = fragile_layer[1]
         fl_autonomy = (
-            fl_data.get("autonomy", 0.0) if isinstance(fl_data, dict)
+            fl_data.get("autonomy", 0.0)
+            if isinstance(fl_data, dict)
             else getattr(fl_data, "autonomy", 0.0)
         )
         fl_criticality = (
-            fl_data.get("criticality", 0.0) if isinstance(fl_data, dict)
+            fl_data.get("criticality", 0.0)
+            if isinstance(fl_data, dict)
             else getattr(fl_data, "criticality", 0.0)
         )
         vuln_summary["most_fragile_layer"] = {
@@ -833,9 +807,7 @@ def build_final_report(
     vuln_summary["bridge_count"] = len(bridge_nodes)
 
     # Highest synergy pair.
-    compound_pairs: list[Any] = getattr(
-        vulnerability_report, "compound_pairs", []
-    )
+    compound_pairs: list[Any] = getattr(vulnerability_report, "compound_pairs", [])
     if compound_pairs:
         top_pair = compound_pairs[0]
         if isinstance(top_pair, dict):
@@ -870,17 +842,16 @@ def build_final_report(
     tree_viz_nodes = []
     tree_viz_edges = []
     for tn in tree.all_nodes:
-        tree_viz_nodes.append({
-            "id": tn.id,
-            "H": round(tn.H, 6),
-            "depth": tn.depth,
-            "agent": tn.agent,
-            "event_summary": (
-                f"{tn.event.action} {tn.event.target}"
-                if tn.event else "root"
-            ),
-            "failed_count": tn.failed_count,
-        })
+        tree_viz_nodes.append(
+            {
+                "id": tn.id,
+                "H": round(tn.H, 6),
+                "depth": tn.depth,
+                "agent": tn.agent,
+                "event_summary": (f"{tn.event.action} {tn.event.target}" if tn.event else "root"),
+                "failed_count": tn.failed_count,
+            }
+        )
         if tn.parent is not None:
             tree_viz_edges.append({"from": tn.parent.id, "to": tn.id})
 
@@ -1026,9 +997,7 @@ async def generate_narrative(
 
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
-        logger.warning(
-            "GEMINI_API_KEY not set -- returning empty narrative"
-        )
+        logger.warning("GEMINI_API_KEY not set -- returning empty narrative")
         return {}
 
     client = genai.Client(api_key=api_key)

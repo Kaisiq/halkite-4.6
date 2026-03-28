@@ -19,14 +19,12 @@ export default function NavBar({ sessionId }: NavBarProps) {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="sticky top-0 z-30 border-b hairline bg-[color:rgb(8_15_27_/_0.72)] backdrop-blur-xl"
-    >
+    <nav className="sticky top-0 z-30 border-b hairline bg-[color:rgb(8_15_27_/_0.72)] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-[1600px] items-center gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="mr-2 min-w-0">
-          <div className="eyebrow mb-1">Resilience Command System</div>
+          <div className="eyebrow mb-1">Organizational Stress Testing</div>
           <div className="display-face text-xl font-semibold tracking-[0.18em] text-[var(--foreground)]">
-            NEXUS
+            Halkantir
           </div>
         </Link>
 

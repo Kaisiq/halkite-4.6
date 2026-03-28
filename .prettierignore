@@ -1,7 +1,9 @@
 .claude
+.turbo
 .next
+.venv
+.venv*
 coverage
 dist
 node_modules
 pnpm-lock.yaml
-

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NEXUS API client
+// Halkantir API client
 // Thin wrapper around axios for every backend endpoint (docs/05_API.md).
 // ---------------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ import type {
   ApiError,
   CascadeEvent,
   CascadeResponse,
+  DriveImportResponse,
   ExploreConfig,
   ExploreResponse,
   GraphData,
@@ -77,6 +78,22 @@ export async function uploadFiles(
   return data;
 }
 
+export async function importGoogleDriveFolder(
+  accessToken: string,
+  folderId: string,
+  description?: string,
+): Promise<DriveImportResponse> {
+  const { data } = await client.post<DriveImportResponse>(
+    "/api/google-drive/import",
+    {
+      access_token: accessToken,
+      folder_id: folderId,
+      description: description ?? "",
+    },
+  );
+  return data;
+}
+
 /**
  * Manually update the graph (add/remove/edit nodes and edges).
  * POST /api/graph/update
@@ -85,10 +102,10 @@ export async function updateGraph(
   sessionId: string,
   operations: GraphOperation[],
 ): Promise<GraphUpdateResponse> {
-  const { data } = await client.post<GraphUpdateResponse>(
-    "/api/graph/update",
-    { session_id: sessionId, operations },
-  );
+  const { data } = await client.post<GraphUpdateResponse>("/api/graph/update", {
+    session_id: sessionId,
+    operations,
+  });
   return data;
 }
 

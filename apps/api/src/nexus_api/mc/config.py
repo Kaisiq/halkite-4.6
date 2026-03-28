@@ -8,6 +8,7 @@ and :func:`~nexus_api.mc.resilience.run_resilience_analysis`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any, cast
 
 _MAX_RESILIENCE_SAMPLES = 5000
 
@@ -66,11 +67,12 @@ class MCConfig:
         if not isinstance(self.per_node_probs, dict):
             raise ValueError("per_node_probs must be a dict[str, float].")
         self.n_resilience_samples = min(
-            self.n_resilience_samples, _MAX_RESILIENCE_SAMPLES,
+            self.n_resilience_samples,
+            _MAX_RESILIENCE_SAMPLES,
         )
 
     @classmethod
-    def from_dict(cls, d: dict) -> MCConfig:
+    def from_dict(cls, d: dict[str, object]) -> MCConfig:
         """Parse an ``MCConfig`` from a JSON-compatible dict.
 
         Unknown keys are silently ignored so the API can evolve without
@@ -78,4 +80,4 @@ class MCConfig:
         """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in d.items() if k in known}
-        return cls(**filtered)
+        return cls(**cast("dict[str, Any]", filtered))

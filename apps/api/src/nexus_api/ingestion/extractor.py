@@ -12,12 +12,18 @@ import json
 import logging
 import os
 import re
-from typing import Any
+from typing import Any, cast
 
 from google import genai
 from google.genai import types
 
 from nexus_api.ingestion.parser import ParsedFile
+from nexus_api.ingestion.scoring import (
+    clamp,
+    score_edge_weight,
+    score_recovery,
+    score_theta,
+)
 from nexus_api.models.graph import Edge, Graph, Node
 
 logger = logging.getLogger(__name__)
@@ -31,30 +37,76 @@ _MODEL = "gemini-2.5-flash"
 _SYSTEM_PROMPT = """\
 You are a network analyst. You will receive the contents of documents from \
 an organization. Your job is to extract ALL entities and ALL dependencies \
-between them, and construct a network graph.
+between them, and construct an evidence-backed candidate graph. Merge \
+evidence across every file into one unified model.
 
 OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
 
 {
   "company": "Organization Name — brief description",
   "layers": ["People", "Technology", "Supply", ...],
+  "scoring_policy_version": "v1",
   "nodes": [
     {
       "id": "unique_snake_case_id",
       "name": "Human Readable Name",
       "layer": "People",
       "h": 1.0,
-      "theta": <float 0-1>,
-      "r": <float>,
-      "meta": {"role": "CEO", "location": "Sofia"}
+      "r_candidate": <float or null>,
+      "meta": {
+        "type": "person",
+        "function": "executive leadership",
+        "owner": "board",
+        "location": "Sofia",
+        "substitutability": <float 0-1 or null>,
+        "max_tolerable_downtime_hours": <float or null>,
+        "single_point_of_failure": <bool or null>,
+        "evidence": [
+          {
+            "kind": "document",
+            "source": "org_chart.pdf",
+            "confidence": <float 0-1>,
+            "note": "Why this node exists"
+          }
+        ],
+        "scoring_features": {
+          "blast_radius": <float 0-1 or null>,
+          "operational_criticality": <float 0-1 or null>,
+          "irreplaceability": <float 0-1 or null>,
+          "recovery_penalty": <float 0-1 or null>,
+          "historical_incident_impact": <float 0-1 or null>
+        }
+      }
     }
   ],
   "edges": [
     {
       "from": "node_id_1",
       "to": "node_id_2",
-      "weight": <float 0-1>,
-      "meta": "Brief description of why this dependency exists"
+      "meta": {
+        "dependency_type": "operational",
+        "directness": "direct | inferred | reconstructed",
+        "substitutes_available": <int or null>,
+        "time_to_substitute_hours": <float or null>,
+        "minimum_support_required": <float 0-1 or null>,
+        "evidence": [
+          {
+            "kind": "architecture_diagram",
+            "source": "infra.drawio",
+            "confidence": <float 0-1>,
+            "note": "Why this edge exists"
+          }
+        ],
+        "scoring_features": {
+          "operational": <float 0-1 or null>,
+          "informational": <float 0-1 or null>,
+          "control": <float 0-1 or null>,
+          "physical": <float 0-1 or null>,
+          "financial": <float 0-1 or null>,
+          "substitutability_penalty": <float 0-1 or null>,
+          "workaround_delay": <float 0-1 or null>
+        }
+      }
     }
   ],
   "r_unit": "days",
@@ -62,7 +114,8 @@ OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
   "known_risks": [
     "Risk description 1",
     "Risk description 2"
-  ]
+  ],
+  "open_questions": ["Uncertain dependency or missing data"]
 }
 
 RULES FOR NODE VALUES:
@@ -70,36 +123,22 @@ RULES FOR NODE VALUES:
 h (health): Always set to 1.0 for initial graph construction.
    The system will modify this during simulations.
 
-theta (network dependency): How critical is this node to the overall network?
-   Consider:
-   - How many other nodes depend on it?
-   - How hard is it to work around if this node disappears?
-   - What fraction of operations/revenue/capability is lost?
-   Examples:
-     CEO of a small company: theta = 0.8-0.95
-     Junior employee with common skills: theta = 0.05-0.15
-     Single critical supplier: theta = 0.7-0.9
-     One of many interchangeable suppliers: theta = 0.1-0.2
-     Core database server: theta = 0.8-0.95
-     Office printer: theta = 0.02-0.05
+Do NOT output final theta values unless they are directly provided by the
+source material. Extract scoring features and evidence instead.
 
-r (recovery cost): Time or money to replace/restore this node.
-   Use consistent units (suggest: days for time, or currency).
-   Default: days.
+r_candidate (recovery cost): only provide a direct numeric candidate when
+the documents support it. Otherwise use null and describe the uncertainty.
 
 RULES FOR EDGES:
 
 Direction: "from" is the node being depended ON.
            "to" is the node that DEPENDS on "from".
 
-Weight: How strong is the dependency?
-   1.0 = total dependency
-   0.7-0.9 = strong dependency
-   0.4-0.6 = moderate dependency
-   0.1-0.3 = weak dependency
+Do NOT output final edge weights unless they are explicitly documented.
+Extract scoring features, evidence, and directness instead.
 
-COMPLETENESS IS CRITICAL. It is better to include a questionable edge at \
-low weight than to miss a real dependency entirely.
+Only create an edge when there is a plausible causal dependency.
+Do not create edges for similarity, same team, or communication alone.
 
 Think about these dependency types:
    - Who manages/supervises whom?
@@ -120,9 +159,6 @@ where applicable, but add or remove layers as the data warrants.
 COMPANY: Set to the organization name and a brief description (e.g. \
 "NovaTech Solutions — Digital Agency, Sofia, Bulgaria").
 
-EDGE META: For each edge, include a brief "meta" string explaining the \
-nature of the dependency (e.g. "CEO directs financial strategy").
-
 KNOWN RISKS: List any risks you identify from the data — single points \
 of failure, concentration risks, missing redundancy, undocumented \
 processes, etc.\
@@ -132,6 +168,7 @@ processes, etc.\
 # ---------------------------------------------------------------------------
 # IngestResult
 # ---------------------------------------------------------------------------
+
 
 class IngestResult:
     """Outcome of the full ingestion pipeline.
@@ -181,9 +218,7 @@ class IngestResult:
         self.follow_up_questions: list[str] = (
             follow_up_questions if follow_up_questions is not None else []
         )
-        self.files_parsed: list[dict[str, Any]] = (
-            files_parsed if files_parsed is not None else []
-        )
+        self.files_parsed: list[dict[str, Any]] = files_parsed if files_parsed is not None else []
         self.standard = standard
 
     def to_dict(self) -> dict[str, Any]:
@@ -209,6 +244,7 @@ class IngestResult:
 # Step 2: Build context
 # ---------------------------------------------------------------------------
 
+
 def build_context(parsed_files: list[ParsedFile], description: str = "") -> str:
     """Concatenate parsed file contents and user description into a single
     context block for the AI extraction prompt.
@@ -228,21 +264,15 @@ def build_context(parsed_files: list[ParsedFile], description: str = "") -> str:
     sections: list[str] = []
 
     if description.strip():
-        sections.append(
-            f"=== USER DESCRIPTION ===\n{description.strip()}"
-        )
+        sections.append(f"=== USER DESCRIPTION ===\n{description.strip()}")
 
     for pf in parsed_files:
         # Skip image-only entries (they will be sent as vision content blocks)
         if pf.raw_bytes is not None:
-            sections.append(
-                f"=== FILE: {pf.filename} (image — sent separately) ==="
-            )
+            sections.append(f"=== FILE: {pf.filename} (image — sent separately) ===")
             continue
 
-        sections.append(
-            f"=== FILE: {pf.filename} ({pf.file_type}) ===\n{pf.content}"
-        )
+        sections.append(f"=== FILE: {pf.filename} ({pf.file_type}) ===\n{pf.content}")
 
     return "\n\n".join(sections)
 
@@ -250,6 +280,7 @@ def build_context(parsed_files: list[ParsedFile], description: str = "") -> str:
 # ---------------------------------------------------------------------------
 # Step 3: AI graph extraction
 # ---------------------------------------------------------------------------
+
 
 def _image_media_type(filename: str) -> str:
     """Return the MIME type for an image filename."""
@@ -284,19 +315,14 @@ def _build_user_content(
                 )
             )
             blocks.append(
-                (
-                    f"The image above is from file '{filename}'. "
-                    "Extract all entities and relationships visible in this "
-                    "image (org chart, diagram, whiteboard, etc.)."
-                )
+                f"The image above is from file '{filename}'. "
+                "Extract all entities and relationships visible in this "
+                "image (org chart, diagram, whiteboard, etc.)."
             )
 
     # Main text context block
     blocks.append(
-        (
-            "Analyze the following documents and extract a complete "
-            "dependency graph:\n\n" + context
-        )
+        "Analyze the following documents and extract a complete dependency graph:\n\n" + context
     )
 
     return blocks
@@ -343,8 +369,7 @@ def _extract_json_from_response(text: str) -> dict[str, Any]:
                         break
 
     raise ValueError(
-        f"Could not extract valid JSON from AI response. "
-        f"Response starts with: {stripped[:200]!r}"
+        f"Could not extract valid JSON from AI response. Response starts with: {stripped[:200]!r}"
     )
 
 
@@ -352,7 +377,7 @@ def _response_text(response: types.GenerateContentResponse) -> str:
     """Extract plain text from a Gemini response."""
     text = getattr(response, "text", None)
     if text:
-        return text
+        return cast("str", text)
 
     parts: list[str] = []
     for candidate in response.candidates or []:
@@ -400,7 +425,7 @@ async def extract_graph(
 
     response = await client.aio.models.generate_content(
         model=_MODEL,
-        contents=user_content,
+        contents=cast("Any", user_content),
         config=types.GenerateContentConfig(
             system_instruction=_SYSTEM_PROMPT,
             temperature=0,
@@ -420,14 +445,6 @@ async def extract_graph(
 # Step 4: Build and validate Graph
 # ---------------------------------------------------------------------------
 
-def _clamp(value: float, lo: float, hi: float) -> float:
-    """Clamp *value* into ``[lo, hi]``."""
-    if value < lo:
-        return lo
-    if value > hi:
-        return hi
-    return value
-
 
 def build_graph_from_dict(data: dict[str, Any]) -> Graph:
     """Construct a validated :class:`Graph` from AI-generated JSON.
@@ -446,6 +463,11 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
     Graph
         A structurally valid graph (may still have validation warnings).
     """
+    r_unit = str(data.get("r_unit", "days"))
+    scoring_policy = data.get("scoring_policy")
+    if not isinstance(scoring_policy, dict):
+        scoring_policy = {}
+
     # --- Layers ---
     layers: list[str] = [str(item) for item in data.get("layers", [])]
 
@@ -472,24 +494,33 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
         if layer and layer not in layers:
             layers.append(layer)
 
-        # Clamp mathematical values
-        h = _clamp(float(raw_node.get("h", 1.0)), 0.0, 1.0)
-        theta = _clamp(float(raw_node.get("theta", 0.0)), 0.0, 1.0)
-        r = max(float(raw_node.get("r", 0.0)), 0.0)
-
         meta = raw_node.get("meta")
         if not isinstance(meta, dict):
             meta = {}
 
-        nodes.append(Node(
-            id=node_id,
-            name=name,
-            layer=layer,
-            h=h,
-            theta=theta,
-            r=r,
-            meta=meta,
-        ))
+        # Clamp / derive mathematical values
+        h = clamp(float(raw_node.get("h", 1.0)), 0.0, 1.0)
+        if raw_node.get("theta") is None:
+            theta = score_theta(meta.get("scoring_features"), meta)
+        else:
+            theta = clamp(float(raw_node.get("theta", 0.0)), 0.0, 1.0)
+
+        if raw_node.get("r") is None:
+            r = score_recovery(raw_node.get("r_candidate"), meta, r_unit=r_unit)
+        else:
+            r = max(float(raw_node.get("r", 0.0)), 0.0)
+
+        nodes.append(
+            Node(
+                id=node_id,
+                name=name,
+                layer=layer,
+                h=h,
+                theta=theta,
+                r=r,
+                meta=meta,
+            )
+        )
 
     # --- Edges ---
     node_id_set = {n.id for n in nodes}
@@ -502,14 +533,10 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
 
         # Skip invalid references
         if from_id not in node_id_set:
-            logger.warning(
-                "Dropping edge: from_id %r not in graph nodes", from_id
-            )
+            logger.warning("Dropping edge: from_id %r not in graph nodes", from_id)
             continue
         if to_id not in node_id_set:
-            logger.warning(
-                "Dropping edge: to_id %r not in graph nodes", to_id
-            )
+            logger.warning("Dropping edge: to_id %r not in graph nodes", to_id)
             continue
 
         # No self-loops
@@ -524,25 +551,42 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
             continue
         seen_pairs.add(pair)
 
+        raw_meta = raw_edge.get("meta")
+        meta_for_scoring = raw_meta if isinstance(raw_meta, dict) else {}
+
         # Clamp weight into (0, 1]; drop zero-weight edges
-        weight = _clamp(float(raw_edge.get("weight", 1.0)), 0.0, 1.0)
-        if weight <= 0.0:
-            logger.warning(
-                "Dropping zero-weight edge %r -> %r", from_id, to_id
+        if raw_edge.get("weight") is None:
+            weight = score_edge_weight(
+                meta_for_scoring.get("scoring_features"),
+                meta_for_scoring,
             )
+        else:
+            weight = clamp(float(raw_edge.get("weight", 1.0)), 0.0, 1.0)
+        if weight <= 0.0:
+            logger.warning("Dropping zero-weight edge %r -> %r", from_id, to_id)
             continue
 
-        edges.append(Edge(
-            from_id=from_id, to_id=to_id, weight=weight,
-            meta=raw_edge.get("meta"),
-        ))
+        edges.append(
+            Edge(
+                from_id=from_id,
+                to_id=to_id,
+                weight=weight,
+                meta=raw_meta,
+            )
+        )
 
-    return Graph(nodes=nodes, edges=edges, layers=layers)
+    return Graph(
+        nodes=nodes,
+        edges=edges,
+        layers=layers,
+        scoring_policy=scoring_policy,
+    )
 
 
 # ---------------------------------------------------------------------------
 # Step 4 (cont.): Gap detection
 # ---------------------------------------------------------------------------
+
 
 def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
     """Scan the graph for suspicious patterns and generate follow-up
@@ -586,9 +630,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
             peers = [
                 n
                 for n in graph.nodes
-                if n.layer == node.layer
-                and n.id != node.id
-                and n.theta >= node.theta - 0.3
+                if n.layer == node.layer and n.id != node.id and n.theta >= node.theta - 0.3
             ]
             if not peers:
                 gaps.append(
@@ -616,10 +658,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
         for j in range(i + 1, len(all_layers)):
             pair = tuple(sorted([all_layers[i], all_layers[j]]))
             if pair not in cross_layer_pairs:
-                gaps.append(
-                    f"No cross-layer edges between '{all_layers[i]}' "
-                    f"and '{all_layers[j]}'"
-                )
+                gaps.append(f"No cross-layer edges between '{all_layers[i]}' and '{all_layers[j]}'")
                 questions.append(
                     f"I don't see how '{all_layers[i]}' and "
                     f"'{all_layers[j]}' are connected. "
@@ -633,8 +672,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
     # Anything significantly below n is suspicious.
     if n_nodes >= 3 and n_edges < n_nodes - 1:
         gaps.append(
-            f"Very few edges ({n_edges}) relative to nodes ({n_nodes}). "
-            f"Network seems sparse."
+            f"Very few edges ({n_edges}) relative to nodes ({n_nodes}). Network seems sparse."
         )
         questions.append(
             "Your network seems sparse. Are there dependencies I "
@@ -645,10 +683,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
     depended_on: set[str] = {e.from_id for e in graph.edges}
     for node in graph.nodes:
         if node.theta > 0.3 and node.id not in depended_on:
-            gaps.append(
-                f"'{node.name}' has high theta={node.theta:.2f} "
-                f"but nothing depends on it"
-            )
+            gaps.append(f"'{node.name}' has high theta={node.theta:.2f} but nothing depends on it")
 
     return gaps, questions
 
@@ -656,6 +691,7 @@ def detect_gaps(graph: Graph) -> tuple[list[str], list[str]]:
 # ---------------------------------------------------------------------------
 # Step 5: Full pipeline
 # ---------------------------------------------------------------------------
+
 
 async def ingest(
     files: list[tuple[str, bytes]],
@@ -665,7 +701,7 @@ async def ingest(
 
     Two paths:
 
-    **Fast path** — If any uploaded ``.json`` file is already in the NEXUS
+    **Fast path** — If any uploaded ``.json`` file is already in the Halkantir
     standard format, skip AI extraction entirely and build the graph
     directly from it.
 
@@ -714,13 +750,9 @@ async def ingest(
 
         validation = graph.validate()
         if validation.errors:
-            logger.warning(
-                "Graph validation errors (standard): %s", validation.errors
-            )
+            logger.warning("Graph validation errors (standard): %s", validation.errors)
         if validation.warnings:
-            logger.info(
-                "Graph validation warnings: %s", validation.warnings
-            )
+            logger.info("Graph validation warnings: %s", validation.warnings)
 
         gaps, follow_up_questions = detect_gaps(graph)
 
@@ -730,13 +762,13 @@ async def ingest(
             confidence=1.0,
             gaps=gaps,
             follow_up_questions=follow_up_questions,
-            files_parsed=[{
-                "filename": standard_filename,
-                "type": "json",
-                "chars_extracted": len(
-                    standard.model_dump_json(by_alias=True)
-                ),
-            }],
+            files_parsed=[
+                {
+                    "filename": standard_filename,
+                    "type": "json",
+                    "chars_extracted": len(standard.model_dump_json(by_alias=True)),
+                }
+            ],
             standard=standard,
         )
 
@@ -752,9 +784,7 @@ async def ingest(
 
     # Collect image data for vision
     image_data: list[tuple[str, bytes]] = [
-        (pf.filename, pf.raw_bytes)
-        for pf in parsed
-        if pf.raw_bytes is not None
+        (pf.filename, pf.raw_bytes) for pf in parsed if pf.raw_bytes is not None
     ]
 
     # Step 3: AI extraction
@@ -775,20 +805,16 @@ async def ingest(
     # Run validation and log warnings
     validation = graph.validate()
     if validation.errors:
-        logger.warning(
-            "Graph validation errors (post-build): %s", validation.errors
-        )
+        logger.warning("Graph validation errors (post-build): %s", validation.errors)
     if validation.warnings:
-        logger.info(
-            "Graph validation warnings: %s", validation.warnings
-        )
+        logger.info("Graph validation warnings: %s", validation.warnings)
 
     # Step 4 (cont.): Detect gaps
     gaps, follow_up_questions = detect_gaps(graph)
 
     # Extract metadata from AI response
     r_unit = str(raw.get("r_unit", "days"))
-    confidence = _clamp(float(raw.get("confidence", 0.0)), 0.0, 1.0)
+    confidence = clamp(float(raw.get("confidence", 0.0)), 0.0, 1.0)
 
     # Build per-file summary
     files_parsed = [pf.to_dict() for pf in parsed]

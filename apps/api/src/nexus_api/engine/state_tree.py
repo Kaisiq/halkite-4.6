@@ -96,10 +96,7 @@ class TreeNode:
         self.worst_path: list[Event] = worst_path if worst_path is not None else []
 
     def __repr__(self) -> str:
-        return (
-            f"TreeNode(id={self.id!r}, depth={self.depth}, "
-            f"H={self.H:.4f}, agent={self.agent!r})"
-        )
+        return f"TreeNode(id={self.id!r}, depth={self.depth}, H={self.H:.4f}, agent={self.agent!r})"
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-safe serialisation (non-recursive to avoid deep nesting)."""
@@ -150,9 +147,7 @@ class StateTree:
         node_ids: list[str] | None = None,
     ) -> None:
         self.root: TreeNode = root
-        self.all_nodes: list[TreeNode] = (
-            all_nodes if all_nodes is not None else [root]
-        )
+        self.all_nodes: list[TreeNode] = all_nodes if all_nodes is not None else [root]
         self.worst_scenarios: list[TreeNode] = (
             worst_scenarios if worst_scenarios is not None else []
         )
@@ -290,9 +285,7 @@ def explore(
         delta_H: float = parent.H - new_H
         cumulative_loss: float = tree.root.H - new_H
         failed_count: int = sum(new_state.phi)
-        recovery_cost: float = sum(
-            g_copy.nodes[i].r for i, phi in enumerate(new_state.phi) if phi
-        )
+        recovery_cost: float = sum(g_copy.nodes[i].r for i, phi in enumerate(new_state.phi) if phi)
 
         child = TreeNode(
             id=str(uuid.uuid4()),
@@ -340,9 +333,7 @@ def backpropagate(tree: StateTree) -> None:
         for child in node.children:
             _backprop(child)
 
-        worst_child: TreeNode = min(
-            node.children, key=lambda c: c.worst_descendant_H
-        )
+        worst_child: TreeNode = min(node.children, key=lambda c: c.worst_descendant_H)
 
         if worst_child.worst_descendant_H < node.worst_descendant_H:
             node.worst_descendant_H = worst_child.worst_descendant_H
@@ -441,11 +432,7 @@ def tree_stats(tree: StateTree) -> dict[str, Any]:
         agent_stats[agent_name] = {
             "nodes_explored": len(nodes),
             "worst_H_found": min(h_values) if h_values else 1.0,
-            "avg_delta_H": (
-                sum(delta_values) / len(delta_values)
-                if delta_values
-                else 0.0
-            ),
+            "avg_delta_H": (sum(delta_values) / len(delta_values) if delta_values else 0.0),
             "unique_failures_found": len(unique_failures),
         }
 
@@ -460,9 +447,7 @@ def tree_stats(tree: StateTree) -> dict[str, Any]:
         lo = i / bucket_count
         hi = (i + 1) / bucket_count
         label = f"{lo:.1f}-{hi:.1f}"
-        h_distribution[label] = sum(
-            1 for h in leaf_h_values if lo <= h < hi
-        )
+        h_distribution[label] = sum(1 for h in leaf_h_values if lo <= h < hi)
     # Include values exactly equal to 1.0 in the last bucket.
     if leaf_h_values and leaf_h_values[-1] == 1.0:
         last_label = f"{(bucket_count - 1) / bucket_count:.1f}-1.0"

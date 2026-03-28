@@ -2,7 +2,14 @@
 
 ## Purpose
 
-Take whatever digital information the user dumps in and produce a valid Graph G as defined in Module 1A.
+Take whatever digital information the user dumps in and produce a valid, evidence-backed Graph `G` as defined in Module 1A.
+
+The research-backed rule for ingestion is:
+
+- AI extracts candidate structure and scoring features
+- deterministic backend logic computes final mathematical values
+- human review resolves the highest-risk ambiguities
+- historical incidents are used for calibration
 
 ---
 
@@ -19,30 +26,49 @@ Data:        .json, .xml
 
 Optionally, the user can also type a free-text description of their organization.
 
+The user may also authorize a Google Drive folder. In that case, the system:
+
+1. Recursively lists files in the selected folder and subfolders
+2. Downloads supported binary files directly
+3. Exports Google Docs / Sheets / Slides into parseable formats
+4. Merges the resulting contents into the same ingestion context as uploads
+
 ---
 
 ## Processing Pipeline
 
 ```
 Step 1: PARSE FILES
-    For each uploaded file:
+    For each uploaded file or Drive file:
         Extract raw text content
         Store as: {filename, type, content}
-    
+
 Step 2: CONCATENATE CONTEXT
-    Combine all extracted text + user description into 
+    Combine all extracted text + user description into
     a single context block
 
-Step 3: AI GRAPH EXTRACTION
-    Send context to Claude with structured instructions
-    Claude outputs: JSON matching Graph schema from Module 1A
+Step 3: AI CANDIDATE EXTRACTION
+    Send context to model with structured instructions
+    Model outputs candidate nodes, candidate edges,
+    evidence, and scoring features
 
-Step 4: VALIDATE
-    Run all validation rules from Module 1A
-    Fix or warn on issues
+Step 4: DETERMINISTIC SCORING
+    Convert extracted features into θ, r, and edge weight
+    using versioned backend formulas
 
-Step 5: RETURN GRAPH
-    Valid Graph G ready for analysis
+Step 5: VALIDATE
+    Run all validation and quality rules from Module 1A
+    Fix, flag, or queue review on issues
+
+Step 6: CALIBRATE
+    Compare graph behavior to known incidents and outages
+    Adjust formulas, features, or missing edges offline
+
+Step 7: FREEZE GRAPH VERSION
+    Store graph, scoring policy, evidence, and provenance
+
+Step 8: RETURN GRAPH
+    Valid Graph G ready for deterministic analysis
 ```
 
 ---
@@ -50,6 +76,7 @@ Step 5: RETURN GRAPH
 ## File Parsing Details
 
 ### PDF
+
 ```
 Library: PyPDF2 or pdfplumber
 Extract: all text pages
@@ -57,6 +84,7 @@ If scanned/image PDF: use Claude vision to read
 ```
 
 ### DOCX
+
 ```
 Library: python-docx
 Extract: all paragraphs, tables, headers
@@ -64,6 +92,7 @@ Tables are especially valuable (employee lists, supplier tables)
 ```
 
 ### XLSX / CSV
+
 ```
 Library: openpyxl / csv module
 Extract: all sheets, all rows
@@ -72,78 +101,118 @@ Format as structured tables in text
 ```
 
 ### Images
+
 ```
 Library: Pillow + Claude API
 Send image to Claude with prompt:
-"Extract all entities and relationships visible in this 
+"Extract all entities and relationships visible in this
 image (org chart, diagram, whiteboard, etc.)"
 ```
 
 ---
 
-## AI Graph Extraction Prompt
+## AI Candidate Extraction Prompt
 
-This is the system prompt sent to Claude for graph construction:
+This is the system prompt sent to the model for graph construction.
+
+The key change is that the model no longer outputs final `theta` or final edge `weight` as pure intuition.
+
+It outputs:
+
+- candidate nodes
+- candidate edges
+- evidence
+- scoring features
+- confidence and uncertainty markers
 
 ```
-You are a network analyst. You will receive the contents of 
-documents from an organization. Your job is to extract ALL 
-entities and ALL dependencies between them, and construct a 
-network graph.
+You are a network analyst. You will receive the contents of
+documents from an organization. Your job is to extract ALL
+entities and ALL causal dependencies between them, and construct
+an evidence-backed candidate graph.
 
 OUTPUT FORMAT: Valid JSON only. No markdown. No explanation.
 
 {
   "layers": ["People", "Technology", "Supply", ...],
+  "scoring_policy_version": "v1",
   "nodes": [
     {
       "id": "unique_snake_case_id",
       "name": "Human Readable Name",
       "layer": "People",
       "h": 1.0,
-      "theta": <float 0-1>,
-      "r": <float>,
-      "meta": {"role": "CEO", "location": "Sofia"}
+      "r_candidate": <float or null>,
+      "meta": {
+        "type": "person",
+        "function": "executive leadership",
+        "owner": "board",
+        "location": "Sofia",
+        "capacity": null,
+        "substitutability": <float 0-1 or null>,
+        "max_tolerable_downtime_hours": <float or null>,
+        "single_point_of_failure": <bool or null>,
+        "evidence": [
+          {
+            "kind": "document",
+            "source": "org_chart.pdf",
+            "confidence": <float 0-1>,
+            "note": "CEO oversees all functions"
+          }
+        ],
+        "scoring_features": {
+          "operational_criticality": <float 0-1 or null>,
+          "irreplaceability": <float 0-1 or null>,
+          "historical_incident_impact": <float 0-1 or null>
+        }
+      }
     }
   ],
   "edges": [
     {
       "from": "node_id_1",
-      "to": "node_id_2", 
-      "weight": <float 0-1>
+      "to": "node_id_2",
+      "meta": {
+        "dependency_type": "operational",
+        "directness": "direct",
+        "substitutes_available": <int or null>,
+        "time_to_substitute_hours": <float or null>,
+        "minimum_support_required": <float 0-1 or null>,
+        "evidence": [
+          {
+            "kind": "architecture_diagram",
+            "source": "infra.drawio",
+            "confidence": <float 0-1>,
+            "note": "service B authenticates through service A"
+          }
+        ],
+        "scoring_features": {
+          "operational": <float 0-1 or null>,
+          "informational": <float 0-1 or null>,
+          "control": <float 0-1 or null>,
+          "physical": <float 0-1 or null>,
+          "financial": <float 0-1 or null>,
+          "substitutability_penalty": <float 0-1 or null>,
+          "workaround_delay": <float 0-1 or null>
+        }
+      }
     }
-  ]
+  ],
+  "open_questions": ["short unresolved ambiguities"]
 }
 
-RULES FOR NODE VALUES:
+RULES FOR EXTRACTION:
 
 h (health): Always set to 1.0 for initial graph construction.
    The system will modify this during simulations.
 
-θ (theta — network dependency): How critical is this node 
-   to the overall network? Consider:
-   - How many other nodes depend on it?
-   - How hard is it to work around if this node disappears?
-   - What fraction of operations/revenue/capability is lost?
-   Examples:
-     CEO of a small company: θ = 0.8-0.95
-     Junior employee with common skills: θ = 0.05-0.15
-     Single critical supplier: θ = 0.7-0.9
-     One of many interchangeable suppliers: θ = 0.1-0.2
-     Core database server: θ = 0.8-0.95
-     Office printer: θ = 0.02-0.05
+Do NOT output final theta values.
+Instead, extract the evidence and scoring features the backend
+will use to compute theta deterministically.
 
-r (recovery cost): Time or money to replace/restore this node.
-   Use consistent units (suggest: days for time, or currency).
-   Examples:
-     Replace a CEO: r = 180 (days) or r = 200000 (currency)
-     Replace a junior employee: r = 14 (days)
-     Switch supplier: r = 30 (days)
-     Restore a server: r = 1 (day)
-     Rebuild a destroyed office: r = 365 (days)
-   
-   Pick ONE unit system and state it in metadata.
-   Default: days.
+For recovery, provide `r_candidate` only when the source gives
+enough evidence. Otherwise return null and explain uncertainty in
+`open_questions`.
 
 RULES FOR EDGES:
 
@@ -151,14 +220,16 @@ Direction: "from" is the node being depended ON.
            "to" is the node that DEPENDS on "from".
            from → to means "to needs from"
 
-Weight: How strong is the dependency?
-   1.0 = total dependency (if "from" dies, "to" cannot function)
-   0.7-0.9 = strong dependency (major impact)
-   0.4-0.6 = moderate dependency (significant but survivable)
-   0.1-0.3 = weak dependency (minor inconvenience)
+Do NOT output final edge weight.
+Instead, output scoring features, evidence, and directness.
 
-COMPLETENESS IS CRITICAL. It is better to include a questionable 
-edge at low weight than to miss a real dependency entirely.
+Only create an edge when there is a plausible causal dependency.
+Do not create edges for mere co-occurrence, same department,
+similarity, or communication alone.
+
+COMPLETENESS IS IMPORTANT, but uncertainty must be explicit.
+Prefer an inferred edge with evidence and low confidence over a
+hallucinated high-confidence direct edge.
 
 Think about these dependency types:
    - Who manages/supervises whom?
@@ -172,9 +243,9 @@ Think about these dependency types:
    - Cross-layer: what technology enables what operations?
    - Cross-layer: what suppliers feed what facilities?
 
-LAYERS: Create layers based on what you see in the data. 
-Use the suggested defaults (People, Technology, Supply, 
-Financial, Facilities, Operations) where applicable, but 
+LAYERS: Create layers based on what you see in the data.
+Use the suggested defaults (People, Technology, Supply,
+Financial, Facilities, Operations) where applicable, but
 add or remove layers as the data warrants.
 ```
 
@@ -182,9 +253,10 @@ add or remove layers as the data warrants.
 
 ## Post-Processing
 
-After AI returns JSON:
+After the model returns candidate JSON:
 
 ### 1. Parse and Validate
+
 ```python
 graph = json.loads(ai_response)
 validate_nodes(graph["nodes"])    # check ranges, uniqueness
@@ -192,7 +264,19 @@ validate_edges(graph["edges"])    # check references, no self-loops
 validate_layers(graph["layers"])  # check all nodes reference valid layers
 ```
 
-### 2. Build Adjacency Matrix
+### 2. Deterministic Scoring
+
+```python
+for node in graph["nodes"]:
+    node["theta"] = score_theta(node["meta"]["scoring_features"], node["meta"])
+    node["r"] = score_recovery(node["r_candidate"], node["meta"])
+
+for edge in graph["edges"]:
+    edge["weight"] = score_edge(edge["meta"]["scoring_features"], edge["meta"])
+```
+
+### 3. Build Adjacency Matrix
+
 ```python
 n = len(graph["nodes"])
 A = np.zeros((n, n))
@@ -202,7 +286,8 @@ for edge in graph["edges"]:
     A[i][j] = edge["weight"]
 ```
 
-### 3. Connectivity Check
+### 4. Connectivity Check
+
 ```python
 G_nx = nx.from_numpy_array(A, create_using=nx.DiGraph)
 if not nx.is_weakly_connected(G_nx):
@@ -210,7 +295,8 @@ if not nx.is_weakly_connected(G_nx):
     # Report which nodes are isolated
 ```
 
-### 4. Gap Detection
+### 5. Gap Detection
+
 ```python
 # Find nodes with no incoming edges (nothing depends on them AND
 # they depend on nothing)
@@ -223,31 +309,47 @@ for i, node in enumerate(nodes):
         warn(f"Node {node.id} has high θ={node.theta} but nothing depends on it")
 ```
 
+### 6. Calibration Against Known Incidents
+
+```python
+for incident in historical_incidents:
+    predicted = simulate_incident(graph, incident)
+    compare(predicted, incident.actual_outcome)
+    # Use mismatches to find missing edges, bad weights,
+    # or overstated substitutability assumptions
+```
+
 ---
 
 ## AI Follow-Up Questions
 
-After initial graph construction, scan for suspicious patterns and generate 2-3 targeted questions:
+After initial graph construction, scan for suspicious patterns and generate targeted questions:
 
 ```
 Triggers for follow-up:
-1. Layer with only 1 node → "Is [layer] really just [node]? 
+1. Layer with only 1 node → "Is [layer] really just [node]?
    Are there other [layer] components?"
 
-2. Node with θ > 0.7 and no redundancy → "You have [node] as 
+2. Node with θ > 0.7 and no redundancy → "You have [node] as
    a critical dependency. Is there a backup?"
 
-3. All suppliers in same layer cluster → "Your suppliers [list] 
-   seem independent. Do they share any common dependencies 
+3. Edge inferred from weak evidence → "Does [target] actually
+   depend on [source], or are they only related organizationally?"
+
+4. All suppliers in same layer cluster → "Your suppliers [list]
+   seem independent. Do they share any common dependencies
    (same country, same raw material source)?"
 
-4. No cross-layer edges between two layers → "I don't see how 
-   [layer A] and [layer B] are connected. Is there a dependency 
+5. No cross-layer edges between two layers → "I don't see how
+   [layer A] and [layer B] are connected. Is there a dependency
    I'm missing?"
 
-5. Very few edges relative to nodes → "Your network seems 
-   sparse. Are there dependencies I might have missed from 
+6. Very few edges relative to nodes → "Your network seems
+   sparse. Are there dependencies I might have missed from
    the documents?"
+
+7. Historical incident not reproducible → "When [incident] happened,
+   what actually broke next that is not represented in this graph?"
 ```
 
 ---

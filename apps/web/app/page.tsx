@@ -21,6 +21,46 @@ const ACCEPT_TYPES = [
 ];
 
 const ACCEPT_STRING = ACCEPT_TYPES.join(",");
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+
+type GoogleTokenResponse = {
+  access_token: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleTokenClient = {
+  requestAccessToken: (options?: { prompt?: string }) => void;
+};
+
+type GoogleTokenError = {
+  message?: string;
+  type?: string;
+};
+
+type DriveFolderNode = {
+  id: string;
+  name: string;
+};
+
+type GoogleAccounts = {
+  oauth2: {
+    initTokenClient: (config: {
+      client_id: string;
+      scope: string;
+      callback: (response: GoogleTokenResponse) => void;
+      error_callback?: (error: GoogleTokenError) => void;
+    }) => GoogleTokenClient;
+  };
+};
+
+type GoogleWindow = Window & {
+  google?: {
+    accounts?: GoogleAccounts;
+  };
+};
 
 const PIPELINE_STEPS = [
   {
@@ -98,10 +138,17 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function displayDriveFolderLabel(value: string): string {
+  if (!value.trim()) return "No folder selected";
+  if (value.startsWith("http")) return "Manual folder link";
+  return value;
+}
+
 export default function DataInputPage() {
   const router = useRouter();
   const {
     uploadFiles,
+    importGoogleDriveFolder,
     uploading,
     uploadError,
     uploadProgress,
@@ -109,18 +156,157 @@ export default function DataInputPage() {
     gaps,
     followUpQuestions,
     confidence,
+    driveFolder,
   } = useNexusStore();
 
   const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const [dragging, setDragging] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
+  const [driveDialogOpen, setDriveDialogOpen] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState("");
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [driveAuthPending, setDriveAuthPending] = useState(false);
+  const [driveFolders, setDriveFolders] = useState<DriveFolderNode[]>([]);
+  const [driveFolderPath, setDriveFolderPath] = useState<DriveFolderNode[]>([
+    { id: "root", name: "My Drive" },
+  ]);
+  const [driveFolderBrowserLoading, setDriveFolderBrowserLoading] =
+    useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const driveDialogRef = useRef<HTMLDivElement>(null);
+  const driveFolderInputRef = useRef<HTMLInputElement>(null);
+  const driveTokenClientRef = useRef<GoogleTokenClient | null>(null);
+  const driveAccessTokenRef = useRef<string | null>(null);
+  const isDriveImporting = driveDialogOpen && uploading;
+  const selectedDriveFolder =
+    driveFolders.find((folder) => folder.id === driveFolderId) ??
+    driveFolderPath.find((folder) => folder.id === driveFolderId) ??
+    null;
 
   useEffect(() => {
     if (!sessionId) return;
     router.push(`/network/${sessionId}` as Route);
   }, [router, sessionId]);
+
+  useEffect(() => {
+    if (!driveDialogOpen) return;
+
+    driveDialogRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    window.setTimeout(() => {
+      driveFolderInputRef.current?.focus();
+    }, 120);
+  }, [driveDialogOpen]);
+
+  const loadDriveFolders = useCallback(
+    async (parent: DriveFolderNode, nextPath?: DriveFolderNode[]) => {
+      if (!driveAccessTokenRef.current) {
+        throw new Error("Authorize Google Drive before browsing folders.");
+      }
+
+      setDriveFolderBrowserLoading(true);
+      setDriveError(null);
+
+      try {
+        const params = new URLSearchParams({
+          q:
+            parent.id === "root"
+              ? `mimeType='${DRIVE_FOLDER_MIME_TYPE}' and 'root' in parents and trashed=false`
+              : `mimeType='${DRIVE_FOLDER_MIME_TYPE}' and '${parent.id}' in parents and trashed=false`,
+          fields: "files(id,name)",
+          orderBy: "name_natural",
+          pageSize: "200",
+          supportsAllDrives: "true",
+          includeItemsFromAllDrives: "true",
+        });
+
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${driveAccessTokenRef.current}`,
+              Accept: "application/json",
+            },
+          },
+        );
+
+        const payload = (await response.json()) as {
+          error?: { message?: string };
+          files?: Array<{ id?: string; name?: string }>;
+        };
+
+        if (!response.ok) {
+          throw new Error(
+            payload.error?.message || "Failed to load Google Drive folders.",
+          );
+        }
+
+        const folders = (payload.files ?? [])
+          .filter((folder) => folder.id && folder.name)
+          .map((folder) => ({
+            id: folder.id as string,
+            name: folder.name as string,
+          }));
+
+        setDriveFolders(folders);
+        if (nextPath) {
+          setDriveFolderPath(nextPath);
+        }
+        return true;
+      } catch (error) {
+        setDriveFolders([]);
+        setDriveError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load Google Drive folders.",
+        );
+        return false;
+      } finally {
+        setDriveFolderBrowserLoading(false);
+      }
+    },
+    [],
+  );
+
+  const loadGoogleIdentity = useCallback(async (): Promise<void> => {
+    if (typeof window === "undefined") {
+      throw new Error("Google Drive auth is only available in the browser.");
+    }
+
+    const googleWindow = window as GoogleWindow;
+    if (googleWindow.google?.accounts?.oauth2) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>(
+        'script[data-google-identity="true"]',
+      );
+
+      if (existing) {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener(
+          "error",
+          () => reject(new Error("Failed to load Google Identity Services.")),
+          { once: true },
+        );
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleIdentity = "true";
+      script.onload = () => resolve();
+      script.onerror = () =>
+        reject(new Error("Failed to load Google Identity Services."));
+      document.head.appendChild(script);
+    });
+  }, []);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming).filter((f) => {
@@ -129,7 +315,9 @@ export default function DataInputPage() {
     });
     setFiles((prev) => {
       const existing = new Set(prev.map((file) => file.name + file.size));
-      const deduped = arr.filter((file) => !existing.has(file.name + file.size));
+      const deduped = arr.filter(
+        (file) => !existing.has(file.name + file.size),
+      );
       return [...prev, ...deduped];
     });
   }, []);
@@ -174,13 +362,137 @@ export default function DataInputPage() {
     }
   };
 
+  const handleConnectGoogleDrive = useCallback(async () => {
+    setDriveError(null);
+
+    if (!GOOGLE_CLIENT_ID) {
+      setDriveError(
+        "Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID. Configure Google OAuth before enabling Drive import.",
+      );
+      return;
+    }
+
+    try {
+      setDriveAuthPending(true);
+      await loadGoogleIdentity();
+      const googleWindow = window as GoogleWindow;
+      const accounts = googleWindow.google?.accounts;
+      if (!accounts?.oauth2) {
+        throw new Error("Google Identity Services did not initialize.");
+      }
+
+      const accessToken = await new Promise<string>((resolve, reject) => {
+        driveTokenClientRef.current = accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: GOOGLE_SCOPE,
+          callback: (response) => {
+            if (response.error) {
+              reject(new Error(response.error_description || response.error));
+              return;
+            }
+            if (!response.access_token) {
+              reject(new Error("Google Drive access token was not returned."));
+              return;
+            }
+            resolve(response.access_token);
+          },
+          error_callback: (error) => {
+            reject(
+              new Error(
+                error.message ||
+                  error.type ||
+                  "Google Drive authorization did not complete.",
+              ),
+            );
+          },
+        });
+
+        driveTokenClientRef.current.requestAccessToken({ prompt: "consent" });
+      });
+
+      driveAccessTokenRef.current = accessToken;
+      setDriveFolderId("");
+      setDriveFolderPath([{ id: "root", name: "My Drive" }]);
+      const loaded = await loadDriveFolders(
+        { id: "root", name: "My Drive" },
+        [{ id: "root", name: "My Drive" }],
+      );
+      if (!loaded) {
+        return;
+      }
+      setDriveDialogOpen(true);
+    } catch (error) {
+      setDriveError(
+        error instanceof Error ? error.message : "Google Drive auth failed.",
+      );
+      setDriveFolders([]);
+    } finally {
+      setDriveAuthPending(false);
+    }
+  }, [loadDriveFolders, loadGoogleIdentity]);
+
+  const handleOpenDriveFolder = useCallback(
+    async (folder: DriveFolderNode) => {
+      const nextPath = [...driveFolderPath, folder];
+      const loaded = await loadDriveFolders(folder, nextPath);
+      if (loaded) {
+        setDriveFolderId(folder.id);
+      }
+    },
+    [driveFolderPath, loadDriveFolders],
+  );
+
+  const handleJumpToDrivePath = useCallback(
+    async (index: number) => {
+      const nextPath = driveFolderPath.slice(0, index + 1);
+      const target = nextPath.at(-1);
+      if (!target) return;
+
+      const loaded = await loadDriveFolders(target, nextPath);
+      if (loaded) {
+        setDriveFolderId(target.id === "root" ? "" : target.id);
+      }
+    },
+    [driveFolderPath, loadDriveFolders],
+  );
+
+  const handleImportGoogleDrive = useCallback(async () => {
+    if (!driveAccessTokenRef.current) {
+      setDriveError("Authorize Google Drive before importing a folder.");
+      return;
+    }
+
+    if (!driveFolderId.trim()) {
+      setDriveError("Paste a Google Drive folder link or folder id.");
+      return;
+    }
+
+    setDriveError(null);
+    const imported = await importGoogleDriveFolder(
+      driveAccessTokenRef.current,
+      driveFolderId.trim(),
+      description || undefined,
+    );
+    if (imported) {
+      setDriveDialogOpen(false);
+      return;
+    }
+
+    setDriveError(
+      useNexusStore.getState().uploadError ||
+        "Google Drive import failed. Check the folder id and your access.",
+    );
+  }, [description, driveFolderId, importGoogleDriveFolder]);
+
   return (
     <main className="app-shell px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-[1540px] flex-col gap-8">
         <header className="fade-rise border-b hairline pb-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <div className="eyebrow mb-3">Nexus // Organizational Survival Analysis</div>
+              <div className="eyebrow mb-3">
+                Nexus // Organizational Survival Analysis
+              </div>
               <h1 className="display-face max-w-4xl text-[clamp(3.3rem,8vw,6.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-[var(--foreground)]">
                 Reveal the dependencies that can break the whole organization.
               </h1>
@@ -203,13 +515,25 @@ export default function DataInputPage() {
           <div className="fade-rise-delay flex flex-col gap-8">
             <div className="max-w-2xl space-y-5">
               <p className="max-w-xl text-lg leading-8 text-[var(--muted-strong)] sm:text-xl">
-                Upload your org data, build a living dependency map, and rank the
-                catastrophic failure paths before they happen in production.
+                Upload your org data, build a living dependency map, and rank
+                the catastrophic failure paths before they happen in production.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
-                <ValueBlock label="Input" value="Any source" detail="CSV, docs, images, notes" />
-                <ValueBlock label="Output" value="True graph" detail="Nodes, edges, weakpoints" />
-                <ValueBlock label="Decision" value="Fix first" detail="Scenario-ranked action plan" />
+                <ValueBlock
+                  label="Input"
+                  value="Any source"
+                  detail="CSV, docs, images, notes"
+                />
+                <ValueBlock
+                  label="Output"
+                  value="True graph"
+                  detail="Nodes, edges, weakpoints"
+                />
+                <ValueBlock
+                  label="Decision"
+                  value="Fix first"
+                  detail="Scenario-ranked action plan"
+                />
               </div>
             </div>
 
@@ -244,13 +568,14 @@ export default function DataInputPage() {
                       Build the network.
                     </h2>
                     <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                      Start with one file or drop the full operational footprint.
-                      We will extract entities, connect dependencies, and push the
-                      session into the graph view.
+                      Start with one file or drop the full operational
+                      footprint. We will extract entities, connect dependencies,
+                      and push the session into the graph view.
                     </p>
                   </div>
                   <div className="metric-chip rounded-2xl px-4 py-3 text-sm">
-                    Accepted formats: PDF, DOCX, XLSX, CSV, TSV, PNG, JPG, JSON, XML, TXT, MD
+                    Accepted formats: PDF, DOCX, XLSX, CSV, TSV, PNG, JPG, JSON,
+                    XML, TXT, MD
                   </div>
                 </div>
 
@@ -290,15 +615,21 @@ export default function DataInputPage() {
                     </div>
                     <div>
                       <p className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
-                        {dragging ? "Release to stage the files" : "Drop files or browse your source set"}
+                        {dragging
+                          ? "Release to stage the files"
+                          : "Drop files or browse your source set"}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        Use one employee CSV to test the full path, or combine org
-                        charts, process docs, and operational notes for a richer graph.
+                        Use one employee CSV to test the full path, or combine
+                        org charts, process docs, and operational notes for a
+                        richer graph.
                       </p>
                     </div>
                     <div className="justify-self-start lg:justify-self-end">
-                      <button type="button" className="ghost-button rounded-full px-5 py-3 text-sm font-semibold">
+                      <button
+                        type="button"
+                        className="ghost-button rounded-full px-5 py-3 text-sm font-semibold"
+                      >
                         Select Files
                       </button>
                     </div>
@@ -366,8 +697,8 @@ export default function DataInputPage() {
                       <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
                         Suggested test path
                       </div>
-                      Start with the org CSV, then expand into diagrams and process notes
-                      to increase graph coverage.
+                      Start with the org CSV, then expand into diagrams and
+                      process notes to increase graph coverage.
                     </div>
                   </div>
                 )}
@@ -389,6 +720,16 @@ export default function DataInputPage() {
                   <div className="flex flex-col gap-3 xl:min-w-[240px]">
                     <button
                       type="button"
+                      className="ghost-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleConnectGoogleDrive}
+                      disabled={uploading || driveAuthPending}
+                    >
+                      {driveAuthPending
+                        ? "Authorizing Drive"
+                        : "Connect Google Drive"}
+                    </button>
+                    <button
+                      type="button"
                       className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
                       onClick={handleBuild}
                       disabled={files.length === 0 || uploading}
@@ -397,11 +738,30 @@ export default function DataInputPage() {
                       {uploading ? "Building Network" : "Build Network"}
                     </button>
                     <p className="text-xs leading-5 text-[var(--muted)]">
-                      The graph becomes the source of truth for analysis, simulation,
-                      and scenario ranking.
+                      Drive import uses a browser OAuth popup. Your Google OAuth
+                      client must allow this app origin, for example
+                      `http://localhost:3000` in local development.
                     </p>
                   </div>
                 </div>
+
+                {driveFolder && (
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-[var(--foreground)]">
+                    Imported Drive folder{" "}
+                    <span className="font-semibold">{driveFolder.name}</span>{" "}
+                    with {driveFolder.file_count} files
+                    {driveFolder.files_skipped > 0
+                      ? ` (${driveFolder.files_skipped} skipped)`
+                      : ""}
+                    .
+                  </div>
+                )}
+
+                {driveError && (
+                  <div className="rounded-[24px] border border-[color:rgb(212_107_70_/_0.3)] bg-[color:rgb(212_107_70_/_0.08)] px-5 py-4 text-sm text-[color:rgb(255_202_186)]">
+                    {driveError}
+                  </div>
+                )}
 
                 {uploadError && (
                   <div className="rounded-[24px] border border-[color:rgb(212_107_70_/_0.3)] bg-[color:rgb(212_107_70_/_0.08)] px-5 py-4 text-sm text-[color:rgb(255_202_186)]">
@@ -421,8 +781,8 @@ export default function DataInputPage() {
                           {uploadProgress}
                         </p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          Extracting entities, linking dependencies, and staging the
-                          first graph state.
+                          Extracting entities, linking dependencies, and staging
+                          the first graph state.
                         </p>
                       </div>
                     </div>
@@ -430,6 +790,236 @@ export default function DataInputPage() {
                 )}
               </div>
             </section>
+
+            {driveDialogOpen && (
+              <section className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[color:rgb(6_10_18_/_0.78)] px-4 py-8 backdrop-blur-sm sm:px-6">
+                <div
+                  ref={driveDialogRef}
+                  className="control-surface relative w-full max-w-4xl overflow-hidden rounded-[28px] p-6 shadow-[0_32px_120px_rgba(0,0,0,0.45)]"
+                >
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <div className="eyebrow mb-2">Google Drive import</div>
+                      <h3 className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
+                        Choose the folder to import.
+                      </h3>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                        Browse your Drive folders below, select one, then import
+                        it. Manual folder URL/id entry remains available as a
+                        fallback.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => setDriveDialogOpen(false)}
+                      disabled={isDriveImporting}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
+                    <label className="field-shell block rounded-[26px] p-4">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+                        Selected folder
+                      </div>
+                      <input
+                        ref={driveFolderInputRef}
+                        value={driveFolderId}
+                        onChange={(e) => setDriveFolderId(e.target.value)}
+                        placeholder="Pick a folder below or paste a Drive folder URL/id"
+                        className="w-full border-0 bg-transparent text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[color:rgb(161_177_196_/_0.36)]"
+                      />
+                    </label>
+
+                    <div className="flex flex-col gap-3 xl:min-w-[240px]">
+                      <button
+                        type="button"
+                        className="accent-button rounded-full px-6 py-4 text-sm uppercase tracking-[0.24em] disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={handleImportGoogleDrive}
+                        disabled={uploading || driveFolderBrowserLoading}
+                      >
+                        {isDriveImporting ? "Importing Folder" : "Import Folder"}
+                      </button>
+                      <p className="text-xs leading-5 text-[var(--muted)]">
+                        Requires a browser-authorized Google account with read
+                        access to the selected folder.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(240px,0.8fr)]">
+                    <div className="rounded-[26px] border border-white/10 bg-white/[0.03] p-4">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+                        Current selection
+                      </div>
+                      <div className="text-base font-semibold text-[var(--foreground)]">
+                        {selectedDriveFolder?.name ||
+                          displayDriveFolderLabel(driveFolderId)}
+                      </div>
+                      <div className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                        {selectedDriveFolder
+                          ? `Folder id: ${selectedDriveFolder.id}`
+                          : driveFolderId
+                            ? "Using a manually entered folder reference."
+                            : "Select a folder from the browser or paste a folder URL/id."}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(135deg,rgba(120,226,201,0.12),rgba(80,110,176,0.08))] p-4">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
+                        Import flow
+                      </div>
+                      <div className="space-y-2 text-sm text-[var(--foreground)]">
+                        <div className={driveAuthPending ? "text-[var(--accent-soft)]" : "text-[var(--muted)]"}>
+                          01 Authorize Google Drive
+                        </div>
+                        <div className={driveDialogOpen ? "text-[var(--accent-soft)]" : "text-[var(--muted)]"}>
+                          02 Choose target folder
+                        </div>
+                        <div className={isDriveImporting ? "text-[var(--accent-soft)]" : "text-[var(--muted)]"}>
+                          03 Import and build graph
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-[26px] border border-white/10 bg-white/[0.03] p-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      {driveFolderPath.map((folder, index) => (
+                        <button
+                          key={`${folder.id}-${index}`}
+                          type="button"
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+                          onClick={() => void handleJumpToDrivePath(index)}
+                          disabled={driveFolderBrowserLoading}
+                        >
+                          {folder.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-[var(--foreground)]">
+                          Browse folders
+                        </div>
+                        <div className="text-xs leading-5 text-[var(--muted)]">
+                          Open a folder to inspect its children, or select it
+                          directly for import.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="ghost-button rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={() =>
+                          void loadDriveFolders(
+                            driveFolderPath[driveFolderPath.length - 1] ?? {
+                              id: "root",
+                              name: "My Drive",
+                            },
+                            driveFolderPath,
+                          )
+                        }
+                        disabled={driveFolderBrowserLoading || isDriveImporting}
+                      >
+                        {driveFolderBrowserLoading ? "Loading" : "Refresh"}
+                      </button>
+                    </div>
+
+                    <div className="grid gap-2">
+                      {driveFolderBrowserLoading ? (
+                        <div className="rounded-[20px] border border-white/8 px-4 py-6 text-sm text-[var(--muted)]">
+                          Loading Drive folders...
+                        </div>
+                      ) : driveFolders.length > 0 ? (
+                        driveFolders.map((folder) => (
+                          <div
+                            key={folder.id}
+                            className="flex items-center justify-between gap-3 rounded-[20px] border border-white/8 bg-white/[0.02] px-4 py-3"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium text-[var(--foreground)]">
+                                {folder.name}
+                              </div>
+                              <div className="truncate text-xs text-[var(--muted)]">
+                                {folder.id}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+                                onClick={() => setDriveFolderId(folder.id)}
+                                disabled={isDriveImporting}
+                              >
+                                Select
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+                                onClick={() => void handleOpenDriveFolder(folder)}
+                                disabled={isDriveImporting}
+                              >
+                                Open
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-[20px] border border-white/8 px-4 py-6 text-sm text-[var(--muted)]">
+                          No child folders found here.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {(driveError || uploadError) && (
+                    <div className="mt-4 rounded-[24px] border border-[color:rgb(212_107_70_/_0.3)] bg-[color:rgb(212_107_70_/_0.08)] px-5 py-4 text-sm text-[color:rgb(255_202_186)]">
+                      {driveError || uploadError}
+                    </div>
+                  )}
+
+                  {isDriveImporting && (
+                    <div className="drive-import-overlay absolute inset-0 flex items-center justify-center rounded-[28px] p-5">
+                      <div className="w-full max-w-md rounded-[28px] border border-[color:rgb(120_226_201_/_0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+                        <div className="mb-4 flex items-center gap-3">
+                          <div className="relative h-12 w-12">
+                            <span className="absolute inset-0 rounded-full border border-[color:rgb(120_226_201_/_0.18)]" />
+                            <span className="absolute inset-[10px] rounded-full bg-[var(--accent-soft)] signal-pulse" />
+                            <span className="drive-import-spinner absolute inset-[3px] rounded-full border-2 border-transparent border-t-[var(--accent)] border-r-[var(--accent-soft)]" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
+                              Google Drive import
+                            </div>
+                            <div className="text-lg font-semibold text-[var(--foreground)]">
+                              {uploadProgress || "Importing folder"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mb-4 h-2 overflow-hidden rounded-full bg-white/6">
+                          <div className="drive-progress-bar h-full w-full rounded-full" />
+                        </div>
+
+                        <div className="rounded-[22px] border border-white/8 bg-black/10 px-4 py-3 text-sm text-[var(--muted-strong)]">
+                          {selectedDriveFolder?.name ||
+                            displayDriveFolderLabel(driveFolderId)}
+                        </div>
+
+                        <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                          Scanning the folder, downloading supported files, and
+                          building the first graph snapshot. This can take a bit
+                          for larger Drive trees.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
             {showFollowUp && (
               <section className="control-surface rounded-[28px] p-6">
@@ -456,7 +1046,9 @@ export default function DataInputPage() {
                             key={question}
                             className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-[var(--foreground)]"
                           >
-                            <span className="text-[var(--accent-soft)]">{index + 1}</span>
+                            <span className="text-[var(--accent-soft)]">
+                              {index + 1}
+                            </span>
                             <span>{question}</span>
                           </li>
                         ))}
@@ -507,9 +1099,9 @@ export default function DataInputPage() {
               </div>
 
               <p className="max-w-lg text-sm leading-6 text-[var(--muted)] sm:text-base">
-                The interface should feel like a resilience war room from the first
-                screen. This preview hints at what the graph view becomes once the
-                upload completes.
+                The interface should feel like a resilience war room from the
+                first screen. This preview hints at what the graph view becomes
+                once the upload completes.
               </p>
 
               <div className="relative mt-8 overflow-hidden rounded-[28px] border border-white/10 bg-[color:rgb(6_13_24_/_0.54)] px-4 py-6 sm:px-6">
@@ -517,7 +1109,10 @@ export default function DataInputPage() {
                   <defs>
                     <linearGradient id="edgeGlow" x1="0%" x2="100%">
                       <stop offset="0%" stopColor="rgba(132, 198, 244, 0.24)" />
-                      <stop offset="100%" stopColor="rgba(123, 220, 198, 0.58)" />
+                      <stop
+                        offset="100%"
+                        stopColor="rgba(123, 220, 198, 0.58)"
+                      />
                     </linearGradient>
                   </defs>
 
@@ -549,10 +1144,26 @@ export default function DataInputPage() {
                   })}
 
                   {PREVIEW_NODES.map((node, index) => (
-                    <g key={node.name} transform={`translate(${node.x}, ${node.y})`}>
-                      <circle r={node.size + 16} fill={node.color} opacity="0.07" />
-                      <circle r={node.size + 8} fill={node.color} opacity="0.05" />
-                      <circle r={node.size + 18} stroke={node.color} strokeOpacity="0.32" fill="none">
+                    <g
+                      key={node.name}
+                      transform={`translate(${node.x}, ${node.y})`}
+                    >
+                      <circle
+                        r={node.size + 16}
+                        fill={node.color}
+                        opacity="0.07"
+                      />
+                      <circle
+                        r={node.size + 8}
+                        fill={node.color}
+                        opacity="0.05"
+                      />
+                      <circle
+                        r={node.size + 18}
+                        stroke={node.color}
+                        strokeOpacity="0.32"
+                        fill="none"
+                      >
                         {index < 2 ? (
                           <animate
                             attributeName="r"
@@ -590,9 +1201,21 @@ export default function DataInputPage() {
                 </svg>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <PreviewMetric label="People layer" value="14 nodes" accent="var(--accent-soft)" />
-                  <PreviewMetric label="Critical path" value="3 jumps" accent="#f0b663" />
-                  <PreviewMetric label="Collapse risk" value="0.28 H" accent="#e28766" />
+                  <PreviewMetric
+                    label="People layer"
+                    value="14 nodes"
+                    accent="var(--accent-soft)"
+                  />
+                  <PreviewMetric
+                    label="Critical path"
+                    value="3 jumps"
+                    accent="#f0b663"
+                  />
+                  <PreviewMetric
+                    label="Collapse risk"
+                    value="0.28 H"
+                    accent="#e28766"
+                  />
                 </div>
               </div>
             </section>
@@ -601,12 +1224,12 @@ export default function DataInputPage() {
               <div className="eyebrow mb-2">Operator notes</div>
               <div className="space-y-4 text-sm leading-6 text-[var(--muted)]">
                 <p>
-                  Keep the graph as the largest visual object. Every deeper screen
-                  should feel connected to this first decision.
+                  Keep the graph as the largest visual object. Every deeper
+                  screen should feel connected to this first decision.
                 </p>
                 <p>
-                  The UI is deliberately dense but readable: less dashboard chrome,
-                  more source-of-truth structure.
+                  The UI is deliberately dense but readable: less dashboard
+                  chrome, more source-of-truth structure.
                 </p>
               </div>
             </section>
