@@ -149,8 +149,9 @@ export default function DataInputPage() {
 
   useEffect(() => {
     if (!sessionId) return;
+    if (gaps.length > 0 || followUpQuestions.length > 0) return;
     router.push(`/network/${sessionId}` as Route);
-  }, [router, sessionId]);
+  }, [followUpQuestions.length, gaps.length, router, sessionId]);
 
   useEffect(() => {
     if (gaps.length > 0 || followUpQuestions.length > 0) {

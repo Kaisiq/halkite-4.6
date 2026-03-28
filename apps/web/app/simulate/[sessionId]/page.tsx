@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
+import { getGraph } from "@/lib/api";
 import { useNexusStore } from "@/lib/store";
 import type {
   ExploreConfig,
@@ -338,6 +339,7 @@ export default function SimulatePage() {
   const runExploration = useNexusStore((s) => s.runExploration);
   const activeScenarioIndex = useNexusStore((s) => s.activeScenarioIndex);
   const setActiveScenario = useNexusStore((s) => s.setActiveScenario);
+  const setGraph = useNexusStore((s) => s.setGraph);
 
   // -- Local state --
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(
@@ -371,6 +373,16 @@ export default function SimulatePage() {
       setSessionId(sessionId);
     }
   }, [sessionId, storeSessionId, setSessionId]);
+
+  useEffect(() => {
+    if (!sessionId || graph) return;
+
+    getGraph(sessionId)
+      .then((data) => setGraph(data.graph))
+      .catch((error) => {
+        console.error("[simulate] graph fetch error:", error);
+      });
+  }, [graph, sessionId, setGraph]);
 
   // -- Toggle agent --
   const toggleAgent = useCallback((agentType: string) => {

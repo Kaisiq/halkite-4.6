@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import { useNexusStore } from "@/lib/store";
-import { getReport } from "@/lib/api";
+import { getGraph, getReport } from "@/lib/api";
 import type { Scenario, Recommendation, ScenarioPath } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -314,6 +314,7 @@ export default function ReportPage() {
   const scenarios = useNexusStore((s) => s.scenarios);
   const recommendations = useNexusStore((s) => s.recommendations);
   const graph = useNexusStore((s) => s.graph);
+  const setGraph = useNexusStore((s) => s.setGraph);
 
   useEffect(() => {
     if (scenarios.length === 0 && sessionId) {
@@ -327,6 +328,14 @@ export default function ReportPage() {
         .catch(() => {});
     }
   }, [sessionId, scenarios.length]);
+
+  useEffect(() => {
+    if (!sessionId || graph) return;
+
+    getGraph(sessionId)
+      .then((data) => setGraph(data.graph))
+      .catch(() => {});
+  }, [graph, sessionId, setGraph]);
 
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const totalNodes = graph?.nodes.length ?? 0;
