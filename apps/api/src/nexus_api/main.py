@@ -664,6 +664,15 @@ async def explore(body: ExploreRequest) -> JSONResponse:
         session.vulnerability_report,
         resilience_profile=resilience_data,
     )
+
+    # Generate AI narratives for worst-case scenarios
+    try:
+        from nexus_api.results.ranking import generate_all_narratives
+
+        await generate_all_narratives(report.worst_scenarios, session.graph)
+    except Exception as exc:
+        logger.warning("Narrative generation failed (non-fatal): %s", exc)
+
     session.final_report = report
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
@@ -955,6 +964,14 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
             session.vulnerability_report,
             resilience_profile=ws_resilience_data,
         )
+
+        try:
+            from nexus_api.results.ranking import generate_all_narratives
+
+            await generate_all_narratives(report.worst_scenarios, session.graph)
+        except Exception as exc:
+            logger.warning("Narrative generation failed (non-fatal): %s", exc)
+
         session.final_report = report
 
         complete_msg: dict[str, Any] = {
