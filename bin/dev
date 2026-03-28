@@ -62,7 +62,7 @@ main() {
   ) &
   WEB_PID=$!
 
-  wait -n "$API_PID" "$WEB_PID"
+  wait "$API_PID" "$WEB_PID"
 }
 
 main "$@"

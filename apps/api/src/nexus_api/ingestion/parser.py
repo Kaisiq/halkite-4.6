@@ -219,10 +219,73 @@ def _parse_csv(data: bytes, delimiter: str = ",") -> str:
 
 
 def _parse_json(data: bytes) -> str:
-    """Pretty-print JSON content."""
+    """Convert JSON content into a readable text representation.
+
+    Arrays of objects are formatted as ``Header: value`` pairs (similar to
+    CSV output) so the AI extraction prompt sees a consistent format.
+    Nested objects are flattened with dotted keys.
+    """
     text = data.decode("utf-8", errors="replace")
     parsed = json.loads(text)
-    return json.dumps(parsed, indent=2, ensure_ascii=False)
+
+    # Unwrap a single top-level key that holds the array
+    # e.g. {"employees": [{...}, ...]}
+    if (
+        isinstance(parsed, dict)
+        and len(parsed) == 1
+        and isinstance(next(iter(parsed.values())), list)
+    ):
+        parsed = next(iter(parsed.values()))
+
+    # Array of objects → tabular header/value format (like CSV)
+    if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
+        return _json_records_to_text(parsed)
+
+    # Fallback: indented JSON with a hint that it's structured data
+    return "Structured JSON data:\n" + json.dumps(parsed, indent=2, ensure_ascii=False)
+
+
+def _flatten_obj(obj: Any, prefix: str = "") -> list[tuple[str, str]]:
+    """Flatten a nested dict into ``(dotted_key, value)`` pairs."""
+    pairs: list[tuple[str, str]] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            full_key = f"{prefix}.{k}" if prefix else str(k)
+            if isinstance(v, dict):
+                pairs.extend(_flatten_obj(v, full_key))
+            elif isinstance(v, list):
+                pairs.append((full_key, ", ".join(str(i) for i in v)))
+            else:
+                pairs.append((full_key, str(v) if v is not None else ""))
+    else:
+        pairs.append((prefix or "value", str(obj)))
+    return pairs
+
+
+def _json_records_to_text(records: list[dict[str, Any]]) -> str:
+    """Format a list of JSON objects as header/value rows."""
+    # Collect all keys across records to build a stable header
+    all_keys: list[str] = []
+    seen: set[str] = set()
+    for record in records:
+        for k, _ in _flatten_obj(record):
+            if k not in seen:
+                all_keys.append(k)
+                seen.add(k)
+
+    parts: list[str] = ["Headers: " + " | ".join(all_keys)]
+
+    for record in records:
+        flat = dict(_flatten_obj(record))
+        pairs: list[str] = []
+        for key in all_keys:
+            val = flat.get(key, "")
+            if val:
+                pairs.append(f"{key}: {val}")
+        if pairs:
+            parts.append(", ".join(pairs))
+
+    return "\n".join(parts)
 
 
 def _parse_xml(data: bytes) -> str:

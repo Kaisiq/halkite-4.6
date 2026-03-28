@@ -383,7 +383,7 @@ async def extract_graph(
         config=types.GenerateContentConfig(
             system_instruction=_SYSTEM_PROMPT,
             temperature=0,
-            max_output_tokens=8192,
+            max_output_tokens=65536,
             response_mime_type="application/json",
         ),
     )
@@ -677,7 +677,6 @@ async def ingest(
         context,
         image_data=image_data if image_data else None,
     )
-
     # Step 4: Build graph
     graph = build_graph_from_dict(raw)
 
