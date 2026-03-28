@@ -5,7 +5,6 @@ import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
-import { RiskDocumentsPanel } from "./risk-documents";
 import { useNexusStore } from "@/lib/store";
 import type { ExploreConfig, Scenario } from "@/lib/types";
 
@@ -588,7 +587,7 @@ export default function SimulatePage() {
       .attr("stroke", (d) =>
         highlightedPathIds.has(d.source.data.id) &&
         highlightedPathIds.has(d.target.data.id)
-          ? "#ef4444"
+          ? "var(--danger)"
           : "rgba(156, 176, 197, 0.25)",
       )
       .attr("stroke-width", (d) =>
@@ -641,7 +640,7 @@ export default function SimulatePage() {
       .attr("fill", (d) => healthColor(d.data.data.H))
       .attr("stroke", (d) =>
         highlightedPathIds.has(d.data.id)
-          ? "#ef4444"
+          ? "var(--danger)"
           : "rgba(255,255,255,0.15)",
       )
       .attr("stroke-width", (d) =>
@@ -827,7 +826,7 @@ export default function SimulatePage() {
     highlightedPathIds,
   ]);
 
-  // -- Top 3 worst scenarios --
+  // -- Top 5 worst scenarios --
   const topScenarios = useMemo(
     () => (scenarios ?? []).slice(0, 5),
     [scenarios],
@@ -1034,7 +1033,7 @@ export default function SimulatePage() {
               <div style={{ color: "var(--muted)" }}>
                 <p>
                   Delta H:{" "}
-                  <span style={{ color: "#ef4444" }}>
+                  <span style={{ color: "var(--danger)" }}>
                     {tooltip.node.delta_H.toFixed(3)}
                   </span>
                 </p>
@@ -1267,7 +1266,7 @@ export default function SimulatePage() {
                 </div>
               )}
 
-              {/* Top 3 worst scenarios */}
+              {/* Top 5 worst scenarios */}
               {topScenarios.length > 0 && (
                 <div className="flex flex-col gap-4">
                   <div className="mono-label text-[9px] opacity-40">CRITICAL_VECTORS</div>

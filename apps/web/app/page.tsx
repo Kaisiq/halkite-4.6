@@ -496,7 +496,7 @@ export default function DataInputPage() {
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <span className="mono-label rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                SYSTEM ID: HALK-046
+                RESILIENCE CONSOLE v1.0
               </span>
               <span className="status-dot animate-pulse" />
               <span className="mono-label text-[var(--accent-soft)]">
