@@ -14,6 +14,7 @@ import os
 import re
 from typing import Any, cast
 
+import numpy as np
 from google import genai
 from google.genai import types
 
@@ -587,8 +588,8 @@ def build_graph_from_dict(data: dict[str, Any]) -> Graph:
         from nexus_api.engine.weight_inference import refine_weights
 
         refine_weights(graph)
-    except Exception as exc:
-        logger.warning("Weight inference failed (using priors): %s", exc)
+    except (ValueError, np.linalg.LinAlgError, RuntimeError) as exc:
+        logger.warning("Weight inference failed (using priors): %s", exc, exc_info=True)
 
     return graph
 

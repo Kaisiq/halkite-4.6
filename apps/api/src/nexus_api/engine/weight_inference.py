@@ -23,6 +23,7 @@ This module is pure and deterministic (seeded RNG). AI never touches the numbers
 
 from __future__ import annotations
 
+import copy
 import logging
 import math
 from collections import defaultdict
@@ -99,7 +100,7 @@ def _to_networkx(graph: Graph) -> nx.DiGraph:
             edge.from_id,
             edge.to_id,
             prior=edge.weight,
-            meta=edge.meta,
+            meta=copy.deepcopy(edge.meta),
         )
     return g
 
@@ -224,7 +225,7 @@ def _information_theoretic_weights(g: nx.DiGraph, config: InferenceConfig) -> di
 
 def _cascade_edge_importance(g: nx.DiGraph, config: InferenceConfig) -> dict:
     """Monte Carlo independent cascade model edge importance."""
-    rng = np.random.RandomState(config.seed)
+    rng = np.random.default_rng(config.seed)
     nodes = list(g.nodes())
     n = len(nodes)
     if n < 2:
@@ -234,7 +235,7 @@ def _cascade_edge_importance(g: nx.DiGraph, config: InferenceConfig) -> dict:
     edge_cascade_sizes: dict[tuple, list] = defaultdict(list)
 
     for _ in range(config.cascade_simulations):
-        seed_node = nodes[rng.randint(n)]
+        seed_node = nodes[rng.integers(n)]
         active = {seed_node}
         newly_active = {seed_node}
         fired_edges: set[tuple] = set()
@@ -280,7 +281,7 @@ def _cascade_edge_importance(g: nx.DiGraph, config: InferenceConfig) -> dict:
 
 def _percolation_edge_criticality(g: nx.DiGraph, config: InferenceConfig) -> dict:
     """Edge contribution to giant connected component survival."""
-    rng = np.random.RandomState(config.seed + 1)
+    rng = np.random.default_rng(config.seed + 1)
     u_graph = g.to_undirected()
     all_edges = list(u_graph.edges())
     n = u_graph.number_of_nodes()
@@ -311,9 +312,10 @@ def _percolation_edge_criticality(g: nx.DiGraph, config: InferenceConfig) -> dic
         curve /= config.percolation_samples
         return curve
 
-    # For large graphs, fall back to edge betweenness
+    # For larger graphs, fall back to edge betweenness — the full
+    # percolation loop is O(E * samples * resolution * (V+E)) per edge.
     directed_edges = list(g.edges())
-    if len(directed_edges) > 100:
+    if len(directed_edges) > 30:
         ebc = nx.edge_betweenness_centrality(u_graph, normalized=True)
         results = {}
         for u, v in directed_edges:
@@ -417,7 +419,8 @@ def _perturbation_sensitivity(g: nx.DiGraph, config: InferenceConfig) -> dict:
         denominator = 1.0 - eps * m_inv[j, i]
 
         if abs(denominator) < 1e-15:
-            results[(u, v)] = 1e6
+            # Near-singular: cap at 10/eps to avoid outlier blowup
+            results[(u, v)] = 10.0 / eps
             continue
 
         delta_m_inv = eps * np.outer(col_i, row_j) / denominator
@@ -479,8 +482,12 @@ def _robust_rank_aggregation(
 
         # Weighted RRA using beta distribution CDF
         weighted_min_p = 1.0
+        n_ranked = len(norm_ranks)
         for k, (r, w, _name) in enumerate(norm_ranks, 1):
-            p = stats.beta.cdf(r, k, n_methods - k + 1)
+            b_param = n_ranked - k + 1
+            if b_param < 1:
+                break
+            p = stats.beta.cdf(r, k, b_param)
             weighted_p = p / w
             weighted_min_p = min(weighted_min_p, weighted_p)
 
