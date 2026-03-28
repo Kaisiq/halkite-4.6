@@ -18,7 +18,7 @@ const monoFont = IBM_Plex_Mono({
 
 const displayFont = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["400", "500", "700"],
   variable: "--font-display",
 });
 

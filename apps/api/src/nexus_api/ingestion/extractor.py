@@ -329,12 +329,82 @@ def _build_user_content(
     return blocks
 
 
+def _repair_truncated_json(text: str) -> str:
+    """Attempt to repair truncated JSON by closing open structures.
+
+    When the model response hits the token limit the JSON is cut mid-stream.
+    This heuristic strips the trailing incomplete value/key and closes any
+    open brackets and braces so that ``json.loads`` can succeed.
+    """
+    repaired = text.rstrip()
+
+    # Iteratively strip trailing junk until we reach a structurally valid
+    # truncation point (ends with a complete value, '}', ']', or '"').
+    for _ in range(5):
+        # Remove trailing comma, colon, whitespace
+        repaired = re.sub(r'[,:\s]+$', '', repaired)
+
+        # Check if we're inside an unclosed string
+        in_string = False
+        last_quote = -1
+        i = 0
+        while i < len(repaired):
+            ch = repaired[i]
+            if ch == '\\' and in_string:
+                i += 2
+                continue
+            if ch == '"':
+                in_string = not in_string
+                last_quote = i
+            i += 1
+
+        if in_string and last_quote > 0:
+            # Truncate at the opening quote of the incomplete string
+            repaired = repaired[:last_quote]
+            repaired = re.sub(r'[,:\s]+$', '', repaired)
+            continue
+
+        # If we end with a bare key ("key" with no colon/value after it),
+        # strip it too — look for pattern: `"somekey"` at end after a `,`
+        stripped_end = re.sub(r',\s*"[^"]*"\s*$', '', repaired)
+        if stripped_end != repaired:
+            repaired = stripped_end
+            continue
+
+        break
+
+    # Close any remaining open brackets/braces in correct LIFO order
+    stack: list[str] = []
+    in_str = False
+    j = 0
+    while j < len(repaired):
+        ch = repaired[j]
+        if ch == '\\' and in_str:
+            j += 2
+            continue
+        if ch == '"':
+            in_str = not in_str
+        elif not in_str:
+            if ch in ('{', '['):
+                stack.append('}' if ch == '{' else ']')
+            elif ch in ('}', ']'):
+                if stack:
+                    stack.pop()
+        j += 1
+
+    repaired += ''.join(reversed(stack))
+
+    return repaired
+
+
 def _extract_json_from_response(text: str) -> dict[str, Any]:
     """Robustly extract a JSON object from the model response text.
 
     The model may wrap the JSON in markdown fences or include preamble text
     despite the system prompt instructions.  This function handles those
-    cases gracefully.
+    cases gracefully.  When the response appears truncated (e.g. the model
+    hit max_output_tokens), it attempts to repair the JSON by closing open
+    structures.
     """
     # Try direct parse first
     stripped = text.strip()
@@ -352,22 +422,44 @@ def _extract_json_from_response(text: str) -> dict[str, Any]:
         except json.JSONDecodeError:
             pass
 
-    # Try finding the first { ... } block
+    # Try finding the first { ... } block (string-aware depth tracking)
     brace_start = stripped.find("{")
     if brace_start != -1:
-        # Walk forward to find the matching closing brace
         depth = 0
-        for i in range(brace_start, len(stripped)):
-            if stripped[i] == "{":
-                depth += 1
-            elif stripped[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    candidate = stripped[brace_start : i + 1]
-                    try:
-                        return json.loads(candidate)  # type: ignore[no-any-return]
-                    except json.JSONDecodeError:
-                        break
+        in_str = False
+        i = brace_start
+        while i < len(stripped):
+            ch = stripped[i]
+            if ch == '\\' and in_str:
+                i += 2
+                continue
+            if ch == '"':
+                in_str = not in_str
+            elif not in_str:
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth == 0:
+                        candidate = stripped[brace_start : i + 1]
+                        try:
+                            return json.loads(candidate)  # type: ignore[no-any-return]
+                        except json.JSONDecodeError:
+                            break
+            i += 1
+
+    # Last resort: try to repair truncated JSON
+    if brace_start is not None and brace_start != -1:
+        candidate = stripped[brace_start:]
+        repaired = _repair_truncated_json(candidate)
+        try:
+            result = json.loads(repaired)  # type: ignore[no-any-return]
+            logger.warning(
+                "JSON response appeared truncated; repaired by closing open structures"
+            )
+            return result
+        except json.JSONDecodeError:
+            pass
 
     raise ValueError(
         f"Could not extract valid JSON from AI response. Response starts with: {stripped[:200]!r}"
