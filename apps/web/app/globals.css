@@ -171,10 +171,25 @@ textarea {
   }
 }
 
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.loading-pulse-dot {
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fade-rise,
   .fade-rise-delay,
-  .drive-import-spinner {
+  .drive-import-spinner,
+  .loading-pulse-dot {
     animation: none;
   }
 }

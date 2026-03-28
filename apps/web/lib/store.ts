@@ -35,6 +35,8 @@ export interface NexusState {
   uploading: boolean;
   uploadError: string | null;
   uploadProgress: string | null;
+  uploadStepIndex: number;
+  uploadTotalSteps: number;
   gaps: string[];
   followUpQuestions: string[];
   confidence: number | null;
@@ -93,10 +95,23 @@ export interface NexusState {
 // Initial (blank) values – useful for resetting slices of state
 // ---------------------------------------------------------------------------
 
+const UPLOAD_STEPS = [
+  "Analyzing documents...",
+  "Extracting entities...",
+  "Building dependency graph...",
+  "Mapping organizational layers...",
+  "Calculating dependencies...",
+  "Finalizing structure...",
+] as const;
+
+const UPLOAD_STEP_DELAYS = [0, 2_000, 4_500, 8_000, 12_000, 17_000];
+
 const INITIAL_UPLOAD = {
   uploading: false,
   uploadError: null as string | null,
   uploadProgress: null as string | null,
+  uploadStepIndex: 0,
+  uploadTotalSteps: UPLOAD_STEPS.length,
   gaps: [] as string[],
   followUpQuestions: [] as string[],
   confidence: null as number | null,
@@ -168,20 +183,20 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       ...INITIAL_ANALYSIS,
       ...INITIAL_EXPLORE,
       uploading: true,
-      uploadProgress: "Analyzing documents...",
+      uploadProgress: UPLOAD_STEPS[0],
+      uploadStepIndex: 0,
+      uploadTotalSteps: UPLOAD_STEPS.length,
       cascadeError: null,
       selectedNodeId: null,
       activeScenarioIndex: null,
     });
 
     // Simulated progress phases so the user sees activity during a long call.
-    const t1 = setTimeout(
-      () => set({ uploadProgress: "Extracting entities..." }),
-      2_000,
-    );
-    const t2 = setTimeout(
-      () => set({ uploadProgress: "Building dependency graph..." }),
-      4_500,
+    const timers = UPLOAD_STEPS.slice(1).map((label, i) =>
+      setTimeout(
+        () => set({ uploadProgress: label, uploadStepIndex: i + 1 }),
+        UPLOAD_STEP_DELAYS[i + 1],
+      ),
     );
 
     try {
@@ -203,30 +218,39 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
         uploadError: api.extractErrorMessage(err),
       });
     } finally {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      timers.forEach(clearTimeout);
     }
   },
 
   importGoogleDriveFolder: async (accessToken, folderId, description) => {
+    const driveSteps = [
+      "Connecting to Google Drive...",
+      "Scanning Google Drive files...",
+      "Extracting entities...",
+      "Building dependency graph...",
+      "Mapping organizational layers...",
+      "Finalizing structure...",
+    ];
+    const driveDelays = [0, 1_500, 4_000, 7_000, 11_000, 15_000];
+
     set({
       ...INITIAL_UPLOAD,
       ...INITIAL_ANALYSIS,
       ...INITIAL_EXPLORE,
       uploading: true,
-      uploadProgress: "Connecting to Google Drive...",
+      uploadProgress: driveSteps[0],
+      uploadStepIndex: 0,
+      uploadTotalSteps: driveSteps.length,
       cascadeError: null,
       selectedNodeId: null,
       activeScenarioIndex: null,
     });
 
-    const t1 = setTimeout(
-      () => set({ uploadProgress: "Scanning Google Drive files..." }),
-      1_500,
-    );
-    const t2 = setTimeout(
-      () => set({ uploadProgress: "Building dependency graph from Drive..." }),
-      4_000,
+    const timers = driveSteps.slice(1).map((label, i) =>
+      setTimeout(
+        () => set({ uploadProgress: label, uploadStepIndex: i + 1 }),
+        driveDelays[i + 1],
+      ),
     );
 
     try {
@@ -255,8 +279,7 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       });
       return false;
     } finally {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      timers.forEach(clearTimeout);
     }
   },
 
