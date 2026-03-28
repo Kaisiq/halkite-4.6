@@ -239,6 +239,7 @@ class FinalReport:
         "metadata",
         "network_health",
         "recommendations",
+        "resilience_profile",
         "visualization_data",
         "vulnerability_summary",
         "worst_scenarios",
@@ -253,6 +254,7 @@ class FinalReport:
         worst_scenarios: list[Scenario] | None = None,
         recommendations: list[Recommendation] | None = None,
         visualization_data: dict[str, Any] | None = None,
+        resilience_profile: dict[str, Any] | None = None,
     ) -> None:
         self.metadata: dict[str, Any] = metadata if metadata is not None else {}
         self.network_health: dict[str, Any] = (
@@ -270,6 +272,7 @@ class FinalReport:
         self.visualization_data: dict[str, Any] = (
             visualization_data if visualization_data is not None else {}
         )
+        self.resilience_profile: dict[str, Any] | None = resilience_profile
 
     def __repr__(self) -> str:
         return (
@@ -285,6 +288,7 @@ class FinalReport:
             "worst_scenarios": [s.to_dict() for s in self.worst_scenarios],
             "recommendations": [r.to_dict() for r in self.recommendations],
             "visualization_data": self.visualization_data,
+            "resilience_profile": self.resilience_profile,
         }
 
 
@@ -721,12 +725,14 @@ def build_final_report(
     *,
     top_k: int = 10,
     r_unit: str = "days",
+    resilience_profile: dict[str, Any] | None = None,
 ) -> FinalReport:
     """Assemble the complete analysis report.
 
     Combines metadata, health scores, vulnerability summary, ranked
     scenarios (with paths and animation data), and recommendations into
-    a single :class:`FinalReport`.
+    a single :class:`FinalReport`.  Optionally includes a Monte Carlo
+    resilience profile.
     """
     # -- Scenarios ---------------------------------------------------------
     scenarios = extract_scenarios(tree, graph, top_k=top_k)
@@ -894,6 +900,7 @@ def build_final_report(
         worst_scenarios=scenarios,
         recommendations=recs,
         visualization_data=visualization_data,
+        resilience_profile=resilience_profile,
     )
 
 

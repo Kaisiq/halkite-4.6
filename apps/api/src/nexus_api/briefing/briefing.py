@@ -4,6 +4,8 @@ Transform the ``VulnerabilityReport`` (Module 2 output) into targeted
 ``AgentBrief`` packets for each of the five agent strategies.  This is a
 pure deterministic mapping -- no AI, no randomness.
 
+An optional Monte Carlo brief can be appended when ``MCConfig`` is provided.
+
 Public API
 ----------
 brief_critical_node_attacker(report)        -> AgentBrief
@@ -11,8 +13,9 @@ brief_bridge_breaker(report)                -> AgentBrief
 brief_compound_exploiter(report)            -> AgentBrief
 brief_layer_assassin(report, graph)         -> AgentBrief
 brief_cluster_isolator(report, graph)       -> AgentBrief
+brief_monte_carlo(mc_config)                -> AgentBrief
 generate_all_briefs(report, graph)          -> list[AgentBrief]
-create_all_agents(briefs)                   -> list[Agent]
+create_all_agents(briefs, mc_config=None)   -> list[Agent]
 
 Reference: docs/03_AGENT_BRIEFING.md
 """
@@ -26,6 +29,7 @@ from nexus_api.models.events import Event
 
 if TYPE_CHECKING:
     from nexus_api.engine.weakpoint import VulnerabilityReport
+    from nexus_api.mc.config import MCConfig
     from nexus_api.models.graph import Graph
 
 
@@ -333,6 +337,25 @@ def brief_cluster_isolator(
     )
 
 
+def brief_monte_carlo(mc_config: MCConfig) -> AgentBrief:
+    """Agent 6: Monte Carlo Explorer.
+
+    Produces a minimal ``AgentBrief`` whose depth and branching factor
+    come from *mc_config*.  The MC agent does not use priority targets
+    or initial events — it generates events randomly.
+    """
+    return AgentBrief(
+        agent_type="monte_carlo",
+        priority_targets=[],
+        priority_edges=[],
+        focus_layers=[],
+        focus_clusters=[],
+        initial_events=[],
+        max_depth=mc_config.max_depth,
+        branching_factor=mc_config.branching_factor,
+    )
+
+
 # ======================================================================
 # Orchestration
 # ======================================================================
@@ -388,6 +411,7 @@ def _get_agent_registry() -> dict[str, type[Agent]]:
     from nexus_api.agents.compound_exploiter import CompoundExploiter
     from nexus_api.agents.critical_node import CriticalNodeAttacker
     from nexus_api.agents.layer_assassin import LayerAssassin
+    from nexus_api.agents.monte_carlo import MonteCarloAgent
 
     _AGENT_REGISTRY = {
         "critical_node_attacker": CriticalNodeAttacker,
@@ -395,17 +419,25 @@ def _get_agent_registry() -> dict[str, type[Agent]]:
         "compound_exploiter": CompoundExploiter,
         "layer_assassin": LayerAssassin,
         "cluster_isolator": ClusterIsolator,
+        "monte_carlo": MonteCarloAgent,
     }
     return _AGENT_REGISTRY
 
 
-def create_all_agents(briefs: list[AgentBrief]) -> list[Agent]:
+def create_all_agents(
+    briefs: list[AgentBrief],
+    *,
+    mc_config: MCConfig | None = None,
+) -> list[Agent]:
     """Instantiate the correct ``Agent`` subclass for each brief.
 
     Parameters
     ----------
     briefs : list[AgentBrief]
         Briefs as returned by :func:`generate_all_briefs`.
+    mc_config : MCConfig | None
+        Monte Carlo configuration.  Required when any brief has
+        ``agent_type="monte_carlo"``.
 
     Returns
     -------
@@ -416,7 +448,8 @@ def create_all_agents(briefs: list[AgentBrief]) -> list[Agent]:
     ------
     ValueError
         If a brief has an ``agent_type`` that does not match any known
-        agent strategy.
+        agent strategy, or if a ``monte_carlo`` brief is present but
+        *mc_config* is ``None``.
     """
     registry = _get_agent_registry()
     agents: list[Agent] = []
@@ -428,6 +461,14 @@ def create_all_agents(briefs: list[AgentBrief]) -> list[Agent]:
                 f"Unknown agent_type {brief.agent_type!r}. "
                 f"Known types: {sorted(registry.keys())}"
             )
-        agents.append(agent_cls(brief))
+
+        if brief.agent_type == "monte_carlo":
+            if mc_config is None:
+                raise ValueError(
+                    "mc_config is required for monte_carlo agent."
+                )
+            agents.append(agent_cls(brief, mc_config))
+        else:
+            agents.append(agent_cls(brief))
 
     return agents
