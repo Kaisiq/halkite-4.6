@@ -1,0 +1,400 @@
+{
+  "description": "Mapping of siphoned (informational/colloquial) phrases to non-siphoned (formal/canonical) organizational impact terms.",
+  "mappings": [
+    {
+      "siphoned": "only guy who knows how it works",
+      "non_siphoned": "Human Single Point of Failure (SPOF)",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "only-guy-who-knows-how-it-works",
+      "non_siphoned": "Human Single Point of Failure (SPOF)",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "the whole thing's a black box",
+      "non_siphoned": "Proprietary Legacy System with Zero Documentation",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "the-whole-thing's-a-black-box",
+      "non_siphoned": "Proprietary Legacy System with Zero Documentation",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "flying blind",
+      "non_siphoned": "Lack of Operational Observability / Monitoring Gap",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "flying-blind",
+      "non_siphoned": "Lack of Operational Observability / Monitoring Gap",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "duct taped together",
+      "non_siphoned": "High Technical Debt / Fragile Integration Layer",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "duct-taped together",
+      "non_siphoned": "High Technical Debt / Fragile Integration Layer",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "duct-taped-together",
+      "non_siphoned": "High Technical Debt / Fragile Integration Layer",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "house of cards",
+      "non_siphoned": "High Risk of Cascading Failure / Tight Coupling",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "house-of-cards",
+      "non_siphoned": "High Risk of Cascading Failure / Tight Coupling",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "zombie service",
+      "non_siphoned": "Deprecated/Unsupported Legacy Component",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "zombie-service",
+      "non_siphoned": "Deprecated/Unsupported Legacy Component",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "bus factor of one",
+      "non_siphoned": "Critical Knowledge Concentration / Succession Risk",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "bus-factor-of-one",
+      "non_siphoned": "Critical Knowledge Concentration / Succession Risk",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "manual toil",
+      "non_siphoned": "Low Recovery Automation / High Operational Burden",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "manual-toil",
+      "non_siphoned": "Low Recovery Automation / High Operational Burden",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "tribal knowledge",
+      "non_siphoned": "Undocumented Specialized Subject Matter Expertise",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "tribal-knowledge",
+      "non_siphoned": "Undocumented Specialized Subject Matter Expertise",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "god object",
+      "non_siphoned": "Centralized Dependency Hub / High Hub Centrality",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "god-object",
+      "non_siphoned": "Centralized Dependency Hub / High Hub Centrality",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "spaghetti code",
+      "non_siphoned": "Unstructured Logic / High Path Complexity",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "spaghetti-code",
+      "non_siphoned": "Unstructured Logic / High Path Complexity",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "skeleton crew",
+      "non_siphoned": "Sub-Optimal Human Resource Redundancy",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "skeleton-crew",
+      "non_siphoned": "Sub-Optimal Human Resource Redundancy",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "bottleneck from hell",
+      "non_siphoned": "Systemic Operational Constraint",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "bottleneck-from-hell",
+      "non_siphoned": "Systemic Operational Constraint",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "crown jewels",
+      "non_siphoned": "Primary Strategic Business Asset",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "crown-jewels",
+      "non_siphoned": "Primary Strategic Business Asset",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "near miss",
+      "non_siphoned": "Sub-Critical Incident with Potential for Escalation",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "near-miss",
+      "non_siphoned": "Sub-Critical Incident with Potential for Escalation",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "black hole",
+      "non_siphoned": "Data/Information Sink with No Outward Flow",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "black-hole",
+      "non_siphoned": "Data/Information Sink with No Outward Flow",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "single point of truth",
+      "non_siphoned": "Canonical Master Data Registry",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "single-point-of-truth",
+      "non_siphoned": "Canonical Master Data Registry",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "legacy baggage",
+      "non_siphoned": "Cumulative Technical Debt from Retired Cycles",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "legacy-baggage",
+      "non_siphoned": "Cumulative Technical Debt from Retired Cycles",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "fire drill",
+      "non_siphoned": "Unplanned High-Priority Recovery Event",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "fire-drill",
+      "non_siphoned": "Unplanned High-Priority Recovery Event",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "dead man's switch",
+      "non_siphoned": "Passive Failure Detection Mechanism",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "dead-man's-switch",
+      "non_siphoned": "Passive Failure Detection Mechanism",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "fail whale",
+      "non_siphoned": "Complete Systemic Availability Collapse",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "fail-whale",
+      "non_siphoned": "Complete Systemic Availability Collapse",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "death by a thousand cuts",
+      "non_siphoned": "Cumulative Degradation from Multiple Weak Dependencies",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "death-by-a-thousand-cuts",
+      "non_siphoned": "Cumulative Degradation from Multiple Weak Dependencies",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "secret sauce",
+      "non_siphoned": "Proprietary Algorithmic Competitive Advantage",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "secret-sauce",
+      "non_siphoned": "Proprietary Algorithmic Competitive Advantage",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "golden goose",
+      "non_siphoned": "Primary Revenue Stream Generator",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "golden-goose",
+      "non_siphoned": "Primary Revenue Stream Generator",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "moat",
+      "non_siphoned": "Defensible Strategic Entry Barrier",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "poison pill",
+      "non_siphoned": "System-Wide Anti-Recovery Constraint",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "poison-pill",
+      "non_siphoned": "System-Wide Anti-Recovery Constraint",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "rip and replace",
+      "non_siphoned": "Complete Hardware/Software Lifecycle Refresh",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "rip-and-replace",
+      "non_siphoned": "Complete Hardware/Software Lifecycle Refresh",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "set and forget",
+      "non_siphoned": "Unmonitored Persistent Configuration",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "set-and-forget",
+      "non_siphoned": "Unmonitored Persistent Configuration",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "wild west",
+      "non_siphoned": "Unregulated/Non-Compliant Operating Environment",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "wild-west",
+      "non_siphoned": "Unregulated/Non-Compliant Operating Environment",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "locked in",
+      "non_siphoned": "High Vendor/Proprietary Exit Costs",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "locked-in",
+      "non_siphoned": "High Vendor/Proprietary Exit Costs",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "bottlenecked",
+      "non_siphoned": "Capacity Constrained / Throughput Limited",
+      "dimension": "mission_criticality"
+    },
+    {
+      "siphoned": "under the hood",
+      "non_siphoned": "Internal Implementation Specifics",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "under-the-hood",
+      "non_siphoned": "Internal Implementation Specifics",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "dirty data",
+      "non_siphoned": "Inconsistent/Low-Integrity Data State",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "dirty-data",
+      "non_siphoned": "Inconsistent/Low-Integrity Data State",
+      "dimension": "recovery_penalty"
+    },
+    {
+      "siphoned": "silence is golden",
+      "non_siphoned": "Lack of Health-Check Reporting",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "silence-is-golden",
+      "non_siphoned": "Lack of Health-Check Reporting",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "band aid",
+      "non_siphoned": "Temporary Non-Robust Mitigation",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "band-aid",
+      "non_siphoned": "Temporary Non-Robust Mitigation",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "bridge to nowhere",
+      "non_siphoned": "Orphaned Integration Point",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "bridge-to-nowhere",
+      "non_siphoned": "Orphaned Integration Point",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "on life support",
+      "non_siphoned": "Critically Fragile Component Awaiting Decommissioning",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "on-life-support",
+      "non_siphoned": "Critically Fragile Component Awaiting Decommissioning",
+      "dimension": "irreplaceability"
+    },
+    {
+      "siphoned": "ticking time bomb",
+      "non_siphoned": "Deterministic Future Failure Point",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "ticking-time-bomb",
+      "non_siphoned": "Deterministic Future Failure Point",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "last man standing",
+      "non_siphoned": "Final Surviving Node in Redundant Set",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "last-man-standing",
+      "non_siphoned": "Final Surviving Node in Redundant Set",
+      "dimension": "blast_radius"
+    },
+    {
+      "siphoned": "black swan",
+      "non_siphoned": "Exogenous High-Impact Low-Probability Event",
+      "dimension": "historical_vulnerability"
+    },
+    {
+      "siphoned": "black-swan",
+      "non_siphoned": "Exogenous High-Impact Low-Probability Event",
+      "dimension": "historical_vulnerability"
+    }
+  ]
+}

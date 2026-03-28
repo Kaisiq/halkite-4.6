@@ -1,0 +1,838 @@
+{
+  "version": "v3.0",
+  "name": "Shizo High-Dimensional Semantic Taxonomy",
+  "dimensions": {
+    "1_mission_criticality": {
+      "id": "criticality",
+      "weight": 0.2,
+      "nodes": [
+        {
+          "concept": "Core Business Function",
+          "keywords": [
+            "backbone",
+            "core service",
+            "core-service",
+            "essential",
+            "mission critical",
+            "mission-critical",
+            "primary",
+            "production"
+          ],
+          "synonyms": [
+            "critical path",
+            "critical-path",
+            "flagship",
+            "front office",
+            "front-office",
+            "heart of the business",
+            "heart-of-the-business",
+            "line of business",
+            "line-of-business",
+            "main engine",
+            "main-engine",
+            "vital organ",
+            "vital-organ"
+          ],
+          "contextual_triggers": [
+            "cannot operate without",
+            "cannot-operate-without",
+            "production critical",
+            "production-critical",
+            "stops the business",
+            "stops-the-business",
+            "top tier service",
+            "top-tier service",
+            "top-tier-service",
+            "zero downtime requirement",
+            "zero-downtime-requirement"
+          ],
+          "exclusion_terms": [
+            "auxiliary",
+            "back office",
+            "back-office",
+            "internal use only",
+            "internal-use-only",
+            "non essential",
+            "non-essential",
+            "support only",
+            "support-only"
+          ]
+        },
+        {
+          "concept": "Regulatory/Legal Compliance",
+          "keywords": [
+            "GDPR",
+            "PCI DSS",
+            "PCI-DSS",
+            "SOX",
+            "audited",
+            "compliance",
+            "fiduciary",
+            "mandated",
+            "statutory"
+          ],
+          "synonyms": [
+            "PCI scope",
+            "PCI-scope",
+            "SOX scope",
+            "SOX-scope",
+            "compliance gatekeeper",
+            "compliance-gatekeeper",
+            "legal requirement",
+            "legal-requirement",
+            "licensed",
+            "regulatory nexus",
+            "regulatory-nexus",
+            "reporting authority",
+            "reporting-authority"
+          ],
+          "contextual_triggers": [
+            "audit requirement",
+            "audit-requirement",
+            "compliance critical",
+            "compliance-critical",
+            "fines for non compliance",
+            "fines for non-compliance",
+            "fines-for-non-compliance",
+            "governance node",
+            "governance-node",
+            "mandatory under law",
+            "mandatory-under-law"
+          ],
+          "exclusion_terms": [
+            "informational only",
+            "informational-only",
+            "optional",
+            "self regulated",
+            "self-regulated",
+            "voluntary"
+          ]
+        },
+        {
+          "concept": "Strategic Intellectual Property",
+          "keywords": [
+            "IP",
+            "competitive advantage",
+            "competitive-advantage",
+            "patent",
+            "proprietary",
+            "trade secret",
+            "trade-secret"
+          ],
+          "synonyms": [
+            "USP",
+            "brand differentiator",
+            "brand-differentiator",
+            "crown jewel",
+            "crown-jewel",
+            "innovation hub",
+            "innovation-hub",
+            "secret sauce",
+            "secret-sauce",
+            "unique selling proposition",
+            "unique-selling-proposition"
+          ],
+          "contextual_triggers": [
+            "gives us the edge",
+            "gives-us-the-edge",
+            "proprietary logic",
+            "proprietary-logic",
+            "strategic advantage",
+            "strategic-advantage",
+            "uniqueness"
+          ],
+          "exclusion_terms": [
+            "commodity",
+            "off the shelf",
+            "off-the-shelf",
+            "open source",
+            "open-source",
+            "standardized"
+          ]
+        }
+      ]
+    },
+    "2_blast_radius": {
+      "id": "radius",
+      "weight": 0.3,
+      "nodes": [
+        {
+          "concept": "Infrastructure Hub",
+          "keywords": [
+            "auth provider",
+            "auth-provider",
+            "gateway",
+            "identity store",
+            "identity-store",
+            "load balancer",
+            "load-balancer",
+            "nexus",
+            "router",
+            "switch"
+          ],
+          "synonyms": [
+            "backhaul",
+            "central hub",
+            "central-hub",
+            "core switch",
+            "core-switch",
+            "entry point",
+            "entry-point",
+            "global gateway",
+            "global-gateway",
+            "nexus point",
+            "nexus-point",
+            "traffic nexus",
+            "traffic-nexus"
+          ],
+          "contextual_triggers": [
+            "all traffic flows through",
+            "all-traffic-flows-through",
+            "authentication nexus",
+            "authentication-nexus",
+            "central point of failure",
+            "central-point-of-failure",
+            "global configuration",
+            "global-configuration",
+            "identity authority",
+            "identity-authority"
+          ],
+          "exclusion_terms": [
+            "endpoint",
+            "internal subnet",
+            "internal-subnet",
+            "leaf node",
+            "leaf-node",
+            "localized service",
+            "localized-service"
+          ]
+        },
+        {
+          "concept": "Shared Enterprise Resource",
+          "keywords": [
+            "enterprise wide",
+            "enterprise-wide",
+            "foundational",
+            "multi tenant",
+            "multi-tenant",
+            "shared service",
+            "shared-service",
+            "universal"
+          ],
+          "synonyms": [
+            "PaaS",
+            "base layer",
+            "base-layer",
+            "common platform",
+            "common-platform",
+            "corporate hub",
+            "corporate-hub",
+            "cross departmental",
+            "cross-departmental",
+            "platform as a service",
+            "platform-as-a-service"
+          ],
+          "contextual_triggers": [
+            "department agnostic",
+            "department-agnostic",
+            "global dependency",
+            "global-dependency",
+            "shared resource pool",
+            "shared-resource-pool",
+            "used by everyone",
+            "used-by-everyone"
+          ],
+          "exclusion_terms": [
+            "departmental",
+            "siloed",
+            "single use",
+            "single-use",
+            "team specific",
+            "team-specific"
+          ]
+        },
+        {
+          "concept": "Data Gravity Nexus",
+          "keywords": [
+            "data lake",
+            "data warehouse",
+            "data-lake",
+            "data-warehouse",
+            "golden record",
+            "golden-record",
+            "master data",
+            "master-data",
+            "message bus",
+            "message-bus",
+            "system of record",
+            "system-of-record"
+          ],
+          "synonyms": [
+            "data hub",
+            "data-hub",
+            "event stream",
+            "event-stream",
+            "global config",
+            "global-config",
+            "lookup service",
+            "lookup-service",
+            "metadata store",
+            "metadata-store",
+            "registry",
+            "source of truth",
+            "source-of-truth"
+          ],
+          "contextual_triggers": [
+            "central data authority",
+            "central-data-authority",
+            "data integrity point",
+            "data-integrity-point",
+            "event driven nexus",
+            "event-driven-nexus",
+            "holds all records",
+            "holds-all-records"
+          ],
+          "exclusion_terms": [
+            "ephemeral",
+            "local db",
+            "local-db",
+            "scratchpad",
+            "temporary cache",
+            "temporary-cache"
+          ]
+        }
+      ]
+    },
+    "3_irreplaceability": {
+      "id": "scarcity",
+      "weight": 0.25,
+      "nodes": [
+        {
+          "concept": "Human Knowledge Scarcity",
+          "keywords": [
+            "SME",
+            "expert",
+            "indispensable",
+            "lone wolf",
+            "lone-wolf",
+            "specialist",
+            "tribal knowledge",
+            "tribal-knowledge"
+          ],
+          "synonyms": [
+            "guru",
+            "key man",
+            "key-man",
+            "knowledge silo",
+            "knowledge-silo",
+            "only one who knows",
+            "only-one-who-knows",
+            "single threaded resource",
+            "single-threaded resource",
+            "single-threaded-resource",
+            "subject matter expert",
+            "subject-matter-expert"
+          ],
+          "contextual_triggers": [
+            "hard to recruit for",
+            "hard-to-recruit-for",
+            "manual override required",
+            "manual-override-required",
+            "no backup personnel",
+            "no-backup-personnel",
+            "sole practitioner",
+            "sole-practitioner",
+            "undocumented knowledge",
+            "undocumented-knowledge"
+          ],
+          "exclusion_terms": [
+            "automated",
+            "commodity skill",
+            "commodity-skill",
+            "outsourced",
+            "standardized",
+            "well documented",
+            "well-documented"
+          ]
+        },
+        {
+          "concept": "Legacy/Niche Technology",
+          "keywords": [
+            "EOL",
+            "custom built",
+            "custom-built",
+            "end of life",
+            "end-of-life",
+            "legacy",
+            "proprietary",
+            "vendor lock in",
+            "vendor-lock-in"
+          ],
+          "synonyms": [
+            "abandonware",
+            "bespoke",
+            "black box",
+            "black-box",
+            "no source code",
+            "no-source-code",
+            "technical debt heavy",
+            "technical-debt-heavy",
+            "unsupported"
+          ],
+          "contextual_triggers": [
+            "cannot find parts",
+            "cannot-find-parts",
+            "fragile implementation",
+            "fragile-implementation",
+            "proprietary protocol",
+            "proprietary-protocol",
+            "unsupported software",
+            "unsupported-software"
+          ],
+          "exclusion_terms": [
+            "cloud native",
+            "cloud-native",
+            "modern",
+            "standard stack",
+            "standard-stack",
+            "supported"
+          ]
+        },
+        {
+          "concept": "Monopoly Supply Source",
+          "keywords": [
+            "exclusive",
+            "monopoly",
+            "patent protected",
+            "patent-protected",
+            "sole source",
+            "sole-source",
+            "unique location",
+            "unique-location"
+          ],
+          "synonyms": [
+            "exclusive license",
+            "exclusive-license",
+            "geographical concentration",
+            "geographical-concentration",
+            "non fungible",
+            "non-fungible",
+            "only game in town",
+            "only-game-in-town",
+            "single source supplier",
+            "single-source-supplier"
+          ],
+          "contextual_triggers": [
+            "exclusive contract",
+            "exclusive-contract",
+            "location locked",
+            "location-locked",
+            "no alternative suppliers",
+            "no-alternative-suppliers",
+            "patent dependency",
+            "patent-dependency"
+          ],
+          "exclusion_terms": [
+            "competitive market",
+            "competitive-market",
+            "interchangeable",
+            "multi sourced",
+            "multi-sourced"
+          ]
+        }
+      ]
+    },
+    "4_recovery_penalty": {
+      "id": "recovery",
+      "weight": 0.15,
+      "nodes": [
+        {
+          "concept": "Data Recovery Complexity",
+          "keywords": [
+            "consistency check",
+            "consistency-check",
+            "high data gravity",
+            "high-data-gravity",
+            "massive dataset",
+            "massive-dataset",
+            "re indexing",
+            "re-indexing",
+            "stateful"
+          ],
+          "synonyms": [
+            "checkpoint recovery",
+            "checkpoint-recovery",
+            "cold storage retrieval",
+            "cold-storage-retrieval",
+            "log catchup",
+            "log-catchup",
+            "synchronization lag",
+            "synchronization-lag",
+            "wal replay",
+            "wal-replay",
+            "write heavy",
+            "write-heavy"
+          ],
+          "contextual_triggers": [
+            "complex consistency checks",
+            "complex-consistency-checks",
+            "data corruption risk",
+            "data-corruption-risk",
+            "long re indexing time",
+            "long re-indexing time",
+            "long-re-indexing-time",
+            "massive volume to restore",
+            "massive-volume-to-restore"
+          ],
+          "exclusion_terms": [
+            "instant restore",
+            "instant-restore",
+            "read only",
+            "read-only",
+            "small dataset",
+            "small-dataset",
+            "stateless"
+          ]
+        },
+        {
+          "concept": "Physical/Logistic Burden",
+          "keywords": [
+            "hardware lead time",
+            "hardware-lead-time",
+            "physical access",
+            "physical-access",
+            "remote site",
+            "remote-site",
+            "site visit",
+            "site-visit",
+            "tape restore",
+            "tape-restore"
+          ],
+          "synonyms": [
+            "custom hardware",
+            "custom-hardware",
+            "hardware token",
+            "hardware-token",
+            "limited bandwidth recovery",
+            "limited-bandwidth-recovery",
+            "off site backup",
+            "off-site-backup",
+            "remote hand required",
+            "remote-hand-required"
+          ],
+          "contextual_triggers": [
+            "hardware lead times",
+            "hardware-lead-times",
+            "remote facility access",
+            "remote-facility-access",
+            "requires physical presence",
+            "requires-physical-presence",
+            "site re entry",
+            "site-re-entry"
+          ],
+          "exclusion_terms": [
+            "cloud managed",
+            "cloud-managed",
+            "instant provisioning",
+            "instant-provisioning",
+            "remote reboot",
+            "remote-reboot",
+            "software defined",
+            "software-defined"
+          ]
+        },
+        {
+          "concept": "Administrative/Audited Restart",
+          "keywords": [
+            "MTTR",
+            "audit pre restart",
+            "audit-pre-restart",
+            "complex rebuild",
+            "complex-rebuild",
+            "dependency ordering",
+            "dependency-ordering",
+            "manual approval",
+            "manual-approval"
+          ],
+          "synonyms": [
+            "approval chain",
+            "approval-chain",
+            "environment rebuild",
+            "environment-rebuild",
+            "human in the loop",
+            "human-in-the-loop",
+            "manual hand off",
+            "manual-hand-off",
+            "restart penalty",
+            "restart-penalty"
+          ],
+          "contextual_triggers": [
+            "audit trail verification",
+            "audit-trail-verification",
+            "manual rebuild required",
+            "manual-rebuild-required",
+            "recovery ordering",
+            "recovery-ordering",
+            "requires sign off before restart",
+            "requires sign-off before restart",
+            "requires-sign-off-before-restart"
+          ],
+          "exclusion_terms": [
+            "auto scaling",
+            "auto-scaling",
+            "self healing",
+            "self-healing",
+            "zero touch recovery",
+            "zero-touch-recovery"
+          ]
+        }
+      ]
+    },
+    "5_historical_vulnerability": {
+      "id": "history",
+      "weight": 0.1,
+      "nodes": [
+        {
+          "concept": "Outage History",
+          "keywords": [
+            "P1 incident",
+            "P1-incident",
+            "SLA breach",
+            "SLA-breach",
+            "downtime",
+            "incident ticket",
+            "incident-ticket",
+            "instability",
+            "outage"
+          ],
+          "synonyms": [
+            "fragile component",
+            "fragile-component",
+            "historical blackout",
+            "historical-blackout",
+            "major failure",
+            "major-failure",
+            "repeat offender",
+            "repeat-offender",
+            "service interruption",
+            "service-interruption",
+            "ticket volatility",
+            "ticket-volatility"
+          ],
+          "contextual_triggers": [
+            "frequent downtime",
+            "frequent-downtime",
+            "incident prone",
+            "incident-prone",
+            "known bottleneck",
+            "known-bottleneck",
+            "recurring issues",
+            "recurring-issues"
+          ],
+          "exclusion_terms": [
+            "proven",
+            "stable",
+            "tested",
+            "uptime guaranteed",
+            "uptime-guaranteed"
+          ]
+        },
+        {
+          "concept": "Incident Consequence",
+          "keywords": [
+            "churn",
+            "fine",
+            "lawsuit",
+            "near miss",
+            "near-miss",
+            "reputational damage",
+            "reputational-damage",
+            "revenue loss",
+            "revenue-loss"
+          ],
+          "synonyms": [
+            "brand erosion",
+            "brand-erosion",
+            "compliance failure",
+            "compliance-failure",
+            "customer loss",
+            "customer-loss",
+            "data leak",
+            "data-leak",
+            "legal exposure",
+            "legal-exposure",
+            "safety incident",
+            "safety-incident"
+          ],
+          "contextual_triggers": [
+            "customer outrage",
+            "customer-outrage",
+            "led to revenue loss",
+            "led-to-revenue-loss",
+            "near catastrophic",
+            "near-catastrophic",
+            "resulted in fines",
+            "resulted-in-fines"
+          ],
+          "exclusion_terms": [
+            "internal only impact",
+            "internal-only-impact",
+            "minor glitch",
+            "minor-glitch",
+            "no consequence",
+            "no-consequence"
+          ]
+        }
+      ]
+    }
+  },
+  "thesaurus": {
+    "impact_words": [
+      "catastrophic",
+      "devastating",
+      "critical",
+      "severe",
+      "disruptive",
+      "deleterious",
+      "adverse",
+      "negative",
+      "harmful",
+      "detrimental",
+      "ruinous",
+      "paralyzing",
+      "stagnating",
+      "debilitating",
+      "incapacitating",
+      "fatal",
+      "lethal",
+      "destructive",
+      "calamitous",
+      "drastic",
+      "dire",
+      "grave",
+      "major",
+      "fundamental",
+      "primary",
+      "pivotal",
+      "crucial",
+      "indispensable",
+      "vital",
+      "essential",
+      "mandatory",
+      "obligatory",
+      "foundational",
+      "underlying",
+      "root",
+      "source",
+      "origin",
+      "nexus",
+      "center",
+      "core",
+      "heart",
+      "spinal",
+      "backbone",
+      "framework",
+      "structure",
+      "skeleton",
+      "base",
+      "bedrock",
+      "cornerstone",
+      "keystone",
+      "gatekeeper",
+      "bottleneck",
+      "narrowing",
+      "choke-point",
+      "single-point",
+      "sole-source",
+      "unique",
+      "exclusive",
+      "niche",
+      "specialized",
+      "proprietary",
+      "closed",
+      "locked-in",
+      "legacy",
+      "archaic",
+      "obsolete",
+      "end-of-life",
+      "terminal",
+      "fragile",
+      "brittle",
+      "delicate",
+      "tenuous",
+      "unstable",
+      "shaky",
+      "vulnerable",
+      "exposed",
+      "unprotected",
+      "unreliable",
+      "incident-prone",
+      "buggy",
+      "flawed"
+    ],
+    "dependency_words": [
+      "relies on",
+      "depends on",
+      "requires",
+      "needs",
+      "uses",
+      "utilizes",
+      "employs",
+      "leverages",
+      "calls",
+      "invokes",
+      "requests",
+      "demands",
+      "expects",
+      "consumes",
+      "reads from",
+      "writes to",
+      "updates",
+      "deletes",
+      "manages",
+      "controls",
+      "governs",
+      "directs",
+      "orchestrates",
+      "configures",
+      "hosts",
+      "virtualizes",
+      "powers",
+      "cools",
+      "supports",
+      "maintains",
+      "monitors",
+      "logs",
+      "audits",
+      "authenticates",
+      "authorizes",
+      "secures",
+      "protects",
+      "defends",
+      "shields",
+      "subscribes to",
+      "publishes to",
+      "broadcasts",
+      "notifies",
+      "triggers",
+      "activates",
+      "enables",
+      "allows",
+      "permits",
+      "authorizes",
+      "vouchers",
+      "validates",
+      "verifies",
+      "checks",
+      "scans",
+      "filters",
+      "processes",
+      "transforms",
+      "converts",
+      "routes",
+      "switches",
+      "bridges",
+      "connects"
+    ]
+  }
+}
