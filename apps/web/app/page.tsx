@@ -89,6 +89,61 @@ const PIPELINE_STEPS = [
   },
 ] as const;
 
+const PRICING_PLANS = [
+  {
+    name: "SMB Starter",
+    label: "50-150 employees",
+    annualPrice: "€6,000",
+    quarterlyInvoice: "€1,500",
+    triennialPrice: "€15,300",
+    theme: "default",
+    purpose: "Low-friction entry point for founder, COO, or CTO-led teams that need structural risk visibility quickly.",
+    bands: ["50-150 employees", "Annual contract only", "Q1 exit available for new customers"],
+    features: [
+      "Cloud only",
+      "No SSO or on-prem deployment",
+      "Built to prove value fast without enterprise overhead",
+    ],
+  },
+  {
+    name: "Growth",
+    label: "151-500 employees",
+    annualPrice: "€12,000-24,000",
+    quarterlyInvoice: "€3,000-6,000",
+    triennialPrice: "€30,600-61,200",
+    theme: "muted",
+    purpose: "For growing companies that need stronger exports, light role-based access, and a clean path into enterprise packaging.",
+    bands: ["151-250: €12k", "251-350: €18k", "351-500: €24k"],
+    features: [
+      "Annual contract, billed quarterly in advance",
+      "First-quarter exit rule for new customers",
+      "Cloud by default with stronger exports and access controls",
+    ],
+  },
+  {
+    name: "Enterprise Platform",
+    label: "500+ employees",
+    annualPrice: "From €35,000",
+    quarterlyInvoice: "From €8,750",
+    triennialPrice: "From €89,250",
+    theme: "dark",
+    purpose: "Enterprise-first packaging for regulated organizations buying against consultant cost, compliance urgency, and deployment constraints.",
+    bands: ["500-1,000: €35k", "1,001-2,500: €60k", "2,501-5,000: €95k", "5,001-10,000: €140k", "10,000+: custom"],
+    features: [
+      "SSO / SCIM, segmented data views, compliance reporting",
+      "On-prem or isolated deployment options",
+      "SLA-backed support and enterprise security review",
+    ],
+  },
+] as const;
+
+const PRICING_NOTES = [
+  "All plans are annual contracts billed quarterly in advance.",
+  "SMB Starter and Growth include a first-quarter exit rule for new customers.",
+  "Three-year terms are priced at 15% off the equivalent three years of annual list price.",
+  "Onboarding, isolated deployment, and custom compliance reporting are scoped separately.",
+] as const;
+
 function fileExtension(name: string): string {
   const dot = name.lastIndexOf(".");
   return dot === -1 ? "" : name.slice(dot + 1).toLowerCase();
@@ -465,8 +520,8 @@ export default function DataInputPage() {
   return (
     <main className="min-h-screen">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 mt-4 bg-white">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 h-16 md:px-10">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:px-10">
           <div className="flex items-center gap-3">
             <Image
               src="/logo.svg"
@@ -494,7 +549,7 @@ export default function DataInputPage() {
       </nav>
 
       {/* Hero */}
-      <section className="flex min-h-screen flex-col justify-center px-6 pt-16 md:px-10">
+      <section className="flex min-h-screen flex-col justify-center px-6 pt-24 md:px-10">
         <div className="mx-auto w-full max-w-[1400px]">
           <h1 className="display-face text-[clamp(3rem,7.5vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.035em] max-w-[900px]">
             Find the dependencies
@@ -545,6 +600,205 @@ export default function DataInputPage() {
                 </div>
                 <p className="text-[13px] leading-relaxed text-[var(--text-muted)]">
                   {step.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-[var(--border)] px-6 py-24 md:px-10">
+        <div className="mx-auto max-w-[1400px]">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,340px)_1fr]">
+            <div className="max-w-[320px]">
+              <p className="mono-label">Pricing</p>
+              <h2 className="display-face mt-4 text-[clamp(2.2rem,4.8vw,4.2rem)] font-normal leading-[1.02] tracking-[-0.03em]">
+                Enterprise-first pricing by company size.
+              </h2>
+              <p className="mt-6 text-[17px] leading-[1.7] text-[var(--text-muted)]">
+                Halkantir is sold on annual terms, priced primarily by employee
+                count, and shaped to keep smaller teams moving while preserving
+                enterprise delivery depth.
+              </p>
+            </div>
+
+            <div className="grid gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] lg:grid-cols-3">
+              {PRICING_PLANS.map((plan) => {
+                const isDark = plan.theme === "dark";
+                const isMuted = plan.theme === "muted";
+
+                return (
+                  <article
+                    key={plan.name}
+                    className={`flex h-full flex-col ${
+                      isDark
+                        ? "bg-[var(--bg-dark)] text-[var(--text-inverse)]"
+                        : isMuted
+                          ? "bg-[var(--bg-alt)]"
+                          : "bg-white"
+                    }`}
+                  >
+                    <div className="flex flex-1 flex-col p-8 md:p-10">
+                      <div className="flex min-h-[7.5rem] items-start justify-between gap-4">
+                        <div>
+                          <p
+                            className={`font-mono text-[11px] uppercase tracking-[0.18em] ${
+                              isDark
+                                ? "text-white/45"
+                                : "text-[var(--text-light)]"
+                            }`}
+                          >
+                            {plan.label}
+                          </p>
+                          <h3 className="display-face mt-4 text-[2rem] leading-none tracking-[-0.03em]">
+                            {plan.name}
+                          </h3>
+                        </div>
+                        <span
+                          className={`rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] ${
+                            isDark
+                              ? "border-white/15 text-white/60"
+                              : "border-[var(--border)] text-[var(--text-light)]"
+                          }`}
+                        >
+                          Annual
+                        </span>
+                      </div>
+
+                      <div
+                        className={`mt-10 border-t pt-6 ${
+                          isDark
+                            ? "border-white/10"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        <p
+                          className={`text-[12px] uppercase tracking-[0.16em] ${
+                            isDark
+                              ? "text-white/45"
+                              : "text-[var(--text-light)]"
+                          }`}
+                        >
+                          Starting annual price
+                        </p>
+                        <p className="mt-3 text-[2.6rem] font-semibold leading-none tracking-[-0.05em]">
+                          {plan.annualPrice}
+                        </p>
+                        <div
+                          className={`mt-6 grid gap-3 text-[14px] ${
+                            isDark
+                              ? "text-white/70"
+                              : "text-[var(--text-muted)]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-4 border-b border-dashed pb-3 last:border-b-0 last:pb-0">
+                            <span>Quarterly invoice</span>
+                            <span
+                              className={
+                                isDark ? "text-white" : "text-[var(--text)]"
+                              }
+                            >
+                              {plan.quarterlyInvoice}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 border-b border-dashed pb-3 last:border-b-0 last:pb-0">
+                            <span>3-year price</span>
+                            <span
+                              className={
+                                isDark ? "text-white" : "text-[var(--text)]"
+                              }
+                            >
+                              {plan.triennialPrice}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p
+                        className={`mt-8 min-h-[8rem] text-[15px] leading-[1.7] ${
+                          isDark
+                            ? "text-white/72"
+                            : "text-[var(--text-secondary)]"
+                        }`}
+                      >
+                        {plan.purpose}
+                      </p>
+
+                      <div
+                        className={`mt-8 border-t pt-6 ${
+                          isDark
+                            ? "border-white/10"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        <p
+                          className={`font-mono text-[10px] uppercase tracking-[0.16em] ${
+                            isDark
+                              ? "text-white/45"
+                              : "text-[var(--text-light)]"
+                          }`}
+                        >
+                          Price bands
+                        </p>
+                        <div className="mt-4 flex min-h-[7rem] flex-wrap content-start gap-2">
+                          {plan.bands.map((band) => (
+                            <span
+                              key={band}
+                              className={`rounded-full border px-3 py-1.5 text-[12px] ${
+                                isDark
+                                  ? "border-white/12 text-white/72"
+                                  : "border-[var(--border)] text-[var(--text-muted)]"
+                              }`}
+                            >
+                              {band}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div
+                        className={`mt-8 border-t pt-6 ${
+                          isDark
+                            ? "border-white/10"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        <p
+                          className={`font-mono text-[10px] uppercase tracking-[0.16em] ${
+                            isDark
+                              ? "text-white/45"
+                              : "text-[var(--text-light)]"
+                          }`}
+                        >
+                          Commercial shape
+                        </p>
+                        <ul
+                          className={`mt-4 min-h-[7.75rem] space-y-3 text-[14px] leading-[1.6] ${
+                            isDark
+                              ? "text-white/72"
+                              : "text-[var(--text-muted)]"
+                          }`}
+                        >
+                          {plan.features.map((feature) => (
+                            <li key={feature}>{feature}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-10 grid gap-px border border-[var(--border)] bg-[var(--border)] md:grid-cols-2 xl:grid-cols-4">
+            {PRICING_NOTES.map((note, index) => (
+              <div key={note} className="bg-white px-6 py-5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-light)]">
+                  /0{index + 1}
+                </p>
+                <p className="mt-3 text-[14px] leading-[1.7] text-[var(--text-muted)]">
+                  {note}
                 </p>
               </div>
             ))}

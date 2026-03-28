@@ -1,3 +1,4 @@
+import "../node_modules/tw-animate-css/dist/tw-animate.css";
 import "./globals.css";
 
 import type { Metadata } from "next";
