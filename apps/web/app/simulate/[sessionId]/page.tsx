@@ -45,6 +45,16 @@ const AGENTS: AgentDef[] = [
     type: "cluster_isolator",
     description: "Fragments clusters from the network",
   },
+  {
+    label: "Cascading Domino",
+    type: "cascading_domino",
+    description: "Hunts longest chain reactions",
+  },
+  {
+    label: "Recovery Maximizer",
+    type: "recovery_maximizer",
+    description: "Maximizes total recovery cost",
+  },
 ];
 
 // ---------------------------------------------------------------------------
