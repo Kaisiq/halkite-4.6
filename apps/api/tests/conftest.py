@@ -1,4 +1,4 @@
-"""Shared test fixtures for the NEXUS API test suite."""
+"""Shared test fixtures for the Halkantir API test suite."""
 
 from __future__ import annotations
 
@@ -58,6 +58,7 @@ def medium_graph() -> Graph:
         Edge("cto", "supplier", 0.2),
     ]
     return Graph(
-        nodes=nodes, edges=edges,
+        nodes=nodes,
+        edges=edges,
         layers=["People", "Technology", "Supply", "Facilities"],
     )

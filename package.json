@@ -1,5 +1,5 @@
 {
-  "name": "halkite46",
+  "name": "halkantir",
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "quality": "turbo run quality",
     "test": "turbo run test",
-    "test:cov": "pnpm --filter @halkite/api test:cov"
+    "test:cov": "pnpm --filter @halkantir/api test:cov"
   },
   "devDependencies": {
     "prettier": "3.8.1",

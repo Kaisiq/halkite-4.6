@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/web/package.json ./apps/web/package.json
 
-RUN pnpm install --frozen-lockfile --filter @halkite/web...
+RUN pnpm install --frozen-lockfile --filter @halkantir/web...
 
 FROM node:22-alpine AS builder
 
@@ -29,7 +29,7 @@ COPY apps/web ./apps/web
 ENV API_INTERNAL_BASE_URL=http://api:8000
 ENV NEXT_PUBLIC_API_BASE_URL=
 
-RUN pnpm --filter @halkite/web build
+RUN pnpm --filter @halkantir/web build
 
 FROM node:22-alpine AS runtime
 

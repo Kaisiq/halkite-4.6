@@ -15,6 +15,7 @@ src/nexus_api/agents/cluster_isolator.py
 src/nexus_api/agents/compound_exploiter.py
 src/nexus_api/agents/critical_node.py
 src/nexus_api/agents/layer_assassin.py
+src/nexus_api/agents/monte_carlo.py
 src/nexus_api/briefing/__init__.py
 src/nexus_api/briefing/briefing.py
 src/nexus_api/engine/__init__.py
@@ -25,6 +26,10 @@ src/nexus_api/ingestion/__init__.py
 src/nexus_api/ingestion/extractor.py
 src/nexus_api/ingestion/google_drive.py
 src/nexus_api/ingestion/parser.py
+src/nexus_api/ingestion/standard.py
+src/nexus_api/mc/__init__.py
+src/nexus_api/mc/config.py
+src/nexus_api/mc/resilience.py
 src/nexus_api/models/__init__.py
 src/nexus_api/models/events.py
 src/nexus_api/models/graph.py
@@ -36,6 +41,8 @@ tests/test_api.py
 tests/test_cascade.py
 tests/test_google_drive_import.py
 tests/test_graph.py
+tests/test_monte_carlo.py
 tests/test_results.py
+tests/test_standard.py
 tests/test_state_tree.py
 tests/test_weakpoint.py

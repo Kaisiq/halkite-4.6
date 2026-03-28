@@ -1,14 +1,7 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const compat = new FlatCompat({ baseDirectory: __dirname });
-
-/** @type {import('eslint').Linter.Config[]} */
 export default [
-  ...compat.extends("next/core-web-vitals"),
+  ...nextCoreWebVitals,
   {
     rules: {
       // Enforce consistent imports
@@ -27,8 +20,7 @@ export default [
       "react-hooks/exhaustive-deps": "warn",
 
       // Allow unused vars prefixed with _
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": [
+      "no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],

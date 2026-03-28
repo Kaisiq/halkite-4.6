@@ -56,6 +56,7 @@ def _suffix(filename: str) -> str:
 # ParsedFile
 # ---------------------------------------------------------------------------
 
+
 class ParsedFile:
     """Result of parsing a single uploaded file.
 
@@ -91,10 +92,7 @@ class ParsedFile:
     def __repr__(self) -> str:
         chars = len(self.content)
         img = ", has_image=True" if self.raw_bytes else ""
-        return (
-            f"ParsedFile({self.filename!r}, type={self.file_type!r}, "
-            f"chars={chars}{img})"
-        )
+        return f"ParsedFile({self.filename!r}, type={self.file_type!r}, chars={chars}{img})"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -107,6 +105,7 @@ class ParsedFile:
 # ---------------------------------------------------------------------------
 # Per-type parsers
 # ---------------------------------------------------------------------------
+
 
 def _parse_pdf(data: bytes) -> str:
     """Extract text from a PDF using PyPDF2."""
@@ -347,6 +346,7 @@ _PARSERS: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def parse_file(filename: str, content: bytes) -> ParsedFile:
     """Parse a single uploaded file and return a :class:`ParsedFile`.

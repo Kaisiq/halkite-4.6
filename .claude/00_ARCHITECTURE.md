@@ -1,10 +1,10 @@
-# Achilles — Organizational Stress-Testing Platform
+# Halkantir — Organizational Stress-Testing Platform
 
 ## Architecture Overview
 
 ### What It Is
 
-Achilles is an organizational stress-testing platform that takes any organization's data, constructs a dependency network, mathematically identifies weakpoints, and runs adversarial simulations to find the worst-case failure scenarios — all backed by exact computation, not AI guessing.
+Halkantir is an organizational stress-testing platform that takes any organization's data, constructs a dependency network, mathematically identifies weakpoints, and runs adversarial simulations to find the worst-case failure scenarios — all backed by exact computation, not AI guessing.
 
 ### Core Principle
 

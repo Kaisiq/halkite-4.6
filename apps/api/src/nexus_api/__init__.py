@@ -1,2 +1,1 @@
-"""NEXUS API package."""
-
+"""Halkantir API package."""

@@ -12,48 +12,48 @@ From the state tree, extract all leaf nodes and rank by severity:
 
 ```
 function EXTRACT_SCENARIOS(tree, top_k=10):
-    
+
     leaves = [n for n in tree.all_nodes if len(n.children) == 0]
-    
+
     // Score each leaf
     scored = []
     for leaf in leaves:
         path = EXTRACT_PATH(leaf)
-        
+
         score = {
             // Primary: how much health was lost
             health_remaining: leaf.H,
             health_lost: 1.0 - leaf.H,
-            
+
             // Secondary: how many nodes failed
             failed_count: leaf.failed_count,
             failed_fraction: leaf.failed_count / total_nodes,
-            
+
             // Context: how deep and expensive
             depth: leaf.depth,
             recovery_cost: leaf.recovery_cost,
-            
+
             // Which layers were affected
             layers_affected: unique([
-                G.nodes[n.id].layer 
+                G.nodes[n.id].layer
                 for n in leaf.state if n.φ
             ]),
             layers_affected_count: len(layers_affected),
-            
+
             // Cross-layer cascade count
             cross_layer_events: count(
-                step for step in path 
-                if any(n.layer != path[0].event.target.layer 
+                step for step in path
+                if any(n.layer != path[0].event.target.layer
                        for n in step.new_failures)
             ),
-            
+
             // Which agent found this
             agent: leaf.agent,
-            
+
             // The full path
             path: path
         }
-        
+
         // Composite severity score
         score.severity = (
             0.5 * score.health_lost +
@@ -61,15 +61,15 @@ function EXTRACT_SCENARIOS(tree, top_k=10):
             0.15 * (score.layers_affected_count / total_layers) +
             0.15 * min(1.0, score.recovery_cost / max_possible_recovery)
         )
-        
+
         scored.append(score)
-    
+
     // Deduplicate similar scenarios
     unique_scenarios = deduplicate(scored)
-    
+
     // Sort by severity descending
     unique_scenarios.sort(by=severity, descending)
-    
+
     return unique_scenarios[:top_k]
 ```
 
@@ -83,12 +83,12 @@ Two scenarios are considered duplicates if they result in the same set of failed
 function deduplicate(scenarios):
     seen = set()
     unique = []
-    
+
     for scenario in scenarios:
         failed_set = frozenset(
             n.id for n in scenario.path[-1].state if n.φ
         )
-        
+
         if failed_set not in seen:
             seen.add(failed_set)
             unique.append(scenario)
@@ -97,7 +97,7 @@ function deduplicate(scenarios):
             existing = find(unique, by=failed_set)
             if scenario.depth < existing.depth:
                 replace(existing, scenario)
-    
+
     return unique
 ```
 
@@ -111,15 +111,15 @@ For each top scenario, send the mathematical results to Claude to generate a hum
 AI PROMPT:
 
 You are a risk analyst presenting findings to a business leader.
-You will receive a mathematical analysis of a worst-case failure 
-scenario for their organization's network. Translate it into a 
+You will receive a mathematical analysis of a worst-case failure
+scenario for their organization's network. Translate it into a
 clear, actionable narrative.
 
 SCENARIO DATA:
 {scenario JSON}
 
 GRAPH CONTEXT:
-{node names, layers, relationships — enough context to understand 
+{node names, layers, relationships — enough context to understand
 what each node represents in the real world}
 
 RULES:
@@ -165,23 +165,23 @@ Based on all scenarios combined, generate overall recommendations:
 
 ```
 function GENERATE_RECOMMENDATIONS(scenarios, vulnerability_report):
-    
+
     // Count how often each node appears in worst scenarios
     failure_frequency = Counter()
     for scenario in scenarios:
         for step in scenario.path:
             for node in step.new_failures:
                 failure_frequency[node.id] += 1
-    
+
     // Nodes that appear in many worst scenarios = high priority to protect
     priority_nodes = failure_frequency.most_common(10)
-    
+
     // For each priority node, recommend based on its properties
     recommendations = []
-    
+
     for node_id, frequency in priority_nodes:
         node = G.nodes[node_id]
-        
+
         if node.θ > 0.7 and no_redundancy(node):
             recommendations.append({
                 type: "add_redundancy",
@@ -191,7 +191,7 @@ function GENERATE_RECOMMENDATIONS(scenarios, vulnerability_report):
                 action: f"Create a backup/alternative for {node.name}",
                 estimated_resilience_gain: estimate_gain(node)
             })
-        
+
         if is_bridge_node(node_id):
             recommendations.append({
                 type: "add_bypass",
@@ -201,7 +201,7 @@ function GENERATE_RECOMMENDATIONS(scenarios, vulnerability_report):
                 action: f"Create alternative connections that bypass {node.name}",
                 estimated_resilience_gain: estimate_gain(node)
             })
-        
+
         if node.r > high_recovery_threshold:
             recommendations.append({
                 type: "reduce_recovery_time",
@@ -212,7 +212,7 @@ function GENERATE_RECOMMENDATIONS(scenarios, vulnerability_report):
                         f"recovery of {node.name}",
                 estimated_resilience_gain: "Reduces downtime"
             })
-    
+
     // Layer-level recommendations
     for layer, analysis in vulnerability_report.layer_analysis:
         if analysis.autonomy < 0.3:
@@ -225,7 +225,7 @@ function GENERATE_RECOMMENDATIONS(scenarios, vulnerability_report):
                 action: f"Build internal redundancy within {layer} layer",
                 estimated_resilience_gain: "Major"
             })
-    
+
     return recommendations
 ```
 
@@ -241,19 +241,19 @@ FinalReport = {
         "tree_stats": TREE_STATS(tree),
         "r_unit": "days"         // Recovery cost unit
     },
-    
+
     "network_health": {
         "overall": H(G),
         "per_layer": {layer: Hᵅ for each layer}
     },
-    
+
     "vulnerability_summary": {
         "most_critical_node": {id, name, θ, impact},
         "most_fragile_layer": {name, autonomy, criticality},
         "bridge_count": int,
         "highest_synergy_pair": {nodes, synergy_ratio}
     },
-    
+
     "worst_scenarios": [
         {
             "rank": 1,
@@ -282,7 +282,7 @@ FinalReport = {
         },
         ...  // top 10 scenarios
     ],
-    
+
     "recommendations": [
         {
             "priority": 1,
@@ -296,7 +296,7 @@ FinalReport = {
         },
         ...
     ],
-    
+
     // Raw data for frontend visualization
     "visualization_data": {
         "graph": G,                    // Full graph for D3 rendering
@@ -329,7 +329,7 @@ For the frontend to animate cascades, pre-compute frame-by-frame data:
 ```
 function PRECOMPUTE_ANIMATION(scenario):
     frames = []
-    
+
     // Frame 0: initial state
     G_anim = rebuild_graph(initial_state)
     frames.append({
@@ -339,17 +339,17 @@ function PRECOMPUTE_ANIMATION(scenario):
         event: null,
         H: H(G_anim)
     })
-    
+
     // For each step in the scenario path
     for step in scenario.path:
         // Apply event
         apply_event(G_anim, step.event)
-        
+
         // Run cascade step by step (not to fixed point)
         // Each cascade step = one animation frame
         while cascade_has_more_steps:
             cascade_one_step(G_anim)
-            
+
             frames.append({
                 step: len(frames),
                 node_healths: {n.id: n.h for n in G_anim.nodes},
@@ -358,7 +358,7 @@ function PRECOMPUTE_ANIMATION(scenario):
                 H: H(G_anim),
                 cascade_step: true
             })
-    
+
     return frames
 ```
 

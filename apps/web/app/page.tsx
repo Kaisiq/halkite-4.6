@@ -201,7 +201,9 @@ export default function DataInputPage() {
     });
     setFiles((prev) => {
       const existing = new Set(prev.map((file) => file.name + file.size));
-      const deduped = arr.filter((file) => !existing.has(file.name + file.size));
+      const deduped = arr.filter(
+        (file) => !existing.has(file.name + file.size),
+      );
       return [...prev, ...deduped];
     });
   }, []);
@@ -270,9 +272,7 @@ export default function DataInputPage() {
           scope: GOOGLE_SCOPE,
           callback: (response) => {
             if (response.error) {
-              reject(
-                new Error(response.error_description || response.error),
-              );
+              reject(new Error(response.error_description || response.error));
               return;
             }
             if (!response.access_token) {
@@ -321,7 +321,9 @@ export default function DataInputPage() {
         <header className="fade-rise border-b hairline pb-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <div className="eyebrow mb-3">Nexus // Organizational Survival Analysis</div>
+              <div className="eyebrow mb-3">
+                Nexus // Organizational Survival Analysis
+              </div>
               <h1 className="display-face max-w-4xl text-[clamp(3.3rem,8vw,6.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-[var(--foreground)]">
                 Reveal the dependencies that can break the whole organization.
               </h1>
@@ -344,13 +346,25 @@ export default function DataInputPage() {
           <div className="fade-rise-delay flex flex-col gap-8">
             <div className="max-w-2xl space-y-5">
               <p className="max-w-xl text-lg leading-8 text-[var(--muted-strong)] sm:text-xl">
-                Upload your org data, build a living dependency map, and rank the
-                catastrophic failure paths before they happen in production.
+                Upload your org data, build a living dependency map, and rank
+                the catastrophic failure paths before they happen in production.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
-                <ValueBlock label="Input" value="Any source" detail="CSV, docs, images, notes" />
-                <ValueBlock label="Output" value="True graph" detail="Nodes, edges, weakpoints" />
-                <ValueBlock label="Decision" value="Fix first" detail="Scenario-ranked action plan" />
+                <ValueBlock
+                  label="Input"
+                  value="Any source"
+                  detail="CSV, docs, images, notes"
+                />
+                <ValueBlock
+                  label="Output"
+                  value="True graph"
+                  detail="Nodes, edges, weakpoints"
+                />
+                <ValueBlock
+                  label="Decision"
+                  value="Fix first"
+                  detail="Scenario-ranked action plan"
+                />
               </div>
             </div>
 
@@ -385,13 +399,14 @@ export default function DataInputPage() {
                       Build the network.
                     </h2>
                     <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                      Start with one file or drop the full operational footprint.
-                      We will extract entities, connect dependencies, and push the
-                      session into the graph view.
+                      Start with one file or drop the full operational
+                      footprint. We will extract entities, connect dependencies,
+                      and push the session into the graph view.
                     </p>
                   </div>
                   <div className="metric-chip rounded-2xl px-4 py-3 text-sm">
-                    Accepted formats: PDF, DOCX, XLSX, CSV, TSV, PNG, JPG, JSON, XML, TXT, MD
+                    Accepted formats: PDF, DOCX, XLSX, CSV, TSV, PNG, JPG, JSON,
+                    XML, TXT, MD
                   </div>
                 </div>
 
@@ -431,15 +446,21 @@ export default function DataInputPage() {
                     </div>
                     <div>
                       <p className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
-                        {dragging ? "Release to stage the files" : "Drop files or browse your source set"}
+                        {dragging
+                          ? "Release to stage the files"
+                          : "Drop files or browse your source set"}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        Use one employee CSV to test the full path, or combine org
-                        charts, process docs, and operational notes for a richer graph.
+                        Use one employee CSV to test the full path, or combine
+                        org charts, process docs, and operational notes for a
+                        richer graph.
                       </p>
                     </div>
                     <div className="justify-self-start lg:justify-self-end">
-                      <button type="button" className="ghost-button rounded-full px-5 py-3 text-sm font-semibold">
+                      <button
+                        type="button"
+                        className="ghost-button rounded-full px-5 py-3 text-sm font-semibold"
+                      >
                         Select Files
                       </button>
                     </div>
@@ -507,8 +528,8 @@ export default function DataInputPage() {
                       <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--accent-soft)]">
                         Suggested test path
                       </div>
-                      Start with the org CSV, then expand into diagrams and process notes
-                      to increase graph coverage.
+                      Start with the org CSV, then expand into diagrams and
+                      process notes to increase graph coverage.
                     </div>
                   </div>
                 )}
@@ -546,20 +567,21 @@ export default function DataInputPage() {
                       {uploading ? "Building Network" : "Build Network"}
                     </button>
                     <p className="text-xs leading-5 text-[var(--muted)]">
-                      The graph becomes the source of truth for analysis, simulation,
-                      and scenario ranking.
+                      The graph becomes the source of truth for analysis,
+                      simulation, and scenario ranking.
                     </p>
                   </div>
                 </div>
 
                 {driveFolder && (
                   <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-[var(--foreground)]">
-                    Imported Drive folder <span className="font-semibold">{driveFolder.name}</span>
-                    {" "}
+                    Imported Drive folder{" "}
+                    <span className="font-semibold">{driveFolder.name}</span>{" "}
                     with {driveFolder.file_count} files
                     {driveFolder.files_skipped > 0
                       ? ` (${driveFolder.files_skipped} skipped)`
-                      : ""}.
+                      : ""}
+                    .
                   </div>
                 )}
 
@@ -587,8 +609,8 @@ export default function DataInputPage() {
                           {uploadProgress}
                         </p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          Extracting entities, linking dependencies, and staging the
-                          first graph state.
+                          Extracting entities, linking dependencies, and staging
+                          the first graph state.
                         </p>
                       </div>
                     </div>
@@ -603,12 +625,13 @@ export default function DataInputPage() {
                   <div>
                     <div className="eyebrow mb-2">Google Drive import</div>
                     <h3 className="display-face text-2xl font-medium tracking-[-0.03em] text-[var(--foreground)]">
-                      Point NEXUS at a Drive folder.
+                      Point Halkantir at a Drive folder.
                     </h3>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                      Paste a shared folder URL or raw folder id. The backend will crawl
-                      subfolders, export Google Docs formats into parseable files, and
-                      merge anything remotely relevant into one graph extraction pass.
+                      Paste a shared folder URL or raw folder id. The backend
+                      will crawl subfolders, export Google Docs formats into
+                      parseable files, and merge anything remotely relevant into
+                      one graph extraction pass.
                     </p>
                   </div>
                   <button
@@ -643,8 +666,8 @@ export default function DataInputPage() {
                       {uploading ? "Importing Folder" : "Import Folder"}
                     </button>
                     <p className="text-xs leading-5 text-[var(--muted)]">
-                      Requires a browser-authorized Google account with read access
-                      to the selected folder.
+                      Requires a browser-authorized Google account with read
+                      access to the selected folder.
                     </p>
                   </div>
                 </div>
@@ -676,7 +699,9 @@ export default function DataInputPage() {
                             key={question}
                             className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-[var(--foreground)]"
                           >
-                            <span className="text-[var(--accent-soft)]">{index + 1}</span>
+                            <span className="text-[var(--accent-soft)]">
+                              {index + 1}
+                            </span>
                             <span>{question}</span>
                           </li>
                         ))}
@@ -727,9 +752,9 @@ export default function DataInputPage() {
               </div>
 
               <p className="max-w-lg text-sm leading-6 text-[var(--muted)] sm:text-base">
-                The interface should feel like a resilience war room from the first
-                screen. This preview hints at what the graph view becomes once the
-                upload completes.
+                The interface should feel like a resilience war room from the
+                first screen. This preview hints at what the graph view becomes
+                once the upload completes.
               </p>
 
               <div className="relative mt-8 overflow-hidden rounded-[28px] border border-white/10 bg-[color:rgb(6_13_24_/_0.54)] px-4 py-6 sm:px-6">
@@ -737,7 +762,10 @@ export default function DataInputPage() {
                   <defs>
                     <linearGradient id="edgeGlow" x1="0%" x2="100%">
                       <stop offset="0%" stopColor="rgba(132, 198, 244, 0.24)" />
-                      <stop offset="100%" stopColor="rgba(123, 220, 198, 0.58)" />
+                      <stop
+                        offset="100%"
+                        stopColor="rgba(123, 220, 198, 0.58)"
+                      />
                     </linearGradient>
                   </defs>
 
@@ -769,10 +797,26 @@ export default function DataInputPage() {
                   })}
 
                   {PREVIEW_NODES.map((node, index) => (
-                    <g key={node.name} transform={`translate(${node.x}, ${node.y})`}>
-                      <circle r={node.size + 16} fill={node.color} opacity="0.07" />
-                      <circle r={node.size + 8} fill={node.color} opacity="0.05" />
-                      <circle r={node.size + 18} stroke={node.color} strokeOpacity="0.32" fill="none">
+                    <g
+                      key={node.name}
+                      transform={`translate(${node.x}, ${node.y})`}
+                    >
+                      <circle
+                        r={node.size + 16}
+                        fill={node.color}
+                        opacity="0.07"
+                      />
+                      <circle
+                        r={node.size + 8}
+                        fill={node.color}
+                        opacity="0.05"
+                      />
+                      <circle
+                        r={node.size + 18}
+                        stroke={node.color}
+                        strokeOpacity="0.32"
+                        fill="none"
+                      >
                         {index < 2 ? (
                           <animate
                             attributeName="r"
@@ -810,9 +854,21 @@ export default function DataInputPage() {
                 </svg>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <PreviewMetric label="People layer" value="14 nodes" accent="var(--accent-soft)" />
-                  <PreviewMetric label="Critical path" value="3 jumps" accent="#f0b663" />
-                  <PreviewMetric label="Collapse risk" value="0.28 H" accent="#e28766" />
+                  <PreviewMetric
+                    label="People layer"
+                    value="14 nodes"
+                    accent="var(--accent-soft)"
+                  />
+                  <PreviewMetric
+                    label="Critical path"
+                    value="3 jumps"
+                    accent="#f0b663"
+                  />
+                  <PreviewMetric
+                    label="Collapse risk"
+                    value="0.28 H"
+                    accent="#e28766"
+                  />
                 </div>
               </div>
             </section>
@@ -821,12 +877,12 @@ export default function DataInputPage() {
               <div className="eyebrow mb-2">Operator notes</div>
               <div className="space-y-4 text-sm leading-6 text-[var(--muted)]">
                 <p>
-                  Keep the graph as the largest visual object. Every deeper screen
-                  should feel connected to this first decision.
+                  Keep the graph as the largest visual object. Every deeper
+                  screen should feel connected to this first decision.
                 </p>
                 <p>
-                  The UI is deliberately dense but readable: less dashboard chrome,
-                  more source-of-truth structure.
+                  The UI is deliberately dense but readable: less dashboard
+                  chrome, more source-of-truth structure.
                 </p>
               </div>
             </section>

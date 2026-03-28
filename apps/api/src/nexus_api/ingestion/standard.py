@@ -1,6 +1,6 @@
 """Data Standardization Layer.
 
-Defines the canonical NEXUS standard format — a validated intermediate
+Defines the canonical Halkantir standard format — a validated intermediate
 representation between raw input and graph construction.  All ingestion
 paths (AI extraction or direct JSON upload) produce this format; graph
 construction reads from it.
@@ -19,6 +19,13 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from nexus_api.ingestion.scoring import (
+    build_default_scoring_policy,
+    score_edge_weight,
+    score_recovery,
+    score_theta,
+)
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -33,8 +40,9 @@ class StandardNode(BaseModel):
     name: str
     layer: str
     h: float = Field(default=1.0, ge=0.0, le=1.0)
-    theta: float = Field(ge=0.0, le=1.0)
-    r: float = Field(ge=0.0)
+    theta: float | None = Field(default=None, ge=0.0, le=1.0)
+    r: float | None = Field(default=None, ge=0.0)
+    r_candidate: float | None = Field(default=None, ge=0.0)
     meta: str | dict[str, Any] = Field(default_factory=dict)
 
 
@@ -49,12 +57,12 @@ class StandardEdge(BaseModel):
 
     from_id: str = Field(alias="from")
     to_id: str = Field(alias="to")
-    weight: float = Field(ge=0.0, le=1.0)
+    weight: float | None = Field(default=None, ge=0.0, le=1.0)
     meta: str | dict[str, Any] | None = None
 
 
 class StandardFormat(BaseModel):
-    """The NEXUS standard intermediate format.
+    """The Halkantir standard intermediate format.
 
     This is the canonical representation that sits between raw input
     and graph construction.
@@ -66,6 +74,7 @@ class StandardFormat(BaseModel):
     nodes: list[StandardNode]
     edges: list[StandardEdge]
     known_risks: list[str] = Field(default_factory=list)
+    scoring_policy: dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +93,7 @@ def detect_standard_format(data: bytes) -> StandardFormat | None:
     """
     try:
         parsed = json.loads(data.decode("utf-8", errors="replace"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except json.JSONDecodeError, UnicodeDecodeError:
         return None
 
     if not isinstance(parsed, dict):
@@ -101,8 +110,11 @@ def detect_standard_format(data: bytes) -> StandardFormat | None:
     first = nodes[0]
     if not isinstance(first, dict):
         return None
-    # theta is the key differentiator from raw business data
-    if not {"id", "layer", "theta"}.issubset(first.keys()):
+    has_theta = "theta" in first
+    has_scoring_features = isinstance(first.get("meta"), dict) and isinstance(
+        first["meta"].get("scoring_features"), dict
+    )
+    if not {"id", "layer"}.issubset(first.keys()) or not (has_theta or has_scoring_features):
         return None
 
     # edges must be a non-empty list of dicts with key fields
@@ -112,7 +124,13 @@ def detect_standard_format(data: bytes) -> StandardFormat | None:
     first_edge = edges[0]
     if not isinstance(first_edge, dict):
         return None
-    if not {"from", "to", "weight"}.issubset(first_edge.keys()):
+    has_weight = "weight" in first_edge
+    has_edge_scoring_features = isinstance(first_edge.get("meta"), dict) and isinstance(
+        first_edge["meta"].get("scoring_features"), dict
+    )
+    if not {"from", "to"}.issubset(first_edge.keys()) or not (
+        has_weight or has_edge_scoring_features
+    ):
         return None
 
     # Full Pydantic validation
@@ -138,13 +156,43 @@ def normalize_ai_output(
     the right shape.  This function fills in missing top-level fields and
     validates through the Pydantic model.
     """
+    r_unit = str(ai_dict.get("r_unit", "days"))
+    scoring_policy = ai_dict.get("scoring_policy")
+    if not isinstance(scoring_policy, dict) or not scoring_policy:
+        scoring_policy = build_default_scoring_policy(r_unit=r_unit)
+
+    nodes: list[dict[str, Any]] = []
+    for raw_node in ai_dict.get("nodes", []):
+        node = dict(raw_node)
+        meta = node.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+        if node.get("theta") is None:
+            node["theta"] = score_theta(meta.get("scoring_features"), meta)
+        if node.get("r") is None:
+            node["r"] = score_recovery(node.get("r_candidate"), meta, r_unit=r_unit)
+        node["meta"] = meta
+        nodes.append(node)
+
+    edges: list[dict[str, Any]] = []
+    for raw_edge in ai_dict.get("edges", []):
+        edge = dict(raw_edge)
+        meta = edge.get("meta")
+        if not isinstance(meta, dict):
+            meta = {} if meta is None else {"note": str(meta)}
+        if edge.get("weight") is None:
+            edge["weight"] = score_edge_weight(meta.get("scoring_features"), meta)
+        edge["meta"] = meta
+        edges.append(edge)
+
     data: dict[str, Any] = {
         "company": ai_dict.get("company", company),
-        "r_unit": ai_dict.get("r_unit", "days"),
+        "r_unit": r_unit,
         "layers": ai_dict.get("layers", []),
-        "nodes": ai_dict.get("nodes", []),
-        "edges": ai_dict.get("edges", []),
+        "nodes": nodes,
+        "edges": edges,
         "known_risks": ai_dict.get("known_risks", known_risks or []),
+        "scoring_policy": scoring_policy,
     }
     return StandardFormat.model_validate(data)
 
@@ -155,8 +203,8 @@ def normalize_ai_output(
 
 
 def _data_dir() -> Path:
-    """Return the base data directory, configurable via ``NEXUS_DATA_DIR``."""
-    return Path(os.environ.get("NEXUS_DATA_DIR", "data"))
+    """Return the base data directory, configurable via ``HALKANTIR_DATA_DIR``."""
+    return Path(os.environ.get("HALKANTIR_DATA_DIR", os.environ.get("NEXUS_DATA_DIR", "data")))
 
 
 def save_standard(session_id: str, standard: StandardFormat) -> Path:
@@ -185,9 +233,7 @@ def load_standard(session_id: str) -> StandardFormat:
     """
     path = _data_dir() / session_id / "standard.json"
     if not path.exists():
-        raise FileNotFoundError(
-            f"No standard.json found for session {session_id}"
-        )
+        raise FileNotFoundError(f"No standard.json found for session {session_id}")
     raw = path.read_text(encoding="utf-8")
     return StandardFormat.model_validate_json(raw)
 

@@ -64,9 +64,9 @@ _load_env_files()
 _validate_required_env()
 
 app = FastAPI(
-    title="NEXUS API",
+    title="Halkantir API",
     version="0.1.0",
-    description="Backend for the NEXUS network survival analyzer.",
+    description="Backend for the Halkantir organizational stress-testing platform.",
 )
 
 app.add_middleware(

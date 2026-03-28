@@ -1,4 +1,4 @@
-"""Tests for the NEXUS cascade engine (Module 2A).
+"""Tests for the Halkantir cascade engine (Module 2A).
 
 Covers ``apply_event``, ``cascade``, and ``cascade_compound`` from
 ``nexus_api.engine.cascade``.

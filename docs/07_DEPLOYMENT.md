@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Containerized on-prem deployment for NEXUS. The goal is to hand clients a
+Containerized on-prem deployment for Halkantir. The goal is to hand clients a
 repeatable Docker-based package that runs the FastAPI backend and Next.js
 frontend with minimal environment-specific changes.
 
@@ -25,10 +25,10 @@ browsers only need to reach the web service.
 Client Browser
       |
       v
-NEXUS Web Container (Next.js, port 3000)
+Halkantir Web Container (Next.js, port 3000)
       |
       v
-NEXUS API Container (FastAPI, port 8000)
+Halkantir API Container (FastAPI, port 8000)
 ```
 
 ---

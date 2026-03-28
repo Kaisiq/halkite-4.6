@@ -1,4 +1,4 @@
-# Achilles Testing Plan
+# Halkantir Testing Plan
 
 Step-by-step quality assurance process for reviewing the entire application.
 
@@ -16,21 +16,21 @@ pnpm test                           # all tests
 pnpm test:cov                       # backend tests with coverage
 
 # Backend only
-pnpm --filter @halkite/api lint     # ruff check
-pnpm --filter @halkite/api format:check  # ruff format check
-pnpm --filter @halkite/api typecheck     # mypy strict
-pnpm --filter @halkite/api test          # pytest
-pnpm --filter @halkite/api test:cov      # pytest + coverage
-pnpm --filter @halkite/api test:unit     # fast tests only (skip slow/integration)
+pnpm --filter @halkantir/api lint     # ruff check
+pnpm --filter @halkantir/api format:check  # ruff format check
+pnpm --filter @halkantir/api typecheck     # mypy strict
+pnpm --filter @halkantir/api test          # pytest
+pnpm --filter @halkantir/api test:cov      # pytest + coverage
+pnpm --filter @halkantir/api test:unit     # fast tests only (skip slow/integration)
 
 # Frontend only
-pnpm --filter @halkite/web lint          # eslint
-pnpm --filter @halkite/web typecheck     # tsc --noEmit
-pnpm --filter @halkite/web build         # next build (catches runtime issues)
+pnpm --filter @halkantir/web lint          # eslint
+pnpm --filter @halkantir/web typecheck     # tsc --noEmit
+pnpm --filter @halkantir/web build         # next build (catches runtime issues)
 
 # Formatting
 pnpm format:check                   # prettier (global)
-pnpm --filter @halkite/api format:check  # ruff format (python)
+pnpm --filter @halkantir/api format:check  # ruff format (python)
 ```
 
 ---
@@ -42,12 +42,13 @@ Run these first. They catch issues without executing any code.
 ### Step 1.1: Python linting (Ruff)
 
 ```bash
-pnpm --filter @halkite/api lint
+pnpm --filter @halkantir/api lint
 ```
 
 **Rules enforced:** pycodestyle, pyflakes, isort, bugbear, pyupgrade, pep8-naming, bandit (security), builtins, comprehensions, simplify, type-checking, pytest-style, return.
 
 **What to look for:**
+
 - [ ] Zero errors
 - [ ] No security warnings (S rules) in production code
 - [ ] Imports sorted correctly (I rules)
@@ -55,21 +56,23 @@ pnpm --filter @halkite/api lint
 ### Step 1.2: Python formatting (Ruff)
 
 ```bash
-pnpm --filter @halkite/api format:check
+pnpm --filter @halkantir/api format:check
 ```
 
 **What to look for:**
+
 - [ ] All files formatted consistently (double quotes, 4-space indent, LF line endings)
 
 ### Step 1.3: Python type checking (MyPy)
 
 ```bash
-pnpm --filter @halkite/api typecheck
+pnpm --filter @halkantir/api typecheck
 ```
 
 **Configuration:** strict mode, all warnings enabled.
 
 **What to look for:**
+
 - [ ] Zero type errors
 - [ ] No `Any` types leaking into public APIs
 - [ ] Third-party library stubs accounted for (numpy, networkx, etc.)
@@ -77,22 +80,24 @@ pnpm --filter @halkite/api typecheck
 ### Step 1.4: TypeScript type checking
 
 ```bash
-pnpm --filter @halkite/web typecheck
+pnpm --filter @halkantir/web typecheck
 ```
 
 **What to look for:**
+
 - [ ] Zero TypeScript errors
 - [ ] No implicit `any` types
 
 ### Step 1.5: Frontend linting (ESLint)
 
 ```bash
-pnpm --filter @halkite/web lint
+pnpm --filter @halkantir/web lint
 ```
 
 **Rules enforced:** next/core-web-vitals, react-hooks/rules-of-hooks, no-duplicate-imports.
 
 **What to look for:**
+
 - [ ] Zero errors
 - [ ] No React hook violations
 
@@ -103,6 +108,7 @@ pnpm format:check
 ```
 
 **What to look for:**
+
 - [ ] All JS/TS/JSON/MD files formatted consistently
 
 ---
@@ -112,68 +118,71 @@ pnpm format:check
 These test individual modules in isolation. No network calls, no AI API.
 
 ```bash
-pnpm --filter @halkite/api test:unit
+pnpm --filter @halkantir/api test:unit
 ```
 
 ### Step 2.1: Graph Model (`test_graph.py`)
 
 Tests the core data structures from Module 1A.
 
-| Test | Validates |
-|------|-----------|
-| Node creation | Default h=1.0, phi=False |
-| Node.from_dict | JSON deserialization, missing-layer KeyError |
-| Graph init | Adjacency matrix shape, node/edge counts |
-| network_health | theta-weighted average = 1.0 when pristine |
-| network_health (damaged) | H < 1.0 after manual damage |
-| layer_health | Per-layer computation |
-| snapshot | State captures h, phi, H, H_per_layer |
-| deep_copy | Independence from original |
-| reset | All h=1.0, phi=False restored |
-| validate | Valid graph passes, self-loops rejected |
+| Test                     | Validates                                    |
+| ------------------------ | -------------------------------------------- |
+| Node creation            | Default h=1.0, phi=False                     |
+| Node.from_dict           | JSON deserialization, missing-layer KeyError |
+| Graph init               | Adjacency matrix shape, node/edge counts     |
+| network_health           | theta-weighted average = 1.0 when pristine   |
+| network_health (damaged) | H < 1.0 after manual damage                  |
+| layer_health             | Per-layer computation                        |
+| snapshot                 | State captures h, phi, H, H_per_layer        |
+| deep_copy                | Independence from original                   |
+| reset                    | All h=1.0, phi=False restored                |
+| validate                 | Valid graph passes, self-loops rejected      |
 
 **What to look for:**
+
 - [ ] All pass
-- [ ] Health formula: H = sum(h_i * theta_i) / sum(theta_i)
+- [ ] Health formula: H = sum(h_i \* theta_i) / sum(theta_i)
 
 ### Step 2.2: Cascade Engine (`test_cascade.py`)
 
 Tests the deterministic cascade propagation from Module 2A.
 
-| Test | Validates |
-|------|-----------|
-| kill event | h=0, phi=True |
-| damage event | h *= (1 - magnitude) |
-| cascade propagation | Downstream damage spreads |
-| cascade metrics | health_loss, cascade_size, nodes_failed |
-| already-dead node | Silently skipped |
-| nonexistent node | ValueError raised |
-| compound cascade | Multiple events, events logged |
-| zero-theta node | No damage propagates |
-| determinism | Same input → same output |
-| convergence | Cascade terminates |
-| cross-layer metric | Accurate attribution |
+| Test                | Validates                               |
+| ------------------- | --------------------------------------- |
+| kill event          | h=0, phi=True                           |
+| damage event        | h \*= (1 - magnitude)                   |
+| cascade propagation | Downstream damage spreads               |
+| cascade metrics     | health_loss, cascade_size, nodes_failed |
+| already-dead node   | Silently skipped                        |
+| nonexistent node    | ValueError raised                       |
+| compound cascade    | Multiple events, events logged          |
+| zero-theta node     | No damage propagates                    |
+| determinism         | Same input → same output                |
+| convergence         | Cascade terminates                      |
+| cross-layer metric  | Accurate attribution                    |
 
 **What to look for:**
+
 - [ ] All pass
 - [ ] Cascade reaches fixed point (no infinite loops)
-- [ ] Damage formula: damage = A[u][v] * theta_v * (1 - h_v)
+- [ ] Damage formula: damage = A[u][v] _ theta_v _ (1 - h_v)
 
 ### Step 2.3: Weakpoint Analysis (`test_weakpoint.py`)
 
 Tests all 6 analysis algorithms from Module 2.
 
-| Test | Validates |
-|------|-----------|
-| Node impact ranking | Ordered by health_loss, CEO at top |
-| Critical edge detection | One entry per edge |
-| Bridge node detection | Fragmentation score in [0, 1] |
-| Cluster detection | At least 1 cluster, isolation_risk > 0 |
-| Compound pairs | Synergy values computed |
-| Layer dependency | All layers present, autonomy in [0, 1] |
-| Full analysis | VulnerabilityReport has all 7 sections |
+| Test                    | Validates                              |
+| ----------------------- | -------------------------------------- |
+| Node impact ranking     | Ordered by health_loss, CEO at top     |
+| Critical edge detection | One entry per edge                     |
+| Bridge node detection   | Fragmentation score in [0, 1]          |
+| Cluster detection       | At least 1 cluster, isolation_risk > 0 |
+| Compound pairs          | Synergy values computed                |
+| Layer dependency        | All layers present, autonomy in [0, 1] |
+| Full analysis           | VulnerabilityReport has all 7 sections |
 
 **What to look for:**
+
 - [ ] All pass
 - [ ] Top-ranked node is the most connected/critical
 
@@ -181,15 +190,16 @@ Tests all 6 analysis algorithms from Module 2.
 
 Tests Modules 3 and 3A.
 
-| Test | Validates |
-|------|-----------|
-| generate_all_briefs | 5 briefs with correct agent_types |
-| create_all_agents | 5 agents of correct subclass types |
-| Each agent's select_events | Returns valid Event list |
-| Branching factor | Output size <= branching_factor |
-| Dead network | Empty list when all nodes dead |
+| Test                       | Validates                          |
+| -------------------------- | ---------------------------------- |
+| generate_all_briefs        | 5 briefs with correct agent_types  |
+| create_all_agents          | 5 agents of correct subclass types |
+| Each agent's select_events | Returns valid Event list           |
+| Branching factor           | Output size <= branching_factor    |
+| Dead network               | Empty list when all nodes dead     |
 
 **What to look for:**
+
 - [ ] All pass
 - [ ] Every agent returns well-formed Event objects
 
@@ -197,18 +207,19 @@ Tests Modules 3 and 3A.
 
 Tests Module 4.
 
-| Test | Validates |
-|------|-----------|
-| build_state_tree | Root exists, nodes explored > 0 |
-| Root health | H = 1.0 for pristine graph |
-| Depth limit | max_depth_reached <= config.max_depth |
-| Size limit | total_nodes_explored <= config.max_tree_nodes |
-| Worst scenarios | Sorted by H ascending |
-| Backpropagation | root.worst_descendant_H matches |
-| extract_path | Returns node IDs, not array indices |
-| Duplicate pruning | Same failure set not explored twice |
+| Test              | Validates                                     |
+| ----------------- | --------------------------------------------- |
+| build_state_tree  | Root exists, nodes explored > 0               |
+| Root health       | H = 1.0 for pristine graph                    |
+| Depth limit       | max_depth_reached <= config.max_depth         |
+| Size limit        | total_nodes_explored <= config.max_tree_nodes |
+| Worst scenarios   | Sorted by H ascending                         |
+| Backpropagation   | root.worst_descendant_H matches               |
+| extract_path      | Returns node IDs, not array indices           |
+| Duplicate pruning | Same failure set not explored twice           |
 
 **What to look for:**
+
 - [ ] All pass
 - [ ] Tree is pruned correctly
 
@@ -216,17 +227,18 @@ Tests Module 4.
 
 Tests Module 4A.
 
-| Test | Validates |
-|------|-----------|
-| extract_scenarios | Sorted by severity descending |
-| Severity range | All values in [0, 1] |
-| Deduplication | Same failure set → one scenario |
-| Recommendations | At least one generated |
-| Animation frames | Frame 0 = initial state |
-| Final report | All sections populated |
-| visualization_data | Contains state_tree key |
+| Test               | Validates                       |
+| ------------------ | ------------------------------- |
+| extract_scenarios  | Sorted by severity descending   |
+| Severity range     | All values in [0, 1]            |
+| Deduplication      | Same failure set → one scenario |
+| Recommendations    | At least one generated          |
+| Animation frames   | Frame 0 = initial state         |
+| Final report       | All sections populated          |
+| visualization_data | Contains state_tree key         |
 
 **What to look for:**
+
 - [ ] All pass
 - [ ] Severity formula: 0.5*health_lost + 0.2*failed_fraction + 0.15*layers_ratio + 0.15*recovery_ratio
 
@@ -238,17 +250,18 @@ Tests Module 4A.
 
 Tests the FastAPI endpoints with an in-process test client (httpx).
 
-| Test | Validates |
-|------|-----------|
-| GET /api/health | Returns 200, {"status": "ok"} |
-| POST /api/analyze (no graph) | Returns 400, GRAPH_EMPTY |
-| POST /api/cascade (no graph) | Returns 400, GRAPH_EMPTY |
-| POST /api/explore (no analysis) | Returns 400, ANALYSIS_NOT_RUN |
-| GET /api/graph/invalid | Returns 404, SESSION_NOT_FOUND |
-| POST /api/graph/update | Add node, verify in response |
-| Full pipeline | Upload → analyze → explore → report |
+| Test                            | Validates                           |
+| ------------------------------- | ----------------------------------- |
+| GET /api/health                 | Returns 200, {"status": "ok"}       |
+| POST /api/analyze (no graph)    | Returns 400, GRAPH_EMPTY            |
+| POST /api/cascade (no graph)    | Returns 400, GRAPH_EMPTY            |
+| POST /api/explore (no analysis) | Returns 400, ANALYSIS_NOT_RUN       |
+| GET /api/graph/invalid          | Returns 404, SESSION_NOT_FOUND      |
+| POST /api/graph/update          | Add node, verify in response        |
+| Full pipeline                   | Upload → analyze → explore → report |
 
 **What to look for:**
+
 - [ ] All pass
 - [ ] Error codes match spec (SESSION_NOT_FOUND, GRAPH_EMPTY, etc.)
 - [ ] Response shapes match `docs/05_API.md`
@@ -256,12 +269,13 @@ Tests the FastAPI endpoints with an in-process test client (httpx).
 ### Step 3.2: Full Pipeline Test (marked `@pytest.mark.slow`)
 
 ```bash
-pnpm --filter @halkite/api test  # includes slow tests
+pnpm --filter @halkantir/api test  # includes slow tests
 ```
 
 This test creates a graph, runs analysis, exploration, and report generation end-to-end. It validates that every module integrates correctly.
 
 **What to look for:**
+
 - [ ] No crashes through the full pipeline
 - [ ] Final report has scenarios with real node IDs
 - [ ] Recommendations reference actual nodes
@@ -271,26 +285,27 @@ This test creates a graph, runs analysis, exploration, and report generation end
 ## Phase 4 — Coverage Report
 
 ```bash
-pnpm --filter @halkite/api test:cov
+pnpm --filter @halkantir/api test:cov
 ```
 
 **Coverage targets:**
 
-| Module | Target | Rationale |
-|--------|--------|-----------|
-| `models/graph.py` | 90%+ | Core data structure, must be solid |
-| `models/events.py` | 95%+ | Small, fully testable |
-| `engine/cascade.py` | 85%+ | Core math, critical correctness |
-| `engine/weakpoint.py` | 75%+ | 6 algorithms, complex branches |
-| `engine/state_tree.py` | 80%+ | Tree construction + pruning |
-| `agents/*.py` | 70%+ | Strategy logic varies |
-| `briefing/briefing.py` | 80%+ | Deterministic mapping |
-| `results/ranking.py` | 65%+ | Large file, some paths need AI |
-| `ingestion/*.py` | 50%+ | AI-dependent paths can't be unit tested |
-| `main.py` | 70%+ | Route handlers |
-| **Overall** | **60%+** | Configured as `fail_under` in pyproject.toml |
+| Module                 | Target   | Rationale                                    |
+| ---------------------- | -------- | -------------------------------------------- |
+| `models/graph.py`      | 90%+     | Core data structure, must be solid           |
+| `models/events.py`     | 95%+     | Small, fully testable                        |
+| `engine/cascade.py`    | 85%+     | Core math, critical correctness              |
+| `engine/weakpoint.py`  | 75%+     | 6 algorithms, complex branches               |
+| `engine/state_tree.py` | 80%+     | Tree construction + pruning                  |
+| `agents/*.py`          | 70%+     | Strategy logic varies                        |
+| `briefing/briefing.py` | 80%+     | Deterministic mapping                        |
+| `results/ranking.py`   | 65%+     | Large file, some paths need AI               |
+| `ingestion/*.py`       | 50%+     | AI-dependent paths can't be unit tested      |
+| `main.py`              | 70%+     | Route handlers                               |
+| **Overall**            | **60%+** | Configured as `fail_under` in pyproject.toml |
 
 **What to look for:**
+
 - [ ] Overall coverage >= 60%
 - [ ] No critical module below its target
 - [ ] Identify uncovered branches for future test additions
@@ -302,16 +317,17 @@ pnpm --filter @halkite/api test:cov
 ### Step 5.1: Backend compiles
 
 ```bash
-pnpm --filter @halkite/api build
+pnpm --filter @halkantir/api build
 ```
 
 ### Step 5.2: Frontend builds
 
 ```bash
-pnpm --filter @halkite/web build
+pnpm --filter @halkantir/web build
 ```
 
 **What to look for:**
+
 - [ ] Both build without errors
 - [ ] Frontend routes: /, /network/[sessionId], /simulate/[sessionId], /report/[sessionId]
 - [ ] No TypeScript errors during build
@@ -345,7 +361,7 @@ curl -s http://localhost:8000/docs | head -5
 
 Open http://localhost:3000 in a browser.
 
-- [ ] Achilles landing page renders
+- [ ] Halkantir landing page renders
 - [ ] Dark theme with gradient background
 - [ ] File drop zone visible
 - [ ] "Build Network" button visible
@@ -418,13 +434,13 @@ Open http://localhost:3000 in a browser.
 
 For a graph with ~20 nodes, ~30 edges:
 
-| Operation | Expected Time |
-|-----------|---------------|
-| Cascade (single kill) | < 50ms |
-| Full weakpoint analysis | < 2s |
-| State tree exploration (depth=5, limit=5000) | < 30s |
-| Frontend initial render | < 2s |
-| D3 graph render | < 1s |
+| Operation                                    | Expected Time |
+| -------------------------------------------- | ------------- |
+| Cascade (single kill)                        | < 50ms        |
+| Full weakpoint analysis                      | < 2s          |
+| State tree exploration (depth=5, limit=5000) | < 30s         |
+| Frontend initial render                      | < 2s          |
+| D3 graph render                              | < 1s          |
 
 - [ ] No operation hangs or takes unreasonably long
 - [ ] Memory usage stays reasonable (< 500MB for the Python process)
@@ -442,13 +458,14 @@ jobs:
     steps:
       - run: pnpm install
       - run: ./bin/setup
-      - run: pnpm quality        # lint + typecheck
-      - run: pnpm format:check   # formatting
-      - run: pnpm test:cov       # tests + coverage
-      - run: pnpm build          # build both apps
+      - run: pnpm quality # lint + typecheck
+      - run: pnpm format:check # formatting
+      - run: pnpm test:cov # tests + coverage
+      - run: pnpm build # build both apps
 ```
 
 **Gate rules:**
+
 - All lint checks pass
 - All type checks pass
 - All tests pass

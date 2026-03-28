@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NEXUS API – shared TypeScript types
+// Halkantir API – shared TypeScript types
 // Mirrors the shapes defined in docs/05_API.md
 // ---------------------------------------------------------------------------
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,10 +17,10 @@ from nexus_api.ingestion.standard import (
     save_standard,
 )
 
-
 # ======================================================================
 # Fixtures
 # ======================================================================
+
 
 @pytest.fixture
 def test_json_path() -> Path:
@@ -54,14 +53,15 @@ def minimal_standard_dict() -> dict:
 
 @pytest.fixture
 def tmp_data_dir(tmp_path: Path):
-    """Patch NEXUS_DATA_DIR to a temp directory."""
-    with patch.dict("os.environ", {"NEXUS_DATA_DIR": str(tmp_path)}):
+    """Patch HALKANTIR_DATA_DIR to a temp directory."""
+    with patch.dict("os.environ", {"HALKANTIR_DATA_DIR": str(tmp_path)}):
         yield tmp_path
 
 
 # ======================================================================
 # Detection
 # ======================================================================
+
 
 class TestDetectStandardFormat:
     def test_valid_test_json(self, test_json_bytes: bytes):
@@ -90,13 +90,67 @@ class TestDetectStandardFormat:
         assert detect_standard_format(b"\x00\x01\x02") is None
 
     def test_json_without_theta_returns_none(self):
-        """JSON with nodes but no theta is not standard format."""
+        """JSON with nodes but no theta or scoring features is not standard format."""
         data = {
             "layers": ["People"],
             "nodes": [{"id": "a", "name": "Alice", "layer": "People"}],
             "edges": [{"from": "a", "to": "a", "weight": 0.5}],
         }
         assert detect_standard_format(json.dumps(data).encode()) is None
+
+    def test_feature_based_graph_is_detected(self):
+        data = {
+            "layers": ["People", "Tech"],
+            "nodes": [
+                {
+                    "id": "a",
+                    "name": "Alice",
+                    "layer": "People",
+                    "r_candidate": 12,
+                    "meta": {
+                        "type": "person",
+                        "function": "leadership",
+                        "evidence": [{"kind": "document", "source": "org.pdf", "confidence": 0.9}],
+                        "scoring_features": {
+                            "blast_radius": 0.8,
+                            "operational_criticality": 0.7,
+                            "irreplaceability": 0.9,
+                        },
+                    },
+                },
+                {
+                    "id": "b",
+                    "name": "Server",
+                    "layer": "Tech",
+                    "theta": 0.4,
+                    "r": 1,
+                    "meta": {"type": "service", "function": "hosting"},
+                },
+            ],
+            "edges": [
+                {
+                    "from": "a",
+                    "to": "b",
+                    "meta": {
+                        "dependency_type": "operational",
+                        "evidence": [
+                            {
+                                "kind": "document",
+                                "source": "runbook.md",
+                                "confidence": 0.8,
+                            }
+                        ],
+                        "scoring_features": {
+                            "operational": 0.9,
+                            "substitutability_penalty": 0.5,
+                        },
+                    },
+                }
+            ],
+        }
+        result = detect_standard_format(json.dumps(data).encode())
+        assert result is not None
+        assert isinstance(result, StandardFormat)
 
     def test_json_missing_edges_returns_none(self):
         data = {
@@ -116,6 +170,7 @@ class TestDetectStandardFormat:
 # ======================================================================
 # Normalization
 # ======================================================================
+
 
 class TestNormalizeAiOutput:
     def test_basic_normalization(self):
@@ -159,10 +214,73 @@ class TestNormalizeAiOutput:
         assert result.r_unit == "days"
         assert result.known_risks == []
 
+    def test_scores_feature_based_ai_output(self):
+        ai_dict = {
+            "layers": ["People", "Tech"],
+            "nodes": [
+                {
+                    "id": "a",
+                    "name": "Alice",
+                    "layer": "People",
+                    "r_candidate": 12,
+                    "meta": {
+                        "type": "person",
+                        "function": "leadership",
+                        "substitutability": 0.1,
+                        "evidence": [{"kind": "document", "source": "org.pdf", "confidence": 0.9}],
+                        "scoring_features": {
+                            "blast_radius": 0.8,
+                            "operational_criticality": 0.7,
+                            "irreplaceability": 0.9,
+                            "recovery_penalty": 0.2,
+                            "historical_incident_impact": 0.1,
+                        },
+                    },
+                }
+            ],
+            "edges": [
+                {
+                    "from": "a",
+                    "to": "a_backup",
+                    "weight": 0.2,
+                },
+                {
+                    "from": "a",
+                    "to": "b",
+                    "meta": {
+                        "dependency_type": "operational",
+                        "evidence": [
+                            {
+                                "kind": "document",
+                                "source": "runbook.md",
+                                "confidence": 0.8,
+                            }
+                        ],
+                        "scoring_features": {
+                            "operational": 0.9,
+                            "informational": 0.4,
+                            "substitutability_penalty": 0.6,
+                            "workaround_delay": 0.3,
+                        },
+                    },
+                },
+            ],
+        }
+        # remove the intentionally extraneous first edge to avoid invalid references
+        ai_dict["edges"] = [ai_dict["edges"][1]]
+
+        result = normalize_ai_output(ai_dict, company="Test Co")
+        assert result.company == "Test Co"
+        assert result.nodes[0].theta == pytest.approx(0.645)
+        assert result.nodes[0].r == pytest.approx(12.0)
+        assert result.edges[0].weight == pytest.approx(0.405)
+        assert result.scoring_policy["version"] == "v1"
+
 
 # ======================================================================
 # Persistence
 # ======================================================================
+
 
 class TestPersistence:
     def test_save_and_load_roundtrip(self, minimal_standard_dict: dict, tmp_data_dir: Path):
@@ -181,7 +299,7 @@ class TestPersistence:
         assert loaded.known_risks == standard.known_risks
 
     def test_load_nonexistent_raises(self, tmp_data_dir: Path):
-        with pytest.raises(FileNotFoundError, match="No standard.json found"):
+        with pytest.raises(FileNotFoundError, match=r"No standard\.json found"):
             load_standard("nonexistent-session")
 
     def test_saved_json_uses_from_alias(self, minimal_standard_dict: dict, tmp_data_dir: Path):
@@ -200,6 +318,7 @@ class TestPersistence:
 # ======================================================================
 # Graph construction
 # ======================================================================
+
 
 class TestBuildGraphFromStandard:
     def test_basic_construction(self, minimal_standard_dict: dict):
@@ -243,3 +362,85 @@ class TestBuildGraphFromStandard:
 
         validation = graph.validate()
         assert validation.is_valid
+
+    def test_feature_based_construction_scores_math(self):
+        standard = StandardFormat.model_validate(
+            {
+                "company": "Research Co",
+                "r_unit": "days",
+                "layers": ["People", "Technology"],
+                "nodes": [
+                    {
+                        "id": "ceo",
+                        "name": "CEO",
+                        "layer": "People",
+                        "r_candidate": 10,
+                        "meta": {
+                            "type": "person",
+                            "function": "leadership",
+                            "evidence": [
+                                {
+                                    "kind": "document",
+                                    "source": "org.pdf",
+                                    "confidence": 0.9,
+                                }
+                            ],
+                            "scoring_features": {
+                                "blast_radius": 0.8,
+                                "operational_criticality": 0.7,
+                                "irreplaceability": 0.9,
+                                "recovery_penalty": 0.2,
+                                "historical_incident_impact": 0.1,
+                            },
+                        },
+                    },
+                    {
+                        "id": "erp",
+                        "name": "ERP",
+                        "layer": "Technology",
+                        "theta": 0.4,
+                        "r": 3,
+                        "meta": {
+                            "type": "service",
+                            "function": "planning",
+                            "evidence": [
+                                {
+                                    "kind": "diagram",
+                                    "source": "arch.drawio",
+                                    "confidence": 0.8,
+                                }
+                            ],
+                        },
+                    },
+                ],
+                "edges": [
+                    {
+                        "from": "ceo",
+                        "to": "erp",
+                        "meta": {
+                            "dependency_type": "operational",
+                            "evidence": [
+                                {
+                                    "kind": "document",
+                                    "source": "runbook.md",
+                                    "confidence": 0.8,
+                                }
+                            ],
+                            "scoring_features": {
+                                "operational": 0.9,
+                                "informational": 0.4,
+                                "substitutability_penalty": 0.6,
+                                "workaround_delay": 0.3,
+                            },
+                        },
+                    }
+                ],
+                "scoring_policy": {"version": "v1"},
+            }
+        )
+
+        graph, _ = build_graph_from_standard(standard)
+        assert graph.get_node("ceo").theta == pytest.approx(0.645)
+        assert graph.get_node("ceo").r == pytest.approx(10.0)
+        assert graph.edges[0].weight == pytest.approx(0.405)
+        assert graph.scoring_policy["version"] == "v1"

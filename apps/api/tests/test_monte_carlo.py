@@ -12,7 +12,6 @@ from nexus_api.mc.resilience import ResilienceProfile, run_resilience_analysis
 from nexus_api.models.events import Event
 from nexus_api.models.graph import Graph
 
-
 # ---------------------------------------------------------------------------
 # MCConfig tests
 # ---------------------------------------------------------------------------
@@ -28,12 +27,14 @@ class TestMCConfig:
         assert cfg.n_resilience_samples == 500
 
     def test_from_dict(self) -> None:
-        cfg = MCConfig.from_dict({
-            "failure_model": "weighted_theta",
-            "branching_factor": 4,
-            "n_resilience_samples": 100,
-            "unknown_key": "ignored",
-        })
+        cfg = MCConfig.from_dict(
+            {
+                "failure_model": "weighted_theta",
+                "branching_factor": 4,
+                "n_resilience_samples": 100,
+                "unknown_key": "ignored",
+            }
+        )
         assert cfg.failure_model == "weighted_theta"
         assert cfg.branching_factor == 4
         assert cfg.n_resilience_samples == 100
@@ -43,7 +44,7 @@ class TestMCConfig:
             MCConfig(failure_model="invalid")
 
     def test_prob_sum_exceeds_one(self) -> None:
-        with pytest.raises(ValueError, match="kill_prob.*damage_prob"):
+        with pytest.raises(ValueError, match=r"kill_prob.*damage_prob"):
             MCConfig(kill_prob=0.6, damage_prob=0.6)
 
     def test_max_resilience_cap(self) -> None:
@@ -75,7 +76,8 @@ class TestMonteCarloAgent:
             assert isinstance(e, Event)
 
     def test_select_events_respects_branching_factor(
-        self, small_graph: Graph,
+        self,
+        small_graph: Graph,
     ) -> None:
         cfg = MCConfig(branching_factor=2)
         brief = brief_monte_carlo(cfg)
@@ -84,7 +86,8 @@ class TestMonteCarloAgent:
         assert len(events) <= 2
 
     def test_select_events_all_dead_returns_empty(
-        self, small_graph: Graph,
+        self,
+        small_graph: Graph,
     ) -> None:
         for n in small_graph.nodes:
             n.phi = True
@@ -129,10 +132,12 @@ class TestMonteCarloAgent:
         assert len(events) > 0
 
     def test_damage_events_have_valid_magnitude(
-        self, small_graph: Graph,
+        self,
+        small_graph: Graph,
     ) -> None:
         cfg = MCConfig(
-            kill_prob=0.0, damage_prob=1.0,  # force all damage
+            kill_prob=0.0,
+            damage_prob=1.0,  # force all damage
             branching_factor=4,
         )
         brief = brief_monte_carlo(cfg)
@@ -144,7 +149,8 @@ class TestMonteCarloAgent:
 
     def test_cut_edge_events(self, small_graph: Graph) -> None:
         cfg = MCConfig(
-            kill_prob=0.0, damage_prob=0.0,  # force all cut_edge
+            kill_prob=0.0,
+            damage_prob=0.0,  # force all cut_edge
             branching_factor=4,
         )
         brief = brief_monte_carlo(cfg)

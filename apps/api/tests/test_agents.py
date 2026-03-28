@@ -241,6 +241,4 @@ def test_agent_on_dead_network(agents):
         # brief regardless of graph state, so test at depth 1 instead.
         depth = 1 if isinstance(agent, CompoundExploiter) else 0
         events = agent.select_events(dead_graph, depth=depth)
-        assert events == [], (
-            f"{type(agent).__name__} returned events on a dead network: {events}"
-        )
+        assert events == [], f"{type(agent).__name__} returned events on a dead network: {events}"

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Summary
 
-Achilles is an organizational stress-testing platform. Users upload documents about their organization, AI builds a dependency graph, deterministic math computes weakpoints/cascades/adversarial simulations, and AI explains outputs with narratives. The core principle: **AI generates. Math computes. AI explains.** — AI never touches the numbers. See `docs/BUSINESS_PLAN.md` for the full pitch kit.
+Halkantir is an organizational stress-testing platform. Users upload documents about their organization, AI builds a dependency graph, deterministic math computes weakpoints/cascades/adversarial simulations, and AI explains outputs with narratives. The core principle: **AI generates. Math computes. AI explains.** — AI never touches the numbers. See `docs/BUSINESS_PLAN.md` for the full pitch kit.
 
 ## Docs as Source of Truth
 
@@ -13,22 +13,26 @@ Read the relevant files in `docs/` before making changes. The `docs/` directory 
 ## Build & Dev Commands
 
 ### First-time setup
+
 ```bash
 ./bin/setup          # installs pnpm deps + creates .venv + pip installs backend
 ```
 
 ### Run both frontend and backend together
+
 ```bash
 ./bin/dev            # starts API (port 8000) and web (Next.js) concurrently
 ```
 
 ### Individual app dev servers
+
 ```bash
-pnpm --filter @halkite/api dev     # FastAPI dev server (apps/api)
-pnpm --filter @halkite/web dev     # Next.js dev server (apps/web)
+pnpm --filter @halkantir/api dev   # FastAPI dev server (apps/api)
+pnpm --filter @halkantir/web dev   # Next.js dev server (apps/web)
 ```
 
 ### Build, lint, typecheck (via Turbo across workspaces)
+
 ```bash
 pnpm build           # turbo run build
 pnpm lint            # turbo run lint
@@ -38,6 +42,7 @@ pnpm format:check    # prettier --check .
 ```
 
 ### Backend-specific (run from activated .venv)
+
 ```bash
 source .venv/bin/activate
 python -m pytest                        # run all tests
@@ -55,6 +60,7 @@ Monorepo managed by **pnpm workspaces** + **Turbo**. Two apps:
 - **`apps/web`** — Next.js 16 + React 19 frontend. Uses App Router (`apps/web/app/`). State via Zustand. Visualization via D3 and Recharts. Styled with Tailwind CSS v4.
 
 ### Module pipeline (maps to `docs/` files)
+
 1. **Data Ingestion** (01) — user files parsed, AI builds the graph
 2. **Weakpoint Analysis** (02) — pure math: rankings, bridges, clusters
 3. **Agent Briefing** (03) — analysis converted to targeted attack briefs

@@ -66,7 +66,8 @@ class MCConfig:
         if not isinstance(self.per_node_probs, dict):
             raise ValueError("per_node_probs must be a dict[str, float].")
         self.n_resilience_samples = min(
-            self.n_resilience_samples, _MAX_RESILIENCE_SAMPLES,
+            self.n_resilience_samples,
+            _MAX_RESILIENCE_SAMPLES,
         )
 
     @classmethod

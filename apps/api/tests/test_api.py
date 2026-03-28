@@ -1,4 +1,4 @@
-"""Tests for the NEXUS FastAPI routes (Module 5).
+"""Tests for the Halkantir FastAPI routes (Module 5).
 
 Covers health, analyze, cascade, explore, graph, and reset endpoints
 from ``nexus_api.main``.  Uses httpx AsyncClient with ASGITransport
@@ -250,7 +250,9 @@ class TestFullPipeline:
         sid = _create_session_with_graph()
 
         async with AsyncClient(
-            transport=_transport(), base_url=_base_url(), timeout=60.0,
+            transport=_transport(),
+            base_url=_base_url(),
+            timeout=60.0,
         ) as client:
             # Step 1: analyze
             analyze_resp = await client.post(

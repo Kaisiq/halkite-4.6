@@ -53,10 +53,7 @@ def brief_critical_node_attacker(report: VulnerabilityReport) -> AgentBrief:
 
     priority_targets = [n.node_id for n in top_nodes]
 
-    initial_events = [
-        Event(target=n.node_id, action="kill")
-        for n in top_nodes[:3]
-    ]
+    initial_events = [Event(target=n.node_id, action="kill") for n in top_nodes[:3]]
 
     return AgentBrief(
         agent_type="critical_node_attacker",
@@ -85,9 +82,7 @@ def brief_bridge_breaker(report: VulnerabilityReport) -> AgentBrief:
             reverse=True,
         )[:10]
 
-        priority_edges = [
-            (e.from_node, e.to_node) for e in top_edges
-        ]
+        priority_edges = [(e.from_node, e.to_node) for e in top_edges]
 
         initial_events = [
             Event(
@@ -118,17 +113,10 @@ def brief_bridge_breaker(report: VulnerabilityReport) -> AgentBrief:
     priority_targets = [b.node_id for b in top_bridges]
 
     # Cross-layer critical edges (secondary targets)
-    cross_layer_edges = [
-        e for e in report.critical_edges if e.crosses_layers
-    ][:5]
-    priority_edges = [
-        (e.from_node, e.to_node) for e in cross_layer_edges
-    ]
+    cross_layer_edges = [e for e in report.critical_edges if e.crosses_layers][:5]
+    priority_edges = [(e.from_node, e.to_node) for e in cross_layer_edges]
 
-    initial_events = [
-        Event(target=b.node_id, action="kill")
-        for b in top_bridges[:3]
-    ]
+    initial_events = [Event(target=b.node_id, action="kill") for b in top_bridges[:3]]
 
     return AgentBrief(
         agent_type="bridge_breaker",
@@ -165,10 +153,7 @@ def brief_compound_exploiter(report: VulnerabilityReport) -> AgentBrief:
                 priority_targets.append(nid)
 
     # Initial events: kill each pair (compound events targeting both nodes)
-    initial_events = [
-        Event(target=[p.node_a, p.node_b], action="kill")
-        for p in top_pairs[:3]
-    ]
+    initial_events = [Event(target=[p.node_a, p.node_b], action="kill") for p in top_pairs[:3]]
 
     return AgentBrief(
         agent_type="compound_exploiter",
@@ -216,9 +201,7 @@ def brief_layer_assassin(
     target_layer = max(layer_scores, key=lambda k: layer_scores[k])
 
     # Get nodes in target layer from the graph, sorted by theta descending
-    layer_node_ids: set[str] = {
-        n.id for n in graph.nodes if n.layer == target_layer
-    }
+    layer_node_ids: set[str] = {n.id for n in graph.nodes if n.layer == target_layer}
     # Use node_rankings for ordering (they carry theta via health_loss)
     # but we want to sort by actual theta from the graph
     layer_nodes_by_theta = sorted(
@@ -240,10 +223,7 @@ def brief_layer_assassin(
     layer_edges = layer_edges[:5]
     priority_edges = [(e.from_node, e.to_node) for e in layer_edges]
 
-    initial_events = [
-        Event(target=n.id, action="kill")
-        for n in layer_nodes_by_theta[:2]
-    ]
+    initial_events = [Event(target=n.id, action="kill") for n in layer_nodes_by_theta[:2]]
 
     return AgentBrief(
         agent_type="layer_assassin",
@@ -305,9 +285,7 @@ def brief_cluster_isolator(
             from_in = edge.from_id in cluster_node_set
             to_in = edge.to_id in cluster_node_set
             if from_in != to_in:
-                boundary_edge_list.append(
-                    (edge.from_id, edge.to_id, edge.weight)
-                )
+                boundary_edge_list.append((edge.from_id, edge.to_id, edge.weight))
         # Sort by weight descending (cut strongest first)
         boundary_edge_list.sort(key=lambda e: e[2], reverse=True)
         for from_id, to_id, _w in boundary_edge_list[:3]:
@@ -458,15 +436,12 @@ def create_all_agents(
         agent_cls = registry.get(brief.agent_type)
         if agent_cls is None:
             raise ValueError(
-                f"Unknown agent_type {brief.agent_type!r}. "
-                f"Known types: {sorted(registry.keys())}"
+                f"Unknown agent_type {brief.agent_type!r}. Known types: {sorted(registry.keys())}"
             )
 
         if brief.agent_type == "monte_carlo":
             if mc_config is None:
-                raise ValueError(
-                    "mc_config is required for monte_carlo agent."
-                )
+                raise ValueError("mc_config is required for monte_carlo agent.")
             agents.append(agent_cls(brief, mc_config))
         else:
             agents.append(agent_cls(brief))

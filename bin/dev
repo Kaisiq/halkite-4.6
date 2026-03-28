@@ -51,14 +51,14 @@ main() {
   echo "Starting backend..."
   (
     cd "$ROOT_DIR"
-    pnpm --filter @halkite/api dev
+    pnpm --filter @halkantir/api dev
   ) &
   API_PID=$!
 
   echo "Starting frontend..."
   (
     cd "$ROOT_DIR"
-    pnpm --filter @halkite/web dev
+    pnpm --filter @halkantir/web dev
   ) &
   WEB_PID=$!
 
@@ -66,4 +66,3 @@ main() {
 }
 
 main "$@"
-

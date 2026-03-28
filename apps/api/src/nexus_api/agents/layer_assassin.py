@@ -45,25 +45,16 @@ class LayerAssassin(Agent):
         target_layer = self.brief.focus_layers[0]
 
         # Surviving nodes in the target layer
-        layer_survivors = [
-            n for n in graph.nodes
-            if not n.phi and n.layer == target_layer
-        ]
+        layer_survivors = [n for n in graph.nodes if not n.phi and n.layer == target_layer]
 
         if layer_survivors:
             # Kill highest-theta surviving node(s) in target layer
             layer_survivors.sort(key=lambda n: n.theta, reverse=True)
-            return [
-                Event(target=n.id, action="kill")
-                for n in layer_survivors[:bf]
-            ]
+            return [Event(target=n.id, action="kill") for n in layer_survivors[:bf]]
 
         # Target layer is fully destroyed -- attack most-damaged survivors
         # in OTHER layers (lowest h first) to amplify cascade effects.
-        other_survivors = [
-            n for n in graph.nodes
-            if not n.phi and n.layer != target_layer
-        ]
+        other_survivors = [n for n in graph.nodes if not n.phi and n.layer != target_layer]
 
         if not other_survivors:
             return []
@@ -71,7 +62,4 @@ class LayerAssassin(Agent):
         # Sort by health ascending (most damaged first -- easiest to finish)
         other_survivors.sort(key=lambda n: n.h)
 
-        return [
-            Event(target=n.id, action="kill")
-            for n in other_survivors[:bf]
-        ]
+        return [Event(target=n.id, action="kill") for n in other_survivors[:bf]]

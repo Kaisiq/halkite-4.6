@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NEXUS API client
+// Halkantir API client
 // Thin wrapper around axios for every backend endpoint (docs/05_API.md).
 // ---------------------------------------------------------------------------
 
@@ -102,10 +102,10 @@ export async function updateGraph(
   sessionId: string,
   operations: GraphOperation[],
 ): Promise<GraphUpdateResponse> {
-  const { data } = await client.post<GraphUpdateResponse>(
-    "/api/graph/update",
-    { session_id: sessionId, operations },
-  );
+  const { data } = await client.post<GraphUpdateResponse>("/api/graph/update", {
+    session_id: sessionId,
+    operations,
+  });
   return data;
 }
 

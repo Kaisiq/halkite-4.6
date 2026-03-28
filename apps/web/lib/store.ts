@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// NEXUS – global Zustand store
+// Halkantir – global Zustand store
 // ---------------------------------------------------------------------------
 
 import { create } from "zustand";
@@ -306,14 +306,10 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       // Apply post-cascade node states to the local graph.
       const currentGraph = get().graph;
       if (currentGraph && res.final_state?.nodes) {
-        const nodeMap = new Map(
-          res.final_state.nodes.map((n) => [n.id, n]),
-        );
+        const nodeMap = new Map(res.final_state.nodes.map((n) => [n.id, n]));
         const updatedNodes = currentGraph.nodes.map((n) => {
           const updated = nodeMap.get(n.id);
-          return updated
-            ? { ...n, h: updated.h, phi: updated.phi }
-            : n;
+          return updated ? { ...n, h: updated.h, phi: updated.phi } : n;
         });
         set({ graph: { ...currentGraph, nodes: updatedNodes } });
       }
@@ -374,7 +370,10 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       set({ graph: res.graph });
 
       if (res.validation_warnings.length > 0) {
-        console.warn("[NEXUS] Graph update warnings:", res.validation_warnings);
+        console.warn(
+          "[Halkantir] Graph update warnings:",
+          res.validation_warnings,
+        );
       }
     } catch (err: unknown) {
       set({ uploadError: api.extractErrorMessage(err) });

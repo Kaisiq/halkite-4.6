@@ -54,14 +54,9 @@ class BridgeBreaker(Agent):
 
         if bridge_node_ids:
             # Score bridges: simulate killing each, measure fragmentation
-            scored = _score_bridge_nodes(
-                graph, nxg, bridge_node_ids, surviving_ids
-            )
+            scored = _score_bridge_nodes(graph, nxg, bridge_node_ids, surviving_ids)
             scored.sort(key=lambda pair: pair[1], reverse=True)
-            return [
-                Event(target=node_id, action="kill")
-                for node_id, _ in scored[:bf]
-            ]
+            return [Event(target=node_id, action="kill") for node_id, _ in scored[:bf]]
 
         # -- No bridge nodes: cut critical edges (bridge edges) ------------
         bridge_edges = list(nx.bridges(nxg))
@@ -113,9 +108,7 @@ def _build_surviving_subgraph(
             # Use max weight if both directions exist (undirected merge)
             if nxg.has_edge(edge.from_id, edge.to_id):
                 existing_w = nxg[edge.from_id][edge.to_id].get("weight", 0.0)
-                nxg[edge.from_id][edge.to_id]["weight"] = max(
-                    existing_w, edge.weight
-                )
+                nxg[edge.from_id][edge.to_id]["weight"] = max(existing_w, edge.weight)
             else:
                 nxg.add_edge(edge.from_id, edge.to_id, weight=edge.weight)
     return nxg
@@ -165,9 +158,7 @@ def _score_edges(
     return scored
 
 
-def _resolve_directed_edge(
-    graph: Graph, u: str, v: str
-) -> tuple[str, str]:
+def _resolve_directed_edge(graph: Graph, u: str, v: str) -> tuple[str, str]:
     """Given an undirected pair (u, v), return the directed (from, to) that
     exists in the original graph.  Prefers u->v; falls back to v->u."""
     for edge in graph.edges:

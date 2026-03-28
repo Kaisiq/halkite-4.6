@@ -21,6 +21,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
+_ALLOWED_NETLOCS = frozenset({"www.googleapis.com", "googleapis.com"})
 
 _SUPPORTED_EXTENSIONS = frozenset(
     {
@@ -113,6 +114,7 @@ def extract_folder_id(value: str) -> str:
 
 
 def _authorized_get_json(url: str, access_token: str) -> dict[str, Any]:
+    _validate_google_url(url)
     request = urllib.request.Request(
         url,
         headers={
@@ -134,6 +136,7 @@ def _authorized_get_json(url: str, access_token: str) -> dict[str, Any]:
 
 
 def _authorized_get_bytes(url: str, access_token: str) -> bytes:
+    _validate_google_url(url)
     request = urllib.request.Request(
         url,
         headers={"Authorization": f"Bearer {access_token}"},
@@ -162,6 +165,14 @@ def _google_error_message(body: str, status: int) -> str:
             return f"Google Drive API error: {message}"
 
     return f"Google Drive API error ({status})."
+
+
+def _validate_google_url(url: str) -> None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https":
+        raise GoogleDriveImportError("Google Drive requests must use HTTPS.")
+    if parsed.netloc not in _ALLOWED_NETLOCS:
+        raise GoogleDriveImportError("Unsupported Google Drive API host.")
 
 
 def _drive_url(path: str, **query: str) -> str:
@@ -316,9 +327,7 @@ def import_drive_folder(access_token: str, folder_id: str) -> DriveImportBundle:
             files.append(downloaded)
 
     if not files:
-        raise GoogleDriveImportError(
-            "No supported files were found in that Google Drive folder."
-        )
+        raise GoogleDriveImportError("No supported files were found in that Google Drive folder.")
 
     return DriveImportBundle(
         folder=DriveFolderSummary(

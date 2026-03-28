@@ -56,20 +56,16 @@ function SeverityBadge({ label }: { label: string }) {
 // ---------------------------------------------------------------------------
 
 const REC_TYPE_STYLES: Record<string, string> = {
-  add_redundancy:
-    "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  add_bypass:
-    "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  reduce_recovery_time:
-    "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  add_redundancy: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  add_bypass: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  reduce_recovery_time: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   increase_layer_autonomy:
     "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
 };
 
 function RecTypeBadge({ type }: { type: string }) {
   const classes =
-    REC_TYPE_STYLES[type] ??
-    "bg-white/10 text-[var(--muted)] border-white/10";
+    REC_TYPE_STYLES[type] ?? "bg-white/10 text-[var(--muted)] border-white/10";
   const label = type.replace(/_/g, " ");
   return (
     <span
@@ -170,7 +166,11 @@ function ScenarioCard({
           stroke="currentColor"
           strokeWidth={2}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
 
@@ -195,12 +195,16 @@ function ScenarioCard({
                       }}
                     />
                     <p className="text-xs leading-relaxed text-[var(--foreground)]">
-                      <span className="font-semibold" style={{ color: "var(--accent)" }}>
+                      <span
+                        className="font-semibold"
+                        style={{ color: "var(--accent)" }}
+                      >
                         Step {step.step}
                       </span>
                       {step.event && (
                         <span className="text-[var(--muted)]">
-                          {" "}&mdash; {step.event.action}{" "}
+                          {" "}
+                          &mdash; {step.event.action}{" "}
                           <span className="font-mono">{step.event.target}</span>
                           {step.event.magnitude < 1 && (
                             <span> (magnitude {step.event.magnitude})</span>
@@ -219,7 +223,8 @@ function ScenarioCard({
                       </span>
                       {step.new_failures.length > 0 && (
                         <>
-                          {" "}&middot; Failures:{" "}
+                          {" "}
+                          &middot; Failures:{" "}
                           <span className="font-mono text-red-400">
                             {step.new_failures.join(", ")}
                           </span>
@@ -260,8 +265,18 @@ function ScenarioCard({
             onClick={() => router.push(`/network/${sessionId}` as Route)}
             className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-2 text-xs font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
           >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg
+              className="h-3.5 w-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -369,8 +384,18 @@ function EmptyState({ sessionId }: { sessionId: string }) {
         style={{ background: "var(--accent)" }}
       >
         Go to Simulate
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13 7l5 5m0 0l-5 5m5-5H6"
+          />
         </svg>
       </Link>
     </div>
@@ -424,7 +449,10 @@ export default function ReportPage() {
   const hasData = scenarios.length > 0;
 
   return (
-    <div className="app-shell min-h-screen" style={{ background: "var(--background)" }}>
+    <div
+      className="app-shell min-h-screen"
+      style={{ background: "var(--background)" }}
+    >
       <NavBar sessionId={sessionId} />
 
       <main className="mx-auto max-w-4xl px-6 py-10">

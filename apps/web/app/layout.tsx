@@ -17,8 +17,8 @@ const displayFont = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "NEXUS",
-  description: "Universal Network Survival Analyzer",
+  title: "Halkantir",
+  description: "Organizational stress-testing platform",
 };
 
 type RootLayoutProps = Readonly<{

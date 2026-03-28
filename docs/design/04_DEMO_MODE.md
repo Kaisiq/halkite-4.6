@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define how Achilles should behave when presented live to a jury.
+Define how Halkantir should behave when presented live to a jury.
 
 ## Demo principle
 
@@ -83,4 +83,3 @@ If a judge watches for 45 seconds with no narration, they should still understan
 
 - Contrast Graph: https://www.contrastsecurity.com/contrast-graph
 - Cye Attack Route Visualization: https://cyesec.com/product/attack-route-visualization
-
