@@ -565,7 +565,7 @@ export default function DataInputPage() {
     <main className="min-h-screen">
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:px-10">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 sm:h-16 sm:px-6 md:px-10">
           <div className="flex items-center gap-3">
             <Image
               src="/logo.svg"
@@ -584,7 +584,7 @@ export default function DataInputPage() {
                 const el = document.getElementById("upload-section");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="border border-[var(--text)] px-7 py-2.5 text-[15px] font-medium transition-all duration-200 hover:bg-[var(--text)] hover:text-white"
+              className="border border-[var(--text)] px-5 py-2 text-[13px] font-medium transition-all duration-200 hover:bg-[var(--text)] hover:text-white sm:px-7 sm:py-2.5 sm:text-[15px]"
             >
               Get Started
             </button>
@@ -593,33 +593,33 @@ export default function DataInputPage() {
       </nav>
 
       {/* Hero */}
-      <section className="flex min-h-screen flex-col justify-center px-6 pt-28 pb-16 md:px-10">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-12 lg:grid-cols-[minmax(0,1.2fr)_420px] lg:items-end">
+      <section className="flex min-h-screen flex-col justify-center px-4 pt-24 pb-12 sm:px-6 sm:pt-28 sm:pb-16 md:px-10">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-8 sm:gap-12 lg:grid-cols-[minmax(0,1.2fr)_420px] lg:items-end">
           <div>
             <p className="mono-label">Deterministic Organizational Stress Testing</p>
-            <h1 className="display-face mt-6 max-w-[900px] text-[clamp(3rem,7.5vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.035em]">
+            <h1 className="display-face mt-4 max-w-[900px] text-[clamp(2.2rem,7.5vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.035em] sm:mt-6">
               Find the dependencies
               that <span className="text-[var(--text-light)]">break</span> the
               organization.
             </h1>
-            <p className="mt-8 max-w-[640px] text-[22px] leading-[1.5] text-[var(--text-muted)]">
+            <p className="mt-5 max-w-[640px] text-[17px] leading-[1.5] text-[var(--text-muted)] sm:mt-8 sm:text-[22px]">
               Deterministic stress-testing for complex human and technical
               systems. Map, analyze, and preempt catastrophic failure paths.
             </p>
-            <div className="mt-12 flex flex-wrap gap-4">
+            <div className="mt-8 flex flex-wrap gap-3 sm:mt-12 sm:gap-4">
               <button
                 type="button"
                 onClick={() => {
                   const el = document.getElementById("upload-section");
                   el?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="border border-[var(--text)] bg-[var(--text)] px-12 py-4.5 text-[17px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)]"
+                className="border border-[var(--text)] bg-[var(--text)] px-8 py-3.5 text-[15px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)] sm:px-12 sm:py-4.5 sm:text-[17px]"
               >
                 Get Started
               </button>
               <a
                 href="#launch-access"
-                className="border border-[var(--border-strong)] px-8 py-4.5 text-[15px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
+                className="border border-[var(--border-strong)] px-6 py-3.5 text-[14px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] sm:px-8 sm:py-4.5 sm:text-[15px]"
               >
                 Join Launch List
               </a>
@@ -628,7 +628,7 @@ export default function DataInputPage() {
 
           <aside
             id="launch-access"
-            className="dark-section relative overflow-hidden border border-white/10 p-7 sm:p-8"
+            className="dark-section relative overflow-hidden border border-white/10 p-5 sm:p-7 md:p-8"
           >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_40%)]" />
@@ -713,14 +713,14 @@ export default function DataInputPage() {
       </section>
 
       {/* Animated Beam — Integration Diagram */}
-      <section className="border-t border-[var(--border)] px-6 md:px-10 py-24">
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 sm:py-24 md:px-10">
         <div className="mx-auto max-w-[1400px]">
           <IntegrationDiagram />
         </div>
       </section>
 
       {/* Our Platform */}
-      <section className="border-t border-[var(--border)] px-6 md:px-10">
+      <section className="border-t border-[var(--border)] px-4 sm:px-6 md:px-10">
         <div className="mx-auto max-w-[1400px] py-10">
           <p className="text-[13px] text-[var(--text-muted)] mb-10">Our Platform</p>
           <div className="grid grid-cols-1 md:grid-cols-4">
@@ -746,15 +746,15 @@ export default function DataInputPage() {
         </div>
       </section>
 
-      <section className="border-t border-[var(--border)] px-6 py-24 md:px-10">
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 sm:py-24 md:px-10">
         <div className="mx-auto max-w-[1400px]">
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,340px)_1fr]">
+          <div className="grid gap-8 sm:gap-12 lg:grid-cols-[minmax(0,340px)_1fr]">
             <div className="max-w-[320px]">
               <p className="mono-label">Pricing</p>
-              <h2 className="display-face mt-4 text-[clamp(2.2rem,4.8vw,4.2rem)] font-normal leading-[1.02] tracking-[-0.03em]">
+              <h2 className="display-face mt-4 text-[clamp(1.8rem,4.8vw,4.2rem)] font-normal leading-[1.02] tracking-[-0.03em]">
                 Enterprise-first pricing by company size.
               </h2>
-              <p className="mt-6 text-[17px] leading-[1.7] text-[var(--text-muted)]">
+              <p className="mt-4 text-[15px] leading-[1.7] text-[var(--text-muted)] sm:mt-6 sm:text-[17px]">
                 Halkantir is sold on annual terms, priced primarily by employee
                 count, and shaped to keep smaller teams moving while preserving
                 enterprise delivery depth.
@@ -777,8 +777,8 @@ export default function DataInputPage() {
                           : "bg-white"
                     }`}
                   >
-                    <div className="flex flex-1 flex-col p-8 md:p-10">
-                      <div className="flex min-h-[7.5rem] items-start justify-between gap-4">
+                    <div className="flex flex-1 flex-col p-5 sm:p-8 md:p-10">
+                      <div className="flex min-h-[6rem] items-start justify-between gap-4 sm:min-h-[7.5rem]">
                         <div>
                           <p
                             className={`font-mono text-[11px] uppercase tracking-[0.18em] ${
@@ -820,7 +820,7 @@ export default function DataInputPage() {
                         >
                           Starting annual price
                         </p>
-                        <p className="mt-3 text-[2.6rem] font-semibold leading-none tracking-[-0.05em]">
+                        <p className="display-face mt-3 text-[2.6rem] font-medium leading-none tracking-[-0.05em]">
                           {plan.annualPrice}
                         </p>
                         <div
@@ -946,22 +946,22 @@ export default function DataInputPage() {
       </section>
 
       {/* Upload section */}
-      <section id="upload-section" className="border-t border-[var(--border)] px-6 py-24 md:px-10">
+      <section id="upload-section" className="border-t border-[var(--border)] px-4 py-16 sm:px-6 sm:py-24 md:px-10">
         <div className="mx-auto max-w-[1400px]">
-          <div className="mb-16 max-w-[700px]">
-            <h2 className="display-face text-[clamp(2.2rem,5vw,4rem)] font-normal leading-[1.1] tracking-[-0.025em]">
+          <div className="mb-10 max-w-[700px] sm:mb-16">
+            <h2 className="display-face text-[clamp(1.8rem,5vw,4rem)] font-normal leading-[1.1] tracking-[-0.025em]">
               Initialize organizational footprint.
             </h2>
-            <p className="mt-6 text-[18px] leading-[1.6] text-[var(--text-muted)]">
+            <p className="mt-4 text-[16px] leading-[1.6] text-[var(--text-muted)] sm:mt-6 sm:text-[18px]">
               Start with your core roster or drop the full operational stack.
               We will extract entities, map dependencies, and stage the graph
               for adversarial simulation.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="border border-[var(--text)] bg-[var(--text)] px-8 py-3.5 text-[15px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)]"
+                className="border border-[var(--text)] bg-[var(--text)] px-6 py-3 text-[14px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)] sm:px-8 sm:py-3.5 sm:text-[15px]"
               >
                 Upload Files
               </button>
@@ -969,7 +969,7 @@ export default function DataInputPage() {
                 type="button"
                 onClick={handleConnectGoogleDrive}
                 disabled={uploading || driveAuthPending}
-                className="flex items-center gap-2.5 border border-[var(--border-strong)] px-8 py-3.5 text-[15px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] disabled:opacity-30"
+                className="flex items-center gap-2.5 border border-[var(--border-strong)] px-5 py-3 text-[14px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] disabled:opacity-30 sm:px-8 sm:py-3.5 sm:text-[15px]"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -999,7 +999,7 @@ export default function DataInputPage() {
             role="button"
             tabIndex={0}
             onClick={() => inputRef.current?.click()}
-            className={`border border-dashed p-12 transition-colors cursor-pointer ${
+            className={`border border-dashed p-6 transition-colors cursor-pointer sm:p-12 ${
               dragging
                 ? "border-[var(--text)] bg-[var(--bg-alt)]"
                 : "border-[var(--border-strong)] hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
@@ -1393,7 +1393,7 @@ export default function DataInputPage() {
 
       {/* Follow-up section */}
       {showFollowUp && (
-        <section className="border-t border-[var(--border)] px-6 py-24">
+        <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 sm:py-24">
           <div className="mx-auto max-w-[1400px]">
             <div className="mb-10 flex items-start justify-between gap-6">
               <div>
@@ -1512,120 +1512,181 @@ function IntegrationDiagram() {
   const outReportRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative mx-auto flex max-w-[900px] items-center justify-between py-12"
-    >
-      {/* Left — Source inputs */}
-      <div className="flex flex-col gap-2.5">
-        <DiagramNode ref={srcPdfRef} label="PDF" sub="Org charts" />
-        <DiagramNode ref={srcCsvRef} label="CSV" sub="Rosters" />
-        <DiagramNode ref={srcDocRef} label="DOCX" sub="Policies" />
-        <DiagramNode ref={srcDriveRef} label="Drive" sub="Folders" />
-      </div>
-
-      {/* Center — Core engine */}
+    <>
+      {/* Desktop: horizontal beam layout */}
       <div
-        ref={coreRef}
-        className="z-10 flex flex-col items-center justify-center border-2 border-[var(--text)] bg-[var(--text)] px-12 py-8 text-white"
+        ref={containerRef}
+        className="relative mx-auto hidden max-w-[900px] items-center justify-between py-12 sm:flex"
       >
-        <Image
-          src="/logo.svg"
-          alt=""
-          width={32}
-          height={40}
-          className="mb-3"
-          style={{ width: 32, height: "auto" }}
+        {/* Left — Source inputs */}
+        <div className="flex flex-col gap-2.5">
+          <DiagramNode ref={srcPdfRef} label="PDF" sub="Org charts" />
+          <DiagramNode ref={srcCsvRef} label="CSV" sub="Rosters" />
+          <DiagramNode ref={srcDocRef} label="DOCX" sub="Policies" />
+          <DiagramNode ref={srcDriveRef} label="Drive" sub="Folders" />
+        </div>
+
+        {/* Center — Core engine */}
+        <div
+          ref={coreRef}
+          className="z-10 flex flex-col items-center justify-center border-2 border-[var(--text)] bg-[var(--text)] px-12 py-8 text-white"
+        >
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={32}
+            height={40}
+            className="mb-3"
+            style={{ width: 32, height: "auto" }}
+          />
+          <span className="text-[17px] font-semibold">Halkantir</span>
+          <span className="text-[11px] text-white/60">Resilience Engine</span>
+        </div>
+
+        {/* Right — Outputs */}
+        <div className="flex flex-col gap-2.5">
+          <DiagramNode ref={outGraphRef} label="Graph" sub="Dependencies" />
+          <DiagramNode ref={outAnalysisRef} label="Analysis" sub="Weakpoints" />
+          <DiagramNode ref={outReportRef} label="Report" sub="Scenarios" />
+        </div>
+
+        {/* Beams — inputs to core */}
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={srcPdfRef}
+          toRef={coreRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          curvature={-30}
         />
-        <span className="text-[17px] font-semibold">Halkantir</span>
-        <span className="text-[11px] text-white/60">Resilience Engine</span>
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={srcCsvRef}
+          toRef={coreRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          delay={0.5}
+          curvature={-10}
+        />
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={srcDocRef}
+          toRef={coreRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          delay={1}
+          curvature={10}
+        />
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={srcDriveRef}
+          toRef={coreRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          delay={1.5}
+          curvature={30}
+        />
+
+        {/* Beams — core to outputs */}
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={coreRef}
+          toRef={outGraphRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          delay={2}
+          curvature={-20}
+        />
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={coreRef}
+          toRef={outAnalysisRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          delay={2.5}
+        />
+        <AnimatedBeam
+          containerRef={containerRef}
+          fromRef={coreRef}
+          toRef={outReportRef}
+          pathColor={BEAM_COLORS.path}
+          gradientStartColor={BEAM_COLORS.gradientStart}
+          gradientStopColor={BEAM_COLORS.gradientStop}
+          duration={4}
+          delay={3}
+          curvature={20}
+        />
       </div>
 
-      {/* Right — Outputs */}
-      <div className="flex flex-col gap-2.5">
-        <DiagramNode ref={outGraphRef} label="Graph" sub="Dependencies" />
-        <DiagramNode ref={outAnalysisRef} label="Analysis" sub="Weakpoints" />
-        <DiagramNode ref={outReportRef} label="Report" sub="Scenarios" />
+      {/* Mobile: stacked vertical layout */}
+      <div className="flex flex-col items-center gap-6 py-6 sm:hidden">
+        <div className="grid grid-cols-2 gap-2 w-full max-w-[280px]">
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[14px] font-semibold">PDF</span>
+            <span className="text-[11px] text-[var(--text-light)]">Org charts</span>
+          </div>
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[14px] font-semibold">CSV</span>
+            <span className="text-[11px] text-[var(--text-light)]">Rosters</span>
+          </div>
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[14px] font-semibold">DOCX</span>
+            <span className="text-[11px] text-[var(--text-light)]">Policies</span>
+          </div>
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[14px] font-semibold">Drive</span>
+            <span className="text-[11px] text-[var(--text-light)]">Folders</span>
+          </div>
+        </div>
+
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M12 5v14M5 12l7 7 7-7" />
+        </svg>
+
+        <div className="flex flex-col items-center justify-center border-2 border-[var(--text)] bg-[var(--text)] px-10 py-6 text-white">
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={28}
+            height={35}
+            className="mb-2"
+            style={{ width: 28, height: "auto" }}
+          />
+          <span className="text-[15px] font-semibold">Halkantir</span>
+          <span className="text-[10px] text-white/60">Resilience Engine</span>
+        </div>
+
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M12 5v14M5 12l7 7 7-7" />
+        </svg>
+
+        <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-3 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[13px] font-semibold">Graph</span>
+            <span className="text-[10px] text-[var(--text-light)]">Dependencies</span>
+          </div>
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-3 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[13px] font-semibold">Analysis</span>
+            <span className="text-[10px] text-[var(--text-light)]">Weakpoints</span>
+          </div>
+          <div className="z-10 flex flex-col items-center justify-center border border-[var(--border)] bg-white px-3 py-2.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <span className="text-[13px] font-semibold">Report</span>
+            <span className="text-[10px] text-[var(--text-light)]">Scenarios</span>
+          </div>
+        </div>
       </div>
-
-      {/* Beams — inputs to core */}
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={srcPdfRef}
-        toRef={coreRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        curvature={-30}
-      />
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={srcCsvRef}
-        toRef={coreRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        delay={0.5}
-        curvature={-10}
-      />
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={srcDocRef}
-        toRef={coreRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        delay={1}
-        curvature={10}
-      />
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={srcDriveRef}
-        toRef={coreRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        delay={1.5}
-        curvature={30}
-      />
-
-      {/* Beams — core to outputs */}
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={coreRef}
-        toRef={outGraphRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        delay={2}
-        curvature={-20}
-      />
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={coreRef}
-        toRef={outAnalysisRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        delay={2.5}
-      />
-      <AnimatedBeam
-        containerRef={containerRef}
-        fromRef={coreRef}
-        toRef={outReportRef}
-        pathColor={BEAM_COLORS.path}
-        gradientStartColor={BEAM_COLORS.gradientStart}
-        gradientStopColor={BEAM_COLORS.gradientStop}
-        duration={4}
-        delay={3}
-        curvature={20}
-      />
-    </div>
+    </>
   );
 }
