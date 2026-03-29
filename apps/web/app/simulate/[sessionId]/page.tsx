@@ -193,8 +193,16 @@ function isPeopleLayer(layer: string | undefined): boolean {
   );
 }
 
+function humanizeId(id: string): string {
+  return id
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function inferNodeLabel(nodeId: string, graph: NonNullable<ReturnType<typeof useAchillesStore.getState>["graph"]>): string {
-  return graph.nodes.find((node) => node.id === nodeId)?.name ?? nodeId;
+  return graph.nodes.find((node) => node.id === nodeId)?.name ?? humanizeId(nodeId);
 }
 
 function inferIncidentLabel(
@@ -285,7 +293,7 @@ function formatScenarioEvent(
 
   const targetId = typeof event.target === "string" ? event.target : "";
   const node = graph.nodes.find((candidate) => candidate.id === targetId);
-  const targetLabel = node?.name ?? targetId;
+  const targetLabel = node?.name ?? humanizeId(targetId);
   return inferIncidentLabel(
     event.action,
     targetLabel,
@@ -312,7 +320,7 @@ function formatTreeEventSummary(
   }
 
   const node = graph.nodes.find((candidate) => candidate.id === rawTarget);
-  const targetLabel = node?.name ?? rawTarget;
+  const targetLabel = node?.name ?? humanizeId(rawTarget);
   return inferIncidentLabel(action, targetLabel, node?.layer);
 }
 

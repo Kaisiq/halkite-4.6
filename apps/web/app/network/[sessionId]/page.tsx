@@ -96,8 +96,16 @@ function severityColor(label: string): string {
   }
 }
 
+function humanizeId(id: string): string {
+  return id
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function inferNodeLabel(nodeId: string, graph: GraphData): string {
-  return graph.nodes.find((n) => n.id === nodeId)?.name ?? nodeId;
+  return graph.nodes.find((n) => n.id === nodeId)?.name ?? humanizeId(nodeId);
 }
 
 function formatScenarioEvent(
@@ -119,7 +127,7 @@ function formatScenarioEvent(
 
   const targetId = typeof event.target === "string" ? event.target : "";
   const node = graph.nodes.find((n) => n.id === targetId);
-  const label = node?.name ?? targetId;
+  const label = node?.name ?? humanizeId(targetId);
   if (event.action === "kill") return `${label} fails`;
   const pct = Math.round(event.magnitude * 100);
   return `${label} degrades (${pct}%)`;
@@ -744,7 +752,7 @@ export default function NetworkPage({ params }: PageProps) {
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <span className="text-sm font-medium">
-                          {node?.name ?? r.node_id}
+                          {node?.name ?? humanizeId(r.node_id)}
                         </span>
                       </div>
                       <span className="font-mono text-xs text-[var(--danger)]">
@@ -772,7 +780,7 @@ export default function NetworkPage({ params }: PageProps) {
                 <div className="col-span-2">
                   <StatCard
                     label="Max Synergy"
-                    value={`${highestSynergy.node_a} + ${highestSynergy.node_b}`}
+                    value={`${graph.nodes.find((n) => n.id === highestSynergy.node_a)?.name ?? humanizeId(highestSynergy.node_a)} + ${graph.nodes.find((n) => n.id === highestSynergy.node_b)?.name ?? humanizeId(highestSynergy.node_b)}`}
                     sub={`${highestSynergy.synergy_ratio.toFixed(1)}x amplification`}
                   />
                 </div>
@@ -933,7 +941,7 @@ export default function NetworkPage({ params }: PageProps) {
                                     setSelectedNode(nodeId);
                                   }}
                                 >
-                                  {node?.name ?? nodeId}
+                                  {node?.name ?? humanizeId(nodeId)}
                                 </span>
                               );
                             })}
@@ -1010,7 +1018,7 @@ export default function NetworkPage({ params }: PageProps) {
                   })
                 }
               >
-                Terminate: {selectedNode?.name ?? selectedNodeId}
+                Terminate: {selectedNode?.name ?? humanizeId(selectedNodeId)}
               </button>
             )}
           </div>
@@ -1069,7 +1077,7 @@ export default function NetworkPage({ params }: PageProps) {
                           key={i}
                           className="border border-[var(--border)] px-2 py-0.5 font-mono text-[9px]"
                         >
-                          {otherNode?.name ?? otherId}
+                          {otherNode?.name ?? humanizeId(otherId)}
                         </span>
                       );
                     })}
