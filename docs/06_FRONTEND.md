@@ -61,10 +61,12 @@ API calls: fetch or axios
 - Launch-interest email form on `/` for pre-release contact capture
 - "Connect Google Drive" button for folder import via Google OAuth
 - Optional text description textarea
-- "Build Network" button → calls POST /api/upload
 - Launch-interest form → calls POST /api/waitlist with email validation, honeypot, and rate-limit-safe UX
-- Drive folder import → calls POST /api/google-drive/import
+- "Build Network" button → calls POST /api/upload-jobs
+- Drive folder import → calls POST /api/google-drive/import-jobs
 - Loading state with progress messages
+- Open WebSocket subscription to `/ws/upload/{job_id}` for real-time progress
+- Render nodes and edges incrementally as upload events arrive
 - On success → navigate to Screen 2
 - If follow_up_questions returned → show as quick prompts before proceeding
 

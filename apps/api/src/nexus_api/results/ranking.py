@@ -995,6 +995,8 @@ async def generate_narrative(
     from google import genai
     from google.genai import types
 
+    from nexus_api.gemini import generate_content_with_fallback
+
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         logger.warning("GEMINI_API_KEY not set -- returning empty narrative")
@@ -1011,8 +1013,9 @@ async def generate_narrative(
     )
 
     try:
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+        response = await generate_content_with_fallback(
+            client,
+            primary_model="gemini-2.5-flash",
             contents=user_message,
             config=types.GenerateContentConfig(
                 system_instruction=_NARRATIVE_SYSTEM_PROMPT,

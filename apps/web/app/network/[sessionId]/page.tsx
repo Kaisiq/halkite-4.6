@@ -72,6 +72,13 @@ interface OrbitLink {
   crossLayer: boolean;
 }
 
+type StoredNodeLayout = {
+  x: number;
+  y: number;
+  fx: number | null;
+  fy: number | null;
+};
+
 // ---------------------------------------------------------------------------
 // Scenario helpers
 // ---------------------------------------------------------------------------
@@ -139,6 +146,10 @@ export default function NetworkPage({ params }: PageProps) {
 
   // ---- Store selectors ----
   const graph = useNexusStore((s) => s.graph);
+  const graphBuildState = useNexusStore((s) => s.graphBuildState);
+  const uploadStageMessage = useNexusStore((s) => s.uploadStageMessage);
+  const uploadProgressValue = useNexusStore((s) => s.uploadProgressValue);
+  const uploadError = useNexusStore((s) => s.uploadError);
   const vulnerabilityReport = useNexusStore((s) => s.vulnerabilityReport);
   const analyzing = useNexusStore((s) => s.analyzing);
   const selectedNodeId = useNexusStore((s) => s.selectedNodeId);
@@ -173,6 +184,7 @@ export default function NetworkPage({ params }: PageProps) {
   const hiddenLayersRef = useRef(hiddenLayers);
   const selectedNodeRef = useRef(selectedNodeId);
   const hoveredNodeRef = useRef(hoveredNodeId);
+  const layoutRef = useRef<Map<string, StoredNodeLayout>>(new Map());
 
   useEffect(() => {
     hiddenLayersRef.current = hiddenLayers;
@@ -232,10 +244,31 @@ export default function NetworkPage({ params }: PageProps) {
       1,
     );
 
+    const storedLayouts = layoutRef.current;
+    const existingLayouts = graph.nodes
+      .map((node) => storedLayouts.get(node.id))
+      .filter((layout): layout is StoredNodeLayout => layout !== undefined);
+    const anchorX =
+      existingLayouts.length > 0
+        ? existingLayouts.reduce((sum, layout) => sum + layout.x, 0) /
+          existingLayouts.length
+        : width / 2;
+    const anchorY =
+      existingLayouts.length > 0
+        ? existingLayouts.reduce((sum, layout) => sum + layout.y, 0) /
+          existingLayouts.length
+        : height / 2;
+
     const orbitNodes: OrbitNode[] = graph.nodes.map((node) => ({
       ...node,
-      x: width / 2 + (Math.random() - 0.5) * 160,
-      y: height / 2 + (Math.random() - 0.5) * 120,
+      x:
+        storedLayouts.get(node.id)?.x ??
+        (anchorX + (Math.random() - 0.5) * 42),
+      y:
+        storedLayouts.get(node.id)?.y ??
+        (anchorY + (Math.random() - 0.5) * 42),
+      fx: storedLayouts.get(node.id)?.fx ?? null,
+      fy: storedLayouts.get(node.id)?.fy ?? null,
       impact: (impactMap.get(node.id) ?? node.theta) / impactMax,
     }));
 
@@ -323,6 +356,9 @@ export default function NetworkPage({ params }: PageProps) {
       )
       .force("x", d3.forceX<OrbitNode>(width / 2).strength(0.03))
       .force("y", d3.forceY<OrbitNode>(height / 2).strength(0.03));
+
+    simulation.alpha(graphBuildState === "building" ? 0.16 : 0.34);
+    simulation.alphaDecay(graphBuildState === "building" ? 0.08 : 0.04);
 
     const drag = d3
       .drag<SVGGElement, OrbitNode>()
@@ -434,10 +470,21 @@ export default function NetworkPage({ params }: PageProps) {
     render();
 
     return () => {
+      layoutRef.current = new Map(
+        orbitNodes.map((node) => [
+          node.id,
+          {
+            x: node.x ?? width / 2,
+            y: node.y ?? height / 2,
+            fx: node.fx ?? null,
+            fy: node.fy ?? null,
+          },
+        ]),
+      );
       simulation.stop();
       svg.selectAll("*").remove();
     };
-  }, [graph, setSelectedNode, vulnerabilityReport]);
+  }, [graph, graphBuildState, setSelectedNode, vulnerabilityReport]);
 
   // ---- Layer toggle handler ----
   const toggleLayer = useCallback((layer: string) => {
@@ -453,6 +500,10 @@ export default function NetworkPage({ params }: PageProps) {
   const layers = graph?.layers ?? [];
   const selectedNode =
     graph?.nodes.find((n) => n.id === selectedNodeId) ?? null;
+  const graphBuilding = graphBuildState === "building";
+  const graphBuildFailed = graphBuildState === "failed";
+  const waitingForFirstNode = graphBuilding && (graph?.nodes.length ?? 0) === 0;
+  const enrichingDraft = graphBuilding && (graph?.nodes.length ?? 0) > 0;
   const selectedEdges =
     graph && selectedNodeId
       ? graph.edges.filter(
@@ -497,10 +548,76 @@ export default function NetworkPage({ params }: PageProps) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white">
       <NavBar sessionId={sessionId} />
+      {graphBuilding && (
+        <div className="border-b border-[var(--border)] bg-[var(--bg-alt)] px-6 py-4">
+          <div className="flex items-center justify-between gap-6">
+            <div>
+              <p className="mono-label mb-1 text-[10px]">Graph Build In Progress</p>
+              <p className="text-sm font-medium">
+                {uploadStageMessage || "Building dependency graph"}
+              </p>
+            </div>
+            <div className="w-full max-w-sm">
+              <div className="h-2 overflow-hidden rounded-full bg-black/8">
+                <div
+                  className="h-full bg-[var(--text)] transition-all duration-300"
+                  style={{ width: `${Math.round(uploadProgressValue * 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-right font-mono text-[10px] text-[var(--text-light)]">
+                {Math.round(uploadProgressValue * 100)}% synced
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {graphBuildFailed && (
+        <div className="border-b border-red-200 bg-red-50 px-6 py-4 text-sm text-[var(--danger)]">
+          {uploadError || "Graph build failed before completion."}
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col min-h-0 md:flex-row">
         {/* D3 Graph Canvas */}
         <div className="relative h-[50vh] min-h-[280px] min-w-0 border-b border-[var(--border)] md:h-auto md:flex-[7] md:border-b-0 md:border-r">
+          {waitingForFirstNode && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/92 backdrop-blur-sm">
+              <div className="text-center">
+                <div className="mx-auto mb-4 h-10 w-10 animate-spin border-2 border-[var(--border)] border-t-[var(--text)]" />
+                <p className="text-sm font-medium">
+                  {uploadStageMessage || "Building dependency graph"}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Waiting for the first nodes to appear.
+                </p>
+              </div>
+            </div>
+          )}
+          {enrichingDraft && (
+            <div className="pointer-events-none absolute right-6 top-6 z-20">
+              <div className="w-[320px] border border-[var(--border)] bg-white/94 p-4 shadow-sm backdrop-blur-sm">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--text)]" />
+                  <div>
+                    <p className="mono-label text-[10px]">Draft Visible</p>
+                    <p className="text-sm font-medium">
+                      {uploadStageMessage || "Enriching graph with dependencies"}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-black/8">
+                  <div
+                    className="h-full bg-[var(--text)] transition-all duration-300"
+                    style={{ width: `${Math.round(uploadProgressValue * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">
+                  The draft graph is on screen. Halkantir is still enriching it
+                  with evidence, missing relationships, and deterministic scores.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Legend */}
           <div className="pointer-events-none absolute left-3 top-3 z-10 sm:left-6 sm:top-6">
             <div className="border border-[var(--border)] bg-white p-2.5 sm:p-4">
@@ -862,18 +979,23 @@ export default function NetworkPage({ params }: PageProps) {
                 await runAnalysis();
                 runExploration();
               }}
-              disabled={analyzing || exploring}
+              disabled={
+                analyzing || exploring || graphBuilding || graphBuildFailed
+              }
             >
-              {analyzing
-                ? "Analyzing..."
-                : exploring
-                  ? "Exploring scenarios..."
+              {graphBuilding
+                ? "Graph Still Building"
+                : analyzing
+                  ? "Analyzing..."
+                  : exploring
+                    ? "Exploring scenarios..."
                   : "Run Analysis"}
             </button>
 
             <button
-              className="w-full border border-[var(--border)] py-3 text-sm font-medium transition-colors hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
+              className="w-full border border-[var(--border)] py-3 text-sm font-medium transition-colors hover:border-[var(--text)] hover:bg-[var(--bg-alt)] disabled:opacity-30"
               onClick={() => router.push(`/simulate/${sessionId}` as Route)}
+              disabled={graphBuilding || graphBuildFailed}
             >
               Start Simulation
             </button>

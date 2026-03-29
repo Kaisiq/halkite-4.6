@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import traceback
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -21,12 +22,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
 
+from nexus_api.models.graph import Graph
 from nexus_api.session import SessionNotFoundError, store
+from nexus_api.upload_jobs import UploadJobNotFoundError, upload_jobs
 from nexus_api.waitlist import SlidingWindowRateLimiter, WaitlistStore, is_valid_email
 
 logger = logging.getLogger(__name__)
 
 _REQUIRED_ENV_VARS = ("GEMINI_API_KEY",)
+_INGESTION_SEMAPHORE = asyncio.Semaphore(int(os.environ.get("INGEST_CONCURRENCY", "2")))
 _WAITLIST_RATE_LIMIT = 5
 _WAITLIST_WINDOW_SECONDS = 60 * 60
 
@@ -126,6 +130,14 @@ def _client_ip(request: Request) -> str | None:
 @app.exception_handler(SessionNotFoundError)
 async def _handle_session_not_found(request: Any, exc: SessionNotFoundError) -> JSONResponse:
     return error_response("SESSION_NOT_FOUND", str(exc), 404)
+
+
+@app.exception_handler(UploadJobNotFoundError)
+async def _handle_upload_job_not_found(
+    request: Any,
+    exc: UploadJobNotFoundError,
+) -> JSONResponse:
+    return error_response("UPLOAD_JOB_NOT_FOUND", str(exc), 404)
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +259,370 @@ def _serialize_state(state: Any) -> dict[str, Any]:
     }
 
 
+def _serialize_job(job_id: str) -> dict[str, Any]:
+    return upload_jobs.require(job_id).to_dict()
+
+
+def _empty_graph() -> Graph:
+    return Graph(nodes=[], edges=[], layers=[])
+
+
+def _apply_preview_graph(session_id: str, graph_data: dict[str, Any] | None) -> None:
+    if not graph_data:
+        return
+    session = store.require(session_id)
+    session.graph = Graph.from_dict(graph_data)
+
+
+def _job_progress_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    event_type = str(payload.get("type", "status"))
+    status = str(payload.get("status", "queued"))
+    progress = float(payload.get("progress", 0.0))
+    stage_message = str(payload.get("stage_message", ""))
+    metrics = payload.get("metrics")
+    graph = payload.get("graph")
+    result = payload.get("result")
+
+    upload_jobs.update(
+        str(payload["job_id"]),
+        status=None if status == "completed" else status,
+        progress=progress,
+        stage_message=stage_message,
+        graph_preview=graph if isinstance(graph, dict) else None,
+        metrics=metrics if isinstance(metrics, dict) else None,
+        result=result if isinstance(result, dict) else None,
+    )
+
+    if isinstance(graph, dict):
+        _apply_preview_graph(str(payload["session_id"]), graph)
+
+    if event_type == "preview":
+        for node in payload.get("new_nodes", []):
+            upload_jobs.publish(
+                str(payload["job_id"]),
+                {
+                    "type": "node_added",
+                    "node": node,
+                },
+            )
+        for edge in payload.get("new_edges", []):
+            upload_jobs.publish(
+                str(payload["job_id"]),
+                {
+                    "type": "edge_added",
+                    "edge": edge,
+                },
+            )
+        upload_jobs.publish(
+            str(payload["job_id"]),
+            {
+                "type": "graph_snapshot",
+                "graph": graph,
+            },
+        )
+
+    if status != "completed":
+        upload_jobs.publish(
+            str(payload["job_id"]),
+            {
+                "type": "job_status",
+                "status": status,
+                "progress": progress,
+                "stage_message": stage_message,
+                "metrics": metrics if isinstance(metrics, dict) else {},
+            },
+        )
+
+async def _run_upload_job(
+    job_id: str,
+    session_id: str,
+    raw_files: list[tuple[str, bytes]],
+    description: str,
+) -> None:
+    from nexus_api.ingestion.extractor import ingest
+    from nexus_api.ingestion.standard import save_standard
+
+    async def progress_callback(event: dict[str, Any]) -> None:
+        payload = {
+            **event,
+            "job_id": job_id,
+            "session_id": session_id,
+        }
+        _job_progress_payload(payload)
+
+    try:
+        upload_jobs.update(
+            job_id,
+            status="queued",
+            progress=0.0,
+            stage_message="Queued",
+            graph_preview=_serialize_graph(_empty_graph()),
+            metrics={"files_total": len(raw_files), "files_processed": 0},
+        )
+        async with _INGESTION_SEMAPHORE:
+            result = await ingest(
+                raw_files,
+                description,
+                progress_callback=progress_callback,
+            )
+
+        session = store.require(session_id)
+        session.graph = result.graph
+        session.r_unit = result.r_unit
+        store.persist(session)
+
+        if result.standard is not None:
+            save_standard(session.session_id, result.standard)
+
+        upload_jobs.update(
+            job_id,
+            status="completed",
+            progress=1.0,
+            stage_message="Graph ready",
+            graph_preview=_serialize_graph(result.graph),
+            result={
+                "session_id": session.session_id,
+                "files_parsed": result.files_parsed,
+                "graph": _serialize_graph(result.graph),
+                "r_unit": result.r_unit,
+                "confidence": result.confidence,
+                "gaps": result.gaps,
+                "follow_up_questions": result.follow_up_questions,
+                **(
+                    {
+                        "company": result.standard.company,
+                        "known_risks": result.standard.known_risks,
+                    }
+                    if result.standard is not None
+                    else {}
+                ),
+            },
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_status",
+                "status": "completed",
+                "progress": 1.0,
+                "stage_message": "Graph ready",
+                "metrics": upload_jobs.require(job_id).metrics,
+            },
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_complete",
+                "session_id": session.session_id,
+                **upload_jobs.require(job_id).result,
+            },
+        )
+    except Exception as exc:
+        logger.exception("Upload job %s failed", job_id)
+        upload_jobs.update(
+            job_id,
+            status="failed",
+            progress=1.0,
+            stage_message="Graph build failed",
+            error=str(exc),
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_status",
+                "status": "failed",
+                "progress": 1.0,
+                "stage_message": "Graph build failed",
+                "metrics": upload_jobs.require(job_id).metrics,
+            },
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_error",
+                "message": str(exc),
+            },
+        )
+
+
+async def _run_google_drive_import_job(
+    job_id: str,
+    session_id: str,
+    access_token: str,
+    folder_id_or_url: str,
+    description: str,
+) -> None:
+    from nexus_api.ingestion.extractor import ingest
+    from nexus_api.ingestion.google_drive import (
+        GoogleDriveImportError,
+        extract_folder_id,
+        import_drive_folder,
+    )
+    from nexus_api.ingestion.standard import save_standard
+
+    async def progress_callback(event: dict[str, Any]) -> None:
+        payload = {
+            **event,
+            "job_id": job_id,
+            "session_id": session_id,
+        }
+        _job_progress_payload(payload)
+
+    try:
+        upload_jobs.update(
+            job_id,
+            status="queued",
+            progress=0.0,
+            stage_message="Connecting to Google Drive",
+            graph_preview=_serialize_graph(_empty_graph()),
+            metrics={"files_total": 0, "files_processed": 0},
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_status",
+                "status": "queued",
+                "progress": 0.0,
+                "stage_message": "Connecting to Google Drive",
+                "metrics": {"files_total": 0, "files_processed": 0},
+            },
+        )
+        async with _INGESTION_SEMAPHORE:
+            upload_jobs.update(
+                job_id,
+                status="parsing",
+                progress=0.05,
+                stage_message="Scanning Google Drive files",
+            )
+            upload_jobs.publish(
+                job_id,
+                {
+                    "type": "job_status",
+                    "status": "parsing",
+                    "progress": 0.05,
+                    "stage_message": "Scanning Google Drive files",
+                    "metrics": upload_jobs.require(job_id).metrics,
+                },
+            )
+            folder_id = extract_folder_id(folder_id_or_url)
+            drive_bundle = await asyncio.to_thread(import_drive_folder, access_token, folder_id)
+            upload_jobs.update(
+                job_id,
+                progress=0.1,
+                stage_message="Starting graph build from Drive",
+                metrics={
+                    "files_total": len(drive_bundle.files),
+                    "files_processed": 0,
+                },
+            )
+            upload_jobs.publish(
+                job_id,
+                {
+                    "type": "job_status",
+                    "status": "parsing",
+                    "progress": 0.1,
+                    "stage_message": "Starting graph build from Drive",
+                    "metrics": upload_jobs.require(job_id).metrics,
+                },
+            )
+
+            result = await ingest(
+                drive_bundle.files,
+                description,
+                progress_callback=progress_callback,
+            )
+
+        session = store.require(session_id)
+        session.graph = result.graph
+        session.r_unit = result.r_unit
+        store.persist(session)
+
+        if result.standard is not None:
+            save_standard(session.session_id, result.standard)
+
+        upload_jobs.update(
+            job_id,
+            status="completed",
+            progress=1.0,
+            stage_message="Drive graph ready",
+            graph_preview=_serialize_graph(result.graph),
+            result={
+                "session_id": session.session_id,
+                "files_parsed": result.files_parsed,
+                "graph": _serialize_graph(result.graph),
+                "r_unit": result.r_unit,
+                "confidence": result.confidence,
+                "gaps": result.gaps,
+                "follow_up_questions": result.follow_up_questions,
+                "drive_folder": drive_bundle.folder.to_dict(),
+                **(
+                    {
+                        "company": result.standard.company,
+                        "known_risks": result.standard.known_risks,
+                    }
+                    if result.standard is not None
+                    else {}
+                ),
+            },
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_status",
+                "status": "completed",
+                "progress": 1.0,
+                "stage_message": "Drive graph ready",
+                "metrics": upload_jobs.require(job_id).metrics,
+            },
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_complete",
+                "session_id": session.session_id,
+                **upload_jobs.require(job_id).result,
+            },
+        )
+    except GoogleDriveImportError as exc:
+        upload_jobs.update(
+            job_id,
+            status="failed",
+            progress=1.0,
+            stage_message="Google Drive import failed",
+            error=str(exc),
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_status",
+                "status": "failed",
+                "progress": 1.0,
+                "stage_message": "Google Drive import failed",
+                "metrics": upload_jobs.require(job_id).metrics,
+            },
+        )
+        upload_jobs.publish(job_id, {"type": "job_error", "message": str(exc)})
+    except Exception as exc:
+        logger.exception("Google Drive upload job %s failed", job_id)
+        upload_jobs.update(
+            job_id,
+            status="failed",
+            progress=1.0,
+            stage_message="Drive graph build failed",
+            error=str(exc),
+        )
+        upload_jobs.publish(
+            job_id,
+            {
+                "type": "job_status",
+                "status": "failed",
+                "progress": 1.0,
+                "stage_message": "Drive graph build failed",
+                "metrics": upload_jobs.require(job_id).metrics,
+            },
+        )
+        upload_jobs.publish(job_id, {"type": "job_error", "message": str(exc)})
+
+
 # ---------------------------------------------------------------------------
 # Health check & sessions
 # ---------------------------------------------------------------------------
@@ -311,6 +687,102 @@ async def create_waitlist_signup(
 
 
 # ---------------------------------------------------------------------------
+# Upload helpers
+# ---------------------------------------------------------------------------
+
+
+async def _read_uploaded_files(files: Sequence[UploadFile]) -> list[tuple[str, bytes]] | JSONResponse:
+    if not files:
+        return error_response("INVALID_REQUEST", "No files provided", 400)
+
+    max_file_bytes = 50 * 1024 * 1024  # 50 MB per file
+    raw_files: list[tuple[str, bytes]] = []
+    for file in files:
+        content = await file.read()
+        if len(content) > max_file_bytes:
+            return error_response(
+                "FILE_TOO_LARGE",
+                f"File {file.filename} exceeds 50 MB limit",
+                413,
+            )
+        raw_files.append((file.filename or "unknown", content))
+    return raw_files
+
+
+# ---------------------------------------------------------------------------
+# POST /api/upload-jobs
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/upload-jobs")
+async def create_upload_job(
+    files: list[UploadFile] = File(...),
+    description: str = Form(""),
+) -> JSONResponse:
+    raw_files = await _read_uploaded_files(files)
+    if isinstance(raw_files, JSONResponse):
+        return raw_files
+
+    session = store.create()
+    session.graph = _empty_graph()
+    store.persist(session)
+
+    job = upload_jobs.create(session.session_id)
+    upload_jobs.update(
+        job.job_id,
+        graph_preview=_serialize_graph(session.graph),
+        metrics={"files_total": len(raw_files), "files_processed": 0},
+    )
+    asyncio.create_task(
+        _run_upload_job(job.job_id, session.session_id, raw_files, description)
+    )
+
+    return JSONResponse(
+        {
+            "session_id": session.session_id,
+            "job_id": job.job_id,
+            "status": job.status,
+        }
+    )
+
+
+@app.post("/api/google-drive/import-jobs")
+async def create_google_drive_import_job(body: GoogleDriveImportRequest) -> JSONResponse:
+    session = store.create()
+    session.graph = _empty_graph()
+    store.persist(session)
+
+    job = upload_jobs.create(session.session_id)
+    upload_jobs.update(
+        job.job_id,
+        graph_preview=_serialize_graph(session.graph),
+        metrics={"files_total": 0, "files_processed": 0},
+    )
+    asyncio.create_task(
+        _run_google_drive_import_job(
+            job.job_id,
+            session.session_id,
+            body.access_token,
+            body.folder_id,
+            body.description,
+        )
+    )
+
+    return JSONResponse(
+        {
+            "session_id": session.session_id,
+            "job_id": job.job_id,
+            "status": job.status,
+        }
+    )
+
+
+@app.get("/api/upload-jobs/{job_id}")
+async def get_upload_job(job_id: str) -> JSONResponse:
+    return JSONResponse(_serialize_job(job_id))
+
+
+# ---------------------------------------------------------------------------
 # POST /api/upload
 # ---------------------------------------------------------------------------
 
@@ -320,24 +792,13 @@ async def upload_files(
     files: list[UploadFile] = File(...),
     description: str = Form(""),
 ) -> JSONResponse:
-    if not files:
-        return error_response("INVALID_REQUEST", "No files provided", 400)
-
-    max_file_bytes = 50 * 1024 * 1024  # 50 MB per file
     try:
         from nexus_api.ingestion.extractor import ingest
         from nexus_api.ingestion.standard import save_standard
 
-        raw_files: list[tuple[str, bytes]] = []
-        for f in files:
-            content = await f.read()
-            if len(content) > max_file_bytes:
-                return error_response(
-                    "FILE_TOO_LARGE",
-                    f"File {f.filename} exceeds 50 MB limit",
-                    413,
-                )
-            raw_files.append((f.filename or "unknown", content))
+        raw_files = await _read_uploaded_files(files)
+        if isinstance(raw_files, JSONResponse):
+            return raw_files
 
         result = await ingest(raw_files, description)
 
@@ -1008,6 +1469,10 @@ async def chat(body: ChatRequest) -> JSONResponse:
     from google.genai import types
 
     from nexus_api.chat.knowledge import EXECUTIVE_SYSTEM_PROMPT, build_knowledge_context
+    from nexus_api.gemini import (
+        generate_content_stream_with_fallback,
+        generate_content_with_fallback,
+    )
     from nexus_api.session import ChatMessage
 
     api_key = os.environ.get("GEMINI_API_KEY", "")
@@ -1044,8 +1509,9 @@ async def chat(body: ChatRequest) -> JSONResponse:
 
     try:
         client = genai.Client(api_key=api_key)
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+        response = await generate_content_with_fallback(
+            client,
+            primary_model="gemini-2.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -1090,6 +1556,77 @@ async def clear_chat_history(session_id: str) -> JSONResponse:
 
 
 # ---------------------------------------------------------------------------
+# WebSocket /ws/upload/{job_id}
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/ws/upload/{job_id}")
+async def ws_upload(websocket: WebSocket, job_id: str) -> None:
+    await websocket.accept()
+    try:
+        job = upload_jobs.require(job_id)
+    except UploadJobNotFoundError:
+        await websocket.send_json({"type": "job_error", "message": "Upload job not found"})
+        await websocket.close()
+        return
+
+    queue = upload_jobs.subscribe(job_id)
+    try:
+        data = await websocket.receive_json()
+        if data.get("action") != "subscribe":
+            await websocket.send_json({"type": "job_error", "message": "Send {action: 'subscribe'}"})
+            await websocket.close()
+            return
+
+        await websocket.send_json(
+            {
+                "type": "job_status",
+                "status": job.status,
+                "progress": job.progress,
+                "stage_message": job.stage_message,
+                "metrics": job.metrics,
+            }
+        )
+        await websocket.send_json(
+            {
+                "type": "graph_snapshot",
+                "graph": job.graph_preview,
+            }
+        )
+        if job.status == "completed" and isinstance(job.result, dict):
+            await websocket.send_json(
+                {
+                    "type": "job_complete",
+                    "session_id": job.session_id,
+                    **job.result,
+                }
+            )
+            return
+        if job.status == "failed":
+            await websocket.send_json(
+                {
+                    "type": "job_error",
+                    "message": job.error or "Upload job failed",
+                }
+            )
+            return
+
+        while True:
+            event = await queue.get()
+            await websocket.send_json(event)
+            if event.get("type") in {"job_complete", "job_error"}:
+                break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        upload_jobs.unsubscribe(job_id, queue)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
 # WebSocket /ws/chat/{session_id} - streaming chat
 # ---------------------------------------------------------------------------
 
@@ -1111,6 +1648,7 @@ async def ws_chat(websocket: WebSocket, session_id: str) -> None:
     from google.genai import types
 
     from nexus_api.chat.knowledge import EXECUTIVE_SYSTEM_PROMPT, build_knowledge_context
+    from nexus_api.gemini import generate_content_stream_with_fallback
     from nexus_api.session import ChatMessage
 
     api_key = os.environ.get("GEMINI_API_KEY", "")
@@ -1153,8 +1691,9 @@ async def ws_chat(websocket: WebSocket, session_id: str) -> None:
             )
 
             try:
-                stream = client.aio.models.generate_content_stream(
-                    model="gemini-2.5-flash",
+                stream = generate_content_stream_with_fallback(
+                    client,
+                    primary_model="gemini-2.5-flash",
                     contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,

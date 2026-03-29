@@ -19,6 +19,8 @@ import type {
   GraphOperation,
   GraphUpdateResponse,
   ReportResponse,
+  UploadJobResponse,
+  UploadJobState,
   UploadResponse,
   WaitlistSignupResponse,
 } from "./types";
@@ -82,6 +84,30 @@ export async function uploadFiles(
   return data;
 }
 
+export async function createUploadJob(
+  files: File[],
+  description?: string,
+): Promise<UploadJobResponse> {
+  const form = new FormData();
+  for (const file of files) {
+    form.append("files", file);
+  }
+  if (description) {
+    form.append("description", description);
+  }
+  const { data } = await client.post<UploadJobResponse>("/api/upload-jobs", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function getUploadJob(jobId: string): Promise<UploadJobState> {
+  const { data } = await client.get<UploadJobState>(
+    `/api/upload-jobs/${encodeURIComponent(jobId)}`,
+  );
+  return data;
+}
+
 export async function importGoogleDriveFolder(
   accessToken: string,
   folderId: string,
@@ -89,6 +115,22 @@ export async function importGoogleDriveFolder(
 ): Promise<DriveImportResponse> {
   const { data } = await client.post<DriveImportResponse>(
     "/api/google-drive/import",
+    {
+      access_token: accessToken,
+      folder_id: folderId,
+      description: description ?? "",
+    },
+  );
+  return data;
+}
+
+export async function createGoogleDriveImportJob(
+  accessToken: string,
+  folderId: string,
+  description?: string,
+): Promise<UploadJobResponse> {
+  const { data } = await client.post<UploadJobResponse>(
+    "/api/google-drive/import-jobs",
     {
       access_token: accessToken,
       folder_id: folderId,
@@ -252,4 +294,10 @@ export function getChatWsUrl(sessionId: string): string {
   const base = BASE_URL || window.location.origin;
   const wsBase = base.replace(/^http/, "ws");
   return `${wsBase}/ws/chat/${encodeURIComponent(sessionId)}`;
+}
+
+export function getUploadWsUrl(jobId: string): string {
+  const base = BASE_URL || window.location.origin;
+  const wsBase = base.replace(/^http/, "ws");
+  return `${wsBase}/ws/upload/${encodeURIComponent(jobId)}`;
 }

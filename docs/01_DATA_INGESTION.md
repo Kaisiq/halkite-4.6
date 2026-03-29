@@ -71,6 +71,13 @@ Step 8: RETURN GRAPH
     Valid Graph G ready for deterministic analysis
 ```
 
+The default product flow now runs this pipeline as an asynchronous upload
+job. The user receives a session immediately, then the frontend streams
+real progress and incremental graph updates while Module 1 continues in the
+background. Nodes may appear before the graph is fully finalized; the final
+deterministic scoring and weight refinement step completes before the job is
+marked done.
+
 ---
 
 ## File Parsing Details

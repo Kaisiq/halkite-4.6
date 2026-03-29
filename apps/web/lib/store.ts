@@ -13,10 +13,15 @@ import type {
   ExploreRequestOptions,
   ExploreResponse,
   GraphData,
+  GraphEdge,
+  GraphNode,
   GraphOperation,
   Recommendation,
   Scenario,
   TreeStats,
+  UploadJobEvent,
+  UploadJobStatus,
+  UploadResponse,
   VulnerabilityReport,
 } from "./types";
 
@@ -27,6 +32,7 @@ import type {
 export interface NexusState {
   // Session
   sessionId: string | null;
+  uploadJobId: string | null;
 
   // Graph
   graph: GraphData | null;
@@ -35,6 +41,10 @@ export interface NexusState {
   uploading: boolean;
   uploadError: string | null;
   uploadProgress: string | null;
+  uploadStatus: UploadJobStatus | null;
+  uploadStageMessage: string | null;
+  uploadProgressValue: number;
+  graphBuildState: "idle" | "building" | "complete" | "failed";
   uploadStepIndex: number;
   uploadTotalSteps: number;
   gaps: string[];
@@ -104,12 +114,47 @@ const UPLOAD_STEPS = [
   "Finalizing structure...",
 ] as const;
 
-const UPLOAD_STEP_DELAYS = [0, 2_000, 4_500, 8_000, 12_000, 17_000];
+const DRIVE_UPLOAD_STEPS = [
+  "Connecting to Google Drive...",
+  "Scanning Google Drive files...",
+  "Extracting entities...",
+  "Building dependency graph...",
+  "Mapping organizational layers...",
+  "Finalizing structure...",
+] as const;
+
+function clampStepIndex(stepIndex: number, totalSteps: number): number {
+  if (totalSteps <= 0) return 0;
+  return Math.max(0, Math.min(stepIndex, totalSteps - 1));
+}
+
+function statusToStepIndex(status: UploadJobStatus, totalSteps: number): number {
+  switch (status) {
+    case "queued":
+      return 0;
+    case "parsing":
+      return clampStepIndex(1, totalSteps);
+    case "extracting":
+      return clampStepIndex(2, totalSteps);
+    case "merging":
+      return clampStepIndex(3, totalSteps);
+    case "refining":
+      return clampStepIndex(4, totalSteps);
+    case "completed":
+      return clampStepIndex(totalSteps - 1, totalSteps);
+    case "failed":
+      return clampStepIndex(totalSteps - 2, totalSteps);
+  }
+}
 
 const INITIAL_UPLOAD = {
   uploading: false,
   uploadError: null as string | null,
   uploadProgress: null as string | null,
+  uploadStatus: null as UploadJobStatus | null,
+  uploadStageMessage: null as string | null,
+  uploadProgressValue: 0,
+  graphBuildState: "idle" as "idle" | "building" | "complete" | "failed",
   uploadStepIndex: 0,
   uploadTotalSteps: UPLOAD_STEPS.length,
   gaps: [] as string[],
@@ -117,6 +162,155 @@ const INITIAL_UPLOAD = {
   confidence: null as number | null,
   driveFolder: null as DriveFolderSummary | null,
 };
+
+let uploadSocket: WebSocket | null = null;
+let previewNodeQueue: GraphNode[] = [];
+let previewEdgeQueue: GraphEdge[] = [];
+let previewFlushTimer: number | null = null;
+let pendingUploadCompletion:
+  | (UploadResponse & {
+      drive_folder?: DriveFolderSummary;
+    })
+  | null = null;
+
+function closeUploadSocket(): void {
+  if (uploadSocket) {
+    uploadSocket.close();
+    uploadSocket = null;
+  }
+}
+
+function resetPreviewQueues(): void {
+  previewNodeQueue = [];
+  previewEdgeQueue = [];
+  pendingUploadCompletion = null;
+  if (previewFlushTimer !== null && typeof window !== "undefined") {
+    window.clearTimeout(previewFlushTimer);
+  }
+  previewFlushTimer = null;
+}
+
+function completeUploadReveal(): void {
+  const completion = pendingUploadCompletion;
+  if (!completion) {
+    return;
+  }
+  pendingUploadCompletion = null;
+  const { uploadTotalSteps } = useNexusStore.getState();
+  useNexusStore.setState({
+    sessionId: completion.session_id,
+    graph: completion.graph,
+    uploading: false,
+    uploadStatus: "completed",
+    uploadStageMessage: "Graph ready",
+    uploadProgress: null,
+    uploadProgressValue: 1,
+    graphBuildState: "complete",
+    uploadStepIndex: statusToStepIndex("completed", uploadTotalSteps),
+    confidence: completion.confidence,
+    gaps: completion.gaps,
+    followUpQuestions: completion.follow_up_questions,
+    driveFolder: completion.drive_folder ?? null,
+  });
+  closeUploadSocket();
+}
+
+function mergePreviewGraph(
+  current: GraphData | null,
+  node?: GraphNode,
+  edge?: GraphEdge,
+): GraphData {
+  const base: GraphData = current ?? { layers: [], nodes: [], edges: [] };
+  const layers = new Set(base.layers);
+  const nodes = [...base.nodes];
+  const edges = [...base.edges];
+
+  if (node && !nodes.some((existing) => existing.id === node.id)) {
+    nodes.push(node);
+    layers.add(node.layer);
+  }
+
+  if (
+    edge &&
+    !edges.some(
+      (existing) => existing.from === edge.from && existing.to === edge.to,
+    ) &&
+    nodes.some((existing) => existing.id === edge.from) &&
+    nodes.some((existing) => existing.id === edge.to)
+  ) {
+    edges.push(edge);
+  }
+
+  return {
+    layers: Array.from(layers),
+    nodes,
+    edges,
+  };
+}
+
+function flushPreviewQueues(): void {
+  previewFlushTimer = null;
+  const nextNode = previewNodeQueue.shift();
+  if (nextNode) {
+    useNexusStore.setState((state) => ({
+      graph: mergePreviewGraph(state.graph, nextNode),
+    }));
+  } else {
+    const nextEdge = previewEdgeQueue.shift();
+    if (nextEdge) {
+      const state = useNexusStore.getState();
+      const graph = state.graph;
+      const hasFrom = graph?.nodes.some((node) => node.id === nextEdge.from);
+      const hasTo = graph?.nodes.some((node) => node.id === nextEdge.to);
+      if (hasFrom && hasTo) {
+        useNexusStore.setState((current) => ({
+          graph: mergePreviewGraph(current.graph, undefined, nextEdge),
+        }));
+      } else {
+        previewEdgeQueue.push(nextEdge);
+      }
+    }
+  }
+
+  if (previewNodeQueue.length > 0 || previewEdgeQueue.length > 0) {
+    previewFlushTimer = window.setTimeout(flushPreviewQueues, 140);
+    return;
+  }
+
+  completeUploadReveal();
+}
+
+function enqueuePreviewNode(node: GraphNode): void {
+  const currentGraph = useNexusStore.getState().graph;
+  if (
+    currentGraph?.nodes.some((existing) => existing.id === node.id) ||
+    previewNodeQueue.some((existing) => existing.id === node.id)
+  ) {
+    return;
+  }
+  previewNodeQueue.push(node);
+  if (previewFlushTimer === null && typeof window !== "undefined") {
+    previewFlushTimer = window.setTimeout(flushPreviewQueues, 0);
+  }
+}
+
+function enqueuePreviewEdge(edge: GraphEdge): void {
+  const currentGraph = useNexusStore.getState().graph;
+  if (
+    currentGraph?.edges.some(
+      (existing) => existing.from === edge.from && existing.to === edge.to,
+    ) ||
+    previewEdgeQueue.some(
+      (existing) => existing.from === edge.from && existing.to === edge.to,
+    )
+  ) {
+    return;
+  }
+  previewEdgeQueue.push(edge);
+  if (previewFlushTimer === null && typeof window !== "undefined") {
+    previewFlushTimer = window.setTimeout(flushPreviewQueues, 0);
+  }
+}
 
 const INITIAL_ANALYSIS = {
   vulnerabilityReport: null as VulnerabilityReport | null,
@@ -141,6 +335,7 @@ const INITIAL_EXPLORE = {
 export const useNexusStore = create<NexusState>()((set, get) => ({
   // -- Session ---------------------------------------------------------------
   sessionId: null,
+  uploadJobId: null,
 
   // -- Graph -----------------------------------------------------------------
   graph: null,
@@ -178,83 +373,237 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
    * Clears any prior analysis / exploration results.
    */
   uploadFiles: async (files, description) => {
+    closeUploadSocket();
+    resetPreviewQueues();
     set({
       ...INITIAL_UPLOAD,
       ...INITIAL_ANALYSIS,
       ...INITIAL_EXPLORE,
+      uploadJobId: null,
+      graph: { layers: [], nodes: [], edges: [] },
       uploading: true,
-      uploadProgress: UPLOAD_STEPS[0],
+      uploadProgress: "Queueing upload...",
+      uploadStatus: "queued",
+      uploadStageMessage: "Queueing upload...",
+      uploadProgressValue: 0,
+      graphBuildState: "building",
       uploadStepIndex: 0,
       uploadTotalSteps: UPLOAD_STEPS.length,
       cascadeError: null,
       selectedNodeId: null,
       activeScenarioIndex: null,
     });
-
-    // Simulated progress phases so the user sees activity during a long call.
-    const timers = UPLOAD_STEPS.slice(1).map((label, i) =>
-      setTimeout(
-        () => set({ uploadProgress: label, uploadStepIndex: i + 1 }),
-        UPLOAD_STEP_DELAYS[i + 1],
-      ),
-    );
-
     try {
-      const res = await api.uploadFiles(files, description);
-
+      const res = await api.createUploadJob(files, description);
       set({
         sessionId: res.session_id,
-        graph: res.graph,
-        uploading: false,
-        uploadProgress: null,
-        confidence: res.confidence,
-        gaps: res.gaps,
-        followUpQuestions: res.follow_up_questions,
+        uploadJobId: res.job_id,
       });
+
+      if (typeof window !== "undefined") {
+        const connectUploadSocket = (jobId: string) => {
+          const socket = new WebSocket(api.getUploadWsUrl(jobId));
+          uploadSocket = socket;
+
+          socket.onopen = () => {
+            socket.send(JSON.stringify({ action: "subscribe" }));
+          };
+
+          socket.onmessage = (message) => {
+            const event = JSON.parse(message.data) as UploadJobEvent;
+
+            if (event.type === "job_status") {
+              const uploadTotalSteps = get().uploadTotalSteps;
+              set({
+                uploadStatus: event.status,
+                uploadStageMessage: event.stage_message,
+                uploadProgress: event.stage_message,
+                uploadProgressValue: event.progress,
+                uploadStepIndex: statusToStepIndex(
+                  event.status,
+                  uploadTotalSteps,
+                ),
+                graphBuildState:
+                  event.status === "failed"
+                    ? "failed"
+                    : event.status === "completed"
+                      ? "complete"
+                      : "building",
+              });
+              return;
+            }
+
+            if (event.type === "node_added") {
+              enqueuePreviewNode(event.node);
+              return;
+            }
+
+            if (event.type === "edge_added") {
+              enqueuePreviewEdge(event.edge);
+              return;
+            }
+
+            if (event.type === "graph_snapshot") {
+              const current = get().graph;
+              if (event.graph.nodes.length > 0) {
+                set((state) => ({
+                  uploadProgressValue: Math.max(state.uploadProgressValue, 0.2),
+                }));
+                for (const node of event.graph.nodes) {
+                  enqueuePreviewNode(node);
+                }
+                for (const edge of event.graph.edges) {
+                  enqueuePreviewEdge(edge);
+                }
+                if ((current?.nodes.length ?? 0) > 0) {
+                  return;
+                }
+              }
+              if ((current?.nodes.length ?? 0) === 0 && event.graph.nodes.length <= 1) {
+                set({ graph: event.graph });
+              }
+              return;
+            }
+
+            if (event.type === "job_complete") {
+              const currentGraph = get().graph;
+              pendingUploadCompletion = event;
+              const uploadTotalSteps = get().uploadTotalSteps;
+              set((state) => ({
+                uploadStatus: "refining",
+                uploadStageMessage: "Rendering final graph",
+                uploadProgress: "Rendering final graph",
+                uploadProgressValue: Math.max(state.uploadProgressValue, 0.9),
+                uploadStepIndex: statusToStepIndex(
+                  "refining",
+                  uploadTotalSteps,
+                ),
+              }));
+              for (const node of event.graph.nodes) {
+                if (!currentGraph?.nodes.some((existing) => existing.id === node.id)) {
+                  enqueuePreviewNode(node);
+                }
+              }
+              for (const edge of event.graph.edges) {
+                if (
+                  !currentGraph?.edges.some(
+                    (existing) => existing.from === edge.from && existing.to === edge.to,
+                  )
+                ) {
+                  enqueuePreviewEdge(edge);
+                }
+              }
+              if (
+                previewNodeQueue.length === 0 &&
+                previewEdgeQueue.length === 0 &&
+                previewFlushTimer === null
+              ) {
+                completeUploadReveal();
+              }
+              return;
+            }
+
+            if (event.type === "job_error") {
+              set({
+                uploading: false,
+                uploadError: event.message,
+                uploadStatus: "failed",
+                uploadStageMessage: "Graph build failed",
+                uploadProgress: null,
+                graphBuildState: "failed",
+              });
+              closeUploadSocket();
+            }
+          };
+
+          socket.onclose = async () => {
+            if (uploadSocket !== socket) {
+              return;
+            }
+            uploadSocket = null;
+            const state = get();
+            if (!state.uploading || state.uploadJobId !== jobId) {
+              return;
+            }
+            try {
+              const job = await api.getUploadJob(jobId);
+              const uploadTotalSteps = get().uploadTotalSteps;
+              set({
+                uploadStatus: job.status,
+                uploadStageMessage: job.stage_message,
+                uploadProgress: job.stage_message,
+                uploadProgressValue: job.progress,
+                uploadStepIndex: statusToStepIndex(
+                  job.status,
+                  uploadTotalSteps,
+                ),
+                graph: job.graph_preview,
+                graphBuildState:
+                  job.status === "failed"
+                    ? "failed"
+                    : job.status === "completed"
+                      ? "complete"
+                      : "building",
+              });
+              if (job.status === "completed" || job.status === "failed") {
+                if (job.status === "failed") {
+                  resetPreviewQueues();
+                }
+                return;
+              }
+              window.setTimeout(() => {
+                const latest = get();
+                if (latest.uploading && latest.uploadJobId === jobId && !uploadSocket) {
+                  connectUploadSocket(jobId);
+                }
+              }, 500);
+            } catch (err: unknown) {
+              set({
+                uploading: false,
+                uploadError: api.extractErrorMessage(err),
+                uploadStatus: "failed",
+                graphBuildState: "failed",
+              });
+            }
+          };
+        };
+
+        connectUploadSocket(res.job_id);
+      }
     } catch (err: unknown) {
       set({
         uploading: false,
         uploadProgress: null,
         uploadError: api.extractErrorMessage(err),
+        uploadStatus: "failed",
+        graphBuildState: "failed",
       });
-    } finally {
-      timers.forEach(clearTimeout);
     }
   },
 
   importGoogleDriveFolder: async (accessToken, folderId, description) => {
-    const driveSteps = [
-      "Connecting to Google Drive...",
-      "Scanning Google Drive files...",
-      "Extracting entities...",
-      "Building dependency graph...",
-      "Mapping organizational layers...",
-      "Finalizing structure...",
-    ];
-    const driveDelays = [0, 1_500, 4_000, 7_000, 11_000, 15_000];
-
+    closeUploadSocket();
+    resetPreviewQueues();
     set({
       ...INITIAL_UPLOAD,
       ...INITIAL_ANALYSIS,
       ...INITIAL_EXPLORE,
+      uploadJobId: null,
+      graph: { layers: [], nodes: [], edges: [] },
       uploading: true,
-      uploadProgress: driveSteps[0],
+      uploadProgress: "Connecting to Google Drive...",
+      uploadStatus: "queued",
+      uploadStageMessage: "Connecting to Google Drive...",
+      uploadProgressValue: 0,
+      graphBuildState: "building",
       uploadStepIndex: 0,
-      uploadTotalSteps: driveSteps.length,
+      uploadTotalSteps: DRIVE_UPLOAD_STEPS.length,
       cascadeError: null,
       selectedNodeId: null,
       activeScenarioIndex: null,
     });
-
-    const timers = driveSteps.slice(1).map((label, i) =>
-      setTimeout(
-        () => set({ uploadProgress: label, uploadStepIndex: i + 1 }),
-        driveDelays[i + 1],
-      ),
-    );
-
     try {
-      const res = await api.importGoogleDriveFolder(
+      const res = await api.createGoogleDriveImportJob(
         accessToken,
         folderId,
         description,
@@ -262,24 +611,190 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
 
       set({
         sessionId: res.session_id,
-        graph: res.graph,
-        uploading: false,
-        uploadProgress: null,
-        confidence: res.confidence,
-        gaps: res.gaps,
-        followUpQuestions: res.follow_up_questions,
-        driveFolder: res.drive_folder,
+        uploadJobId: res.job_id,
       });
+
+      if (typeof window !== "undefined") {
+        const connectUploadSocket = (jobId: string) => {
+          const socket = new WebSocket(api.getUploadWsUrl(jobId));
+          uploadSocket = socket;
+
+          socket.onopen = () => {
+            socket.send(JSON.stringify({ action: "subscribe" }));
+          };
+
+          socket.onmessage = (message) => {
+            const event = JSON.parse(message.data) as UploadJobEvent;
+
+            if (event.type === "job_status") {
+              const uploadTotalSteps = get().uploadTotalSteps;
+              set({
+                uploadStatus: event.status,
+                uploadStageMessage: event.stage_message,
+                uploadProgress: event.stage_message,
+                uploadProgressValue: event.progress,
+                uploadStepIndex: statusToStepIndex(
+                  event.status,
+                  uploadTotalSteps,
+                ),
+                graphBuildState:
+                  event.status === "failed"
+                    ? "failed"
+                    : event.status === "completed"
+                      ? "complete"
+                      : "building",
+              });
+              return;
+            }
+
+            if (event.type === "node_added") {
+              enqueuePreviewNode(event.node);
+              return;
+            }
+
+            if (event.type === "edge_added") {
+              enqueuePreviewEdge(event.edge);
+              return;
+            }
+
+            if (event.type === "graph_snapshot") {
+              const current = get().graph;
+              if (event.graph.nodes.length > 0) {
+                set((state) => ({
+                  uploadProgressValue: Math.max(state.uploadProgressValue, 0.2),
+                }));
+                for (const node of event.graph.nodes) {
+                  enqueuePreviewNode(node);
+                }
+                for (const edge of event.graph.edges) {
+                  enqueuePreviewEdge(edge);
+                }
+                if ((current?.nodes.length ?? 0) > 0) {
+                  return;
+                }
+              }
+              if ((current?.nodes.length ?? 0) === 0 && event.graph.nodes.length <= 1) {
+                set({ graph: event.graph });
+              }
+              return;
+            }
+
+            if (event.type === "job_complete") {
+              const currentGraph = get().graph;
+              pendingUploadCompletion = event;
+              const uploadTotalSteps = get().uploadTotalSteps;
+              set((state) => ({
+                uploadStatus: "refining",
+                uploadStageMessage: "Rendering final graph",
+                uploadProgress: "Rendering final graph",
+                uploadProgressValue: Math.max(state.uploadProgressValue, 0.9),
+                uploadStepIndex: statusToStepIndex(
+                  "refining",
+                  uploadTotalSteps,
+                ),
+              }));
+              for (const node of event.graph.nodes) {
+                if (!currentGraph?.nodes.some((existing) => existing.id === node.id)) {
+                  enqueuePreviewNode(node);
+                }
+              }
+              for (const edge of event.graph.edges) {
+                if (
+                  !currentGraph?.edges.some(
+                    (existing) => existing.from === edge.from && existing.to === edge.to,
+                  )
+                ) {
+                  enqueuePreviewEdge(edge);
+                }
+              }
+              if (
+                previewNodeQueue.length === 0 &&
+                previewEdgeQueue.length === 0 &&
+                previewFlushTimer === null
+              ) {
+                completeUploadReveal();
+              }
+              return;
+            }
+
+            if (event.type === "job_error") {
+              set({
+                uploading: false,
+                uploadError: event.message,
+                uploadStatus: "failed",
+                uploadStageMessage: "Drive import failed",
+                uploadProgress: null,
+                graphBuildState: "failed",
+              });
+              closeUploadSocket();
+            }
+          };
+
+          socket.onclose = async () => {
+            if (uploadSocket !== socket) {
+              return;
+            }
+            uploadSocket = null;
+            const state = get();
+            if (!state.uploading || state.uploadJobId !== jobId) {
+              return;
+            }
+            try {
+              const job = await api.getUploadJob(jobId);
+              const uploadTotalSteps = get().uploadTotalSteps;
+              set({
+                uploadStatus: job.status,
+                uploadStageMessage: job.stage_message,
+                uploadProgress: job.stage_message,
+                uploadProgressValue: job.progress,
+                uploadStepIndex: statusToStepIndex(
+                  job.status,
+                  uploadTotalSteps,
+                ),
+                graph: job.graph_preview,
+                graphBuildState:
+                  job.status === "failed"
+                    ? "failed"
+                    : job.status === "completed"
+                      ? "complete"
+                      : "building",
+              });
+              if (job.status === "completed" || job.status === "failed") {
+                if (job.status === "failed") {
+                  resetPreviewQueues();
+                }
+                return;
+              }
+              window.setTimeout(() => {
+                const latest = get();
+                if (latest.uploading && latest.uploadJobId === jobId && !uploadSocket) {
+                  connectUploadSocket(jobId);
+                }
+              }, 500);
+            } catch (err: unknown) {
+              set({
+                uploading: false,
+                uploadError: api.extractErrorMessage(err),
+                uploadStatus: "failed",
+                graphBuildState: "failed",
+              });
+            }
+          };
+        };
+
+        connectUploadSocket(res.job_id);
+      }
       return true;
     } catch (err: unknown) {
       set({
         uploading: false,
         uploadProgress: null,
         uploadError: api.extractErrorMessage(err),
+        uploadStatus: "failed",
+        uploadStageMessage: "Drive import failed",
+        graphBuildState: "failed",
       });
       return false;
-    } finally {
-      timers.forEach(clearTimeout);
     }
   },
 
@@ -370,6 +885,8 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
    * Reset the graph to its initial healthy state and clear derived results.
    */
   resetSession: async () => {
+    closeUploadSocket();
+    resetPreviewQueues();
     const { sessionId } = get();
     if (!sessionId) return;
 

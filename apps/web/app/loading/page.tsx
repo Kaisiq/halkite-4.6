@@ -40,6 +40,7 @@ export default function LoadingPage() {
   const uploading = useNexusStore((s) => s.uploading);
   const uploadError = useNexusStore((s) => s.uploadError);
   const uploadProgress = useNexusStore((s) => s.uploadProgress);
+  const uploadProgressValue = useNexusStore((s) => s.uploadProgressValue);
   const uploadStepIndex = useNexusStore((s) => s.uploadStepIndex);
   const uploadTotalSteps = useNexusStore((s) => s.uploadTotalSteps);
   const sessionId = useNexusStore((s) => s.sessionId);
@@ -93,12 +94,14 @@ export default function LoadingPage() {
     router.replace("/" as Route);
   }, [uploading, uploadError, sessionId, router]);
 
-  // Cap progress at 90% while still uploading — the last step is the longest
-  const rawPercent =
+  const stepPercent =
     uploadTotalSteps > 0
       ? Math.round(((uploadStepIndex + 1) / uploadTotalSteps) * 100)
       : 0;
-  const progressPercent = uploading ? Math.min(rawPercent, 90) : 100;
+  const actualPercent = Math.round(uploadProgressValue * 100);
+  const progressPercent = uploading
+    ? Math.min(Math.max(actualPercent, stepPercent), 95)
+    : 100;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg)] px-4 sm:px-6">

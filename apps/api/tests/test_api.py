@@ -7,15 +7,18 @@ for all requests.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from nexus_api import main as api_main
-from nexus_api.main import app
+from nexus_api.main import _run_upload_job, app
 from nexus_api.models.graph import Edge, Graph, Node
 from nexus_api.session import store
+from nexus_api.upload_jobs import upload_jobs
 from nexus_api.waitlist import SlidingWindowRateLimiter, WaitlistStore
 
 # ---------------------------------------------------------------------------
@@ -308,6 +311,136 @@ class TestGraphUpdateEndpoint:
         graph_data = data["graph"]
         node_ids = [n["id"] for n in graph_data["nodes"]]
         assert "intern" in node_ids
+
+
+class TestUploadJobsEndpoint:
+    async def test_upload_job_returns_immediately(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        created = {"called": False}
+
+        def fake_create_task(coro):
+            created["called"] = True
+            coro.close()
+            return SimpleNamespace()
+
+        monkeypatch.setattr("nexus_api.main.asyncio.create_task", fake_create_task)
+
+        async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
+            response = await client.post(
+                "/api/upload-jobs",
+                files={"files": ("notes.txt", b"hello world", "text/plain")},
+                data={"description": "demo"},
+            )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["status"] == "queued"
+        assert payload["session_id"]
+        assert payload["job_id"]
+        assert created["called"] is True
+
+    async def test_run_upload_job_updates_status_and_session(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path,
+    ) -> None:
+        monkeypatch.setenv("HALKANTIR_DATA_DIR", str(tmp_path))
+        session = store.create()
+        session.graph = Graph(nodes=[], edges=[], layers=[])
+        job = upload_jobs.create(session.session_id)
+
+        graph = Graph(
+            nodes=[Node("ceo", "CEO", "People", theta=0.9, r=180)],
+            edges=[],
+            layers=["People"],
+        )
+        result = SimpleNamespace(
+            graph=graph,
+            r_unit="days",
+            confidence=0.9,
+            gaps=[],
+            follow_up_questions=[],
+            files_parsed=[{"filename": "notes.txt", "type": "txt", "chars_extracted": 11}],
+            standard=SimpleNamespace(company="Acme", known_risks=[]),
+            to_dict=lambda: {
+                "graph": graph.to_dict(),
+                "r_unit": "days",
+                "confidence": 0.9,
+                "gaps": [],
+                "follow_up_questions": [],
+                "files_parsed": [
+                    {"filename": "notes.txt", "type": "txt", "chars_extracted": 11}
+                ],
+            },
+        )
+
+        async def fake_ingest(files, description, progress_callback=None):
+            assert files == [("notes.txt", b"hello world")]
+            assert description == "demo"
+            if progress_callback is not None:
+                await progress_callback(
+                    {
+                        "type": "preview",
+                        "status": "merging",
+                        "progress": 0.5,
+                        "stage_message": "Merging graph",
+                        "graph": graph.to_dict(),
+                        "new_nodes": [graph.nodes[0].to_dict()],
+                        "new_edges": [],
+                        "metrics": {
+                            "files_total": 1,
+                            "files_processed": 1,
+                            "candidate_nodes": 1,
+                            "candidate_edges": 0,
+                        },
+                    }
+                )
+            return result
+
+        monkeypatch.setattr("nexus_api.ingestion.extractor.ingest", fake_ingest)
+        monkeypatch.setattr(
+            "nexus_api.ingestion.standard.save_standard",
+            lambda session_id, standard: tmp_path / f"{session_id}.json",
+        )
+
+        await _run_upload_job(job.job_id, session.session_id, [("notes.txt", b"hello world")], "demo")
+
+        saved_job = upload_jobs.require(job.job_id)
+        assert saved_job.status == "completed"
+        assert saved_job.result is not None
+        assert saved_job.graph_preview["nodes"][0]["id"] == "ceo"
+        assert store.require(session.session_id).graph is not None
+
+    def test_upload_ws_streams_snapshot_and_completion(self) -> None:
+        session = store.create()
+        session.graph = Graph(nodes=[], edges=[], layers=[])
+        job = upload_jobs.create(session.session_id)
+        upload_jobs.update(
+            job.job_id,
+            status="completed",
+            progress=1.0,
+            stage_message="Graph ready",
+            graph_preview={"layers": ["People"], "nodes": [], "edges": []},
+            result={
+                "session_id": session.session_id,
+                "files_parsed": [],
+                "graph": {"layers": ["People"], "nodes": [], "edges": []},
+                "r_unit": "days",
+                "confidence": 1.0,
+                "gaps": [],
+                "follow_up_questions": [],
+            },
+        )
+
+        with TestClient(app) as client:
+            with client.websocket_connect(f"/ws/upload/{job.job_id}") as websocket:
+                websocket.send_json({"action": "subscribe"})
+                status = websocket.receive_json()
+                snapshot = websocket.receive_json()
+                complete = websocket.receive_json()
+
+        assert status["type"] == "job_status"
+        assert snapshot["type"] == "graph_snapshot"
+        assert complete["type"] == "job_complete"
 
 
 class TestGoogleDriveImportEndpoint:
