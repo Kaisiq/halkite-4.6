@@ -14,6 +14,7 @@ explains them.
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import os
@@ -142,7 +143,10 @@ class MonteCarloAgent(Agent):
         if self._scenario_plans is not None:
             return self._scenario_plans
 
-        source_graph = self._initial_graph.deep_copy() if self._initial_graph is not None else graph.deep_copy()
+        if self._initial_graph is not None:
+            source_graph = self._initial_graph.deep_copy()
+        else:
+            source_graph = graph.deep_copy()
         if self._initial_graph is not None:
             source_graph.reset()
 
@@ -251,7 +255,10 @@ class MonteCarloAgent(Agent):
                 f"  - Step {idx + 1}: {self._summarize_event(event, graph)}"
                 for idx, event in enumerate(candidate.events)
             ]
-            path_labels = " -> ".join(self._node_name(graph, node_id) for node_id in candidate.causal_path)
+            path_labels = " -> ".join(
+                self._node_name(graph, node_id)
+                for node_id in candidate.causal_path
+            )
             candidate_blocks.append(
                 "\n".join(
                     [
@@ -324,9 +331,14 @@ class MonteCarloAgent(Agent):
             plans.append(
                 ScenarioPlan(
                     scenario_id=candidate_id or f"scenario-{idx}",
-                    title=str(raw.get("title", candidate.title_hint)).strip() or candidate.title_hint,
-                    summary=str(raw.get("summary", candidate.summary_hint)).strip()
-                    or candidate.summary_hint,
+                    title=(
+                        str(raw.get("title", candidate.title_hint)).strip()
+                        or candidate.title_hint
+                    ),
+                    summary=(
+                        str(raw.get("summary", candidate.summary_hint)).strip()
+                        or candidate.summary_hint
+                    ),
                     outcome=str(raw.get("outcome", candidate.outcome_hint)).strip()
                     or candidate.outcome_hint,
                     steps=steps,
@@ -388,7 +400,11 @@ class MonteCarloAgent(Agent):
         overflow: list[ScenarioCandidate] = []
         seen_openers: set[str] = set()
         for candidate in deduped:
-            opener = self._event_key(candidate.events[0]) if candidate.events else candidate.candidate_id
+            opener = (
+                self._event_key(candidate.events[0])
+                if candidate.events
+                else candidate.candidate_id
+            )
             if opener in seen_openers:
                 overflow.append(candidate)
                 continue
@@ -434,7 +450,11 @@ class MonteCarloAgent(Agent):
                 if path_tuple in seen_paths:
                     continue
                 seen_paths.add(path_tuple)
-                candidates.append(self._candidate_from_dependency_path(path, adjacency, graph, node_priority))
+                candidates.append(
+                    self._candidate_from_dependency_path(
+                        path, adjacency, graph, node_priority,
+                    )
+                )
 
         return candidates
 
@@ -443,7 +463,9 @@ class MonteCarloAgent(Agent):
         node_priority = self._node_priority_map(graph)
         candidates: list[ScenarioCandidate] = []
         for edge in self._ordered_edges(graph)[:4]:
-            downstream_path = self._best_downstream_path(adjacency, edge.to_id, graph, node_priority)
+            downstream_path = self._best_downstream_path(
+                adjacency, edge.to_id, graph, node_priority,
+            )
             path = [edge.from_id] + downstream_path
             candidates.append(
                 ScenarioCandidate(
@@ -451,18 +473,32 @@ class MonteCarloAgent(Agent):
                     kind="edge_isolation",
                     title_hint=f"{self._node_name(graph, edge.to_id)} becomes isolated",
                     summary_hint=(
-                        f"The dependency link from {self._node_name(graph, edge.from_id)} to "
-                        f"{self._node_name(graph, edge.to_id)} is severed, isolating a key downstream path."
+                        f"The dependency link from "
+                        f"{self._node_name(graph, edge.from_id)} to "
+                        f"{self._node_name(graph, edge.to_id)} is "
+                        f"severed, isolating a key downstream path."
                     ),
                     outcome_hint=(
-                        f"{self._node_name(graph, path[-1])} loses upstream support and the dependent capability degrades."
+                        f"{self._node_name(graph, path[-1])} loses "
+                        f"upstream support and the dependent "
+                        f"capability degrades."
                     ),
                     causal_path=path,
-                    events=[Event(target={"from": edge.from_id, "to": edge.to_id}, action="cut_edge")],
-                    step_outcomes=[
-                        f"The support path into {self._node_name(graph, edge.to_id)} is broken, exposing downstream operations."
+                    events=[
+                        Event(
+                            target={"from": edge.from_id, "to": edge.to_id},
+                            action="cut_edge",
+                        ),
                     ],
-                    score=self._path_score(path, adjacency, graph, node_priority) + edge.weight,
+                    step_outcomes=[
+                        f"The support path into "
+                        f"{self._node_name(graph, edge.to_id)} is "
+                        f"broken, exposing downstream operations."
+                    ],
+                    score=(
+                        self._path_score(path, adjacency, graph, node_priority)
+                        + edge.weight
+                    ),
                 )
             )
         return candidates
@@ -485,29 +521,45 @@ class MonteCarloAgent(Agent):
             terminal = shared[0] if shared else None
             causal_path = [pair.node_a, pair.node_b]
             step_outcomes = [
-                f"Simultaneous failure removes two reinforcing supports from the organization.",
+                "Simultaneous failure removes two reinforcing "
+                "supports from the organization.",
             ]
-            events = [Event(target=[pair.node_a, pair.node_b], action="kill")]
+            events = [
+                Event(target=[pair.node_a, pair.node_b], action="kill"),
+            ]
 
-            if terminal and terminal not in {pair.node_a, pair.node_b} and len(events) < self.mc_config.max_depth:
-                events.append(self._make_node_event(graph, terminal, preferred_action="kill"))
+            not_pair = terminal not in {pair.node_a, pair.node_b}
+            if terminal and not_pair and len(events) < self.mc_config.max_depth:
+                events.append(
+                    self._make_node_event(
+                        graph, terminal, preferred_action="kill",
+                    )
+                )
                 causal_path.append(terminal)
                 step_outcomes.append(
-                    f"{self._node_name(graph, terminal)} becomes the shared downstream bottleneck and tips into failure."
+                    f"{self._node_name(graph, terminal)} becomes "
+                    f"the shared downstream bottleneck and tips "
+                    f"into failure."
                 )
 
-            score = pair.synergy + sum(node_priority.get(node_id, 0.0) for node_id in causal_path)
+            score = pair.synergy + sum(
+                node_priority.get(node_id, 0.0) for node_id in causal_path
+            )
             candidates.append(
                 ScenarioCandidate(
                     candidate_id=f"compound-{pair.node_a}-{pair.node_b}",
                     kind="compound_convergence",
                     title_hint="Reinforcing failures converge on one capability",
                     summary_hint=(
-                        f"{self._node_name(graph, pair.node_a)} and {self._node_name(graph, pair.node_b)} fail together, "
-                        "stacking pressure on the same downstream capability."
+                        f"{self._node_name(graph, pair.node_a)} and "
+                        f"{self._node_name(graph, pair.node_b)} fail "
+                        f"together, stacking pressure on the same "
+                        f"downstream capability."
                     ),
                     outcome_hint=(
-                        f"The combined shock produces a sharper collapse than either failure would create on its own."
+                        "The combined shock produces a sharper "
+                        "collapse than either failure would create "
+                        "on its own."
                     ),
                     causal_path=causal_path,
                     events=events,
@@ -537,21 +589,32 @@ class MonteCarloAgent(Agent):
             if idx + 1 < len(causal_path):
                 next_id = causal_path[idx + 1]
                 step_outcomes.append(
-                    f"Pressure moves from {self._node_name(graph, node_id)} into {self._node_name(graph, next_id)}, which depends on it."
+                    f"Pressure moves from "
+                    f"{self._node_name(graph, node_id)} into "
+                    f"{self._node_name(graph, next_id)}, "
+                    f"which depends on it."
                 )
             else:
                 step_outcomes.append(
-                    f"{self._node_name(graph, terminal_id)} loses enough support to become the terminal business failure in this branch."
+                    f"{self._node_name(graph, terminal_id)} loses "
+                    f"enough support to become the terminal "
+                    f"business failure in this branch."
                 )
 
-        title = f"{self._node_name(graph, start_id)} disruption cascades to {self._node_name(graph, terminal_id)}"
-        summary = (
-            f"This branch follows the real dependency path from {self._node_name(graph, start_id)} to "
-            f"{self._node_name(graph, terminal_id)} instead of mixing unrelated node failures."
+        start_name = self._node_name(graph, start_id)
+        terminal_name = self._node_name(graph, terminal_id)
+        title = (
+            f"{start_name} disruption cascades to {terminal_name}"
         )
+        summary = (
+            f"This branch follows the real dependency path "
+            f"from {start_name} to {terminal_name} instead of "
+            f"mixing unrelated node failures."
+        )
+        terminal_layer = graph.get_node(terminal_id).layer.lower()
         outcome = (
-            f"The disruption reaches {self._node_name(graph, terminal_id)} and causes a clear "
-            f"{graph.get_node(terminal_id).layer.lower()}-layer operating failure."
+            f"The disruption reaches {terminal_name} and causes "
+            f"a clear {terminal_layer}-layer operating failure."
         )
 
         return ScenarioCandidate(
@@ -571,17 +634,30 @@ class MonteCarloAgent(Agent):
         if event.action == "cut_edge":
             target = cast("dict[str, str]", event.target)
             return (
-                f"Sever the support link from {target['from']} to {target['to']} so the downstream path loses a real dependency."
+                f"Sever the support link from {target['from']} "
+                f"to {target['to']} so the downstream path "
+                f"loses a real dependency."
             )
 
-        target_ids = event.target if isinstance(event.target, list) else [cast("str", event.target)]
+        target_ids = (
+            event.target
+            if isinstance(event.target, list)
+            else [cast("str", event.target)]
+        )
         target_label = ", ".join(target_ids)
         if step_index == 0:
-            return f"Trigger the branch at {target_label}, the start of the selected causal path."
+            return (
+                f"Trigger the branch at {target_label}, the "
+                f"start of the selected causal path."
+            )
 
         previous_ids = candidate.events[step_index - 1].target_node_ids()
         previous_label = ", ".join(previous_ids)
-        return f"Follow the pressure from {previous_label} into {target_label}, which sits next on the dependency path."
+        return (
+            f"Follow the pressure from {previous_label} into "
+            f"{target_label}, which sits next on the "
+            f"dependency path."
+        )
 
     def _make_node_event(self, graph: Graph, node_id: str, *, preferred_action: str) -> Event:
         allowed = self._allowed_actions(graph)
@@ -591,7 +667,10 @@ class MonteCarloAgent(Agent):
             return Event(
                 target=node_id,
                 action="damage",
-                magnitude=max(self.mc_config.damage_magnitude_min, self.mc_config.damage_magnitude_max),
+                magnitude=max(
+                    self.mc_config.damage_magnitude_min,
+                    self.mc_config.damage_magnitude_max,
+                ),
             )
         return Event(target=node_id, action="kill")
 
@@ -601,7 +680,8 @@ class MonteCarloAgent(Agent):
             allowed.add("kill")
         if self.mc_config.damage_prob > 0.0:
             allowed.add("damage")
-        if (1.0 - self.mc_config.kill_prob - self.mc_config.damage_prob) > 0.0 and self._candidate_edges(graph):
+        cut_prob = 1.0 - self.mc_config.kill_prob - self.mc_config.damage_prob
+        if cut_prob > 0.0 and self._candidate_edges(graph):
             allowed.add("cut_edge")
         return allowed or {"kill"}
 
@@ -640,9 +720,11 @@ class MonteCarloAgent(Agent):
         priority = {node.id: node.theta for node in graph.nodes}
         if self._vulnerability_report is not None:
             for rank in self._vulnerability_report.node_rankings:
-                priority[rank.node_id] = priority.get(rank.node_id, 0.0) + rank.health_loss * 2.0
+                nid = rank.node_id
+                priority[nid] = priority.get(nid, 0.0) + rank.health_loss * 2.0
             for bridge in self._vulnerability_report.bridge_nodes:
-                priority[bridge.node_id] = priority.get(bridge.node_id, 0.0) + bridge.fragmentation_score
+                nid = bridge.node_id
+                priority[nid] = priority.get(nid, 0.0) + bridge.fragmentation_score
         return priority
 
     @staticmethod
@@ -729,14 +811,23 @@ class MonteCarloAgent(Agent):
             node_score += node_priority.get(node_id, 0.0) * (0.82**index)
 
         edge_score = 0.0
-        for left, right in zip(path, path[1:], strict=False):
+        for left, right in itertools.pairwise(path):
             edge_score += next(
-                (weight for candidate, weight in adjacency.get(left, []) if candidate == right),
+                (
+                    weight
+                    for candidate, weight in adjacency.get(left, [])
+                    if candidate == right
+                ),
                 0.0,
             )
 
         layers = {graph.get_node(node_id).layer for node_id in path}
-        return node_score + (0.35 * edge_score) + (0.2 * len(layers)) + (0.1 * len(path))
+        return (
+            node_score
+            + (0.35 * edge_score)
+            + (0.2 * len(layers))
+            + (0.1 * len(path))
+        )
 
     @staticmethod
     def _event_key(event: Event) -> str:

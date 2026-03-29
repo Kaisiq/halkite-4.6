@@ -22,7 +22,7 @@ import numpy as np
 try:
     import google.genai as genai
     from google.genai import types
-except Exception:  # pragma: no cover - optional dependency in tests
+except ImportError:  # pragma: no cover - optional dependency in tests
     genai = None
     types = None
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 from achilles_api.agents.base import Agent, AgentBrief
@@ -186,8 +188,12 @@ class TestMonteCarloAgent:
 
         edge_pairs = {(edge.from_id, edge.to_id) for edge in small_graph.edges}
         for plan in plans:
-            node_steps = [step.event.target for step in plan.steps if isinstance(step.event.target, str)]
-            for left, right in zip(node_steps, node_steps[1:], strict=False):
+            node_steps = [
+                step.event.target
+                for step in plan.steps
+                if isinstance(step.event.target, str)
+            ]
+            for left, right in itertools.pairwise(node_steps):
                 assert (left, right) in edge_pairs
             assert plan.summary
             assert plan.outcome
