@@ -13,12 +13,24 @@ Agent        -- abstract base class for all agent strategies.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from achilles_api.models.graph import Graph
 
 from achilles_api.models.events import Event
+
+
+@dataclass(slots=True)
+class BranchMetadata:
+    """Optional human-readable context attached to one explored branch."""
+
+    scenario_id: str = ""
+    scenario_title: str = ""
+    scenario_summary: str = ""
+    expected_outcome: str = ""
+    step_description: str = ""
 
 # ======================================================================
 # AgentBrief
@@ -108,7 +120,12 @@ class Agent(ABC):
         self.brief: AgentBrief = brief
 
     @abstractmethod
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Given the current graph state and tree depth, return events to explore.
 
         Parameters
@@ -128,6 +145,16 @@ class Agent(ABC):
             child branch in the state tree.
         """
         ...
+
+    def describe_path(self, path: list[Event]) -> BranchMetadata | None:
+        """Return optional narrative metadata for the explored *path*.
+
+        Deterministic agents usually return ``None``. Agents that pre-plan
+        coherent scenarios can attach titles, expected outcomes, and per-step
+        descriptions so downstream ranking can show clearer scenario cards even
+        before final narrative generation runs.
+        """
+        return None
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(brief={self.brief!r})"

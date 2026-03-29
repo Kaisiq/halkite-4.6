@@ -27,7 +27,12 @@ from achilles_api.models.graph import Graph
 class _StubAgent(Agent):
     """An agent that kills priority_targets one at a time."""
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         events: list[Event] = []
         for nid in self.brief.priority_targets:
             try:

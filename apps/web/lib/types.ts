@@ -265,6 +265,8 @@ export interface ScenarioPath {
   H_before: number;
   H_after: number;
   new_failures: string[];
+  step_description?: string;
+  expected_outcome?: string;
 }
 
 export interface Scenario {
@@ -273,6 +275,7 @@ export interface Scenario {
   severity_label: string;
   title: string;
   summary: string;
+  intended_outcome?: string;
   health_remaining: number;
   failed_nodes: string[];
   recovery_cost: number;

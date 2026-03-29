@@ -832,18 +832,19 @@ async def upload_files(
 
 @app.post("/api/google-drive/import")
 async def import_google_drive_folder(body: GoogleDriveImportRequest) -> JSONResponse:
+    from achilles_api.ingestion.google_drive import (
+        GoogleDriveImportError,
+        extract_folder_id,
+        import_drive_folder,
+    )
+
     try:
         import asyncio
 
+        folder_id = extract_folder_id(body.folder_id)
         from achilles_api.ingestion.extractor import ingest
-        from achilles_api.ingestion.google_drive import (
-            GoogleDriveImportError,
-            extract_folder_id,
-            import_drive_folder,
-        )
         from achilles_api.ingestion.standard import save_standard
 
-        folder_id = extract_folder_id(body.folder_id)
         drive_bundle = await asyncio.to_thread(
             import_drive_folder, body.access_token, folder_id
         )
@@ -1239,7 +1240,12 @@ async def explore(body: ExploreRequest) -> JSONResponse:
     if agent_filter:
         briefs = [b for b in briefs if b.agent_type in agent_filter]
 
-    agents = create_all_agents(briefs, mc_config=mc_config)
+    agents = create_all_agents(
+        briefs,
+        mc_config=mc_config,
+        graph=session.graph,
+        vulnerability_report=session.vulnerability_report,
+    )
     tree = await asyncio.to_thread(build_state_tree, session.graph, agents, config)
     session.state_tree = tree
 
@@ -1315,6 +1321,7 @@ def _serialize_scenarios(scenarios: list[Any]) -> list[dict[str, Any]]:
                 "severity_label": s.severity_label,
                 "title": s.title,
                 "summary": s.summary,
+                "intended_outcome": getattr(s, "intended_outcome", ""),
                 "health_remaining": round(s.health_remaining, 6),
                 "failed_nodes": s.failed_nodes,
                 "recovery_cost": round(s.recovery_cost, 4),
@@ -1327,6 +1334,8 @@ def _serialize_scenarios(scenarios: list[Any]) -> list[dict[str, Any]]:
                         "H_before": round(step.get("H_before", 1.0), 6),
                         "H_after": round(step.get("H_after", 1.0), 6),
                         "new_failures": step.get("new_failures", []),
+                        "step_description": step.get("step_description", ""),
+                        "expected_outcome": step.get("expected_outcome", ""),
                     }
                     for step in (s.path or [])
                 ],
@@ -1465,7 +1474,7 @@ async def chat(body: ChatRequest) -> JSONResponse:
     if session.graph is None:
         return error_response("GRAPH_EMPTY", "No graph built yet.", 400)
 
-    from google import genai
+    import google.genai as genai
     from google.genai import types
 
     from achilles_api.chat.knowledge import EXECUTIVE_SYSTEM_PROMPT, build_knowledge_context
@@ -1644,7 +1653,7 @@ async def ws_chat(websocket: WebSocket, session_id: str) -> None:
         await websocket.close()
         return
 
-    from google import genai
+    import google.genai as genai
     from google.genai import types
 
     from achilles_api.chat.knowledge import EXECUTIVE_SYSTEM_PROMPT, build_knowledge_context
@@ -1800,7 +1809,12 @@ async def ws_explore(websocket: WebSocket, session_id: str) -> None:
         if ws_agent_filter:
             briefs = [b for b in briefs if b.agent_type in ws_agent_filter]
 
-        agents = create_all_agents(briefs, mc_config=ws_mc_config)
+        agents = create_all_agents(
+            briefs,
+            mc_config=ws_mc_config,
+            graph=session.graph,
+            vulnerability_report=session.vulnerability_report,
+        )
 
         for agent in agents:
             await websocket.send_json(

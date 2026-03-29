@@ -53,6 +53,7 @@ class Scenario:
         "failed_nodes",
         "health_lost",
         "health_remaining",
+        "intended_outcome",
         "layers_affected",
         "narrative",
         "path",
@@ -75,6 +76,7 @@ class Scenario:
         summary: str = "",
         health_remaining: float = 1.0,
         health_lost: float = 0.0,
+        intended_outcome: str = "",
         failed_nodes: list[str] | None = None,
         failed_fraction: float = 0.0,
         recovery_cost: float = 0.0,
@@ -94,6 +96,7 @@ class Scenario:
         self.summary: str = summary
         self.health_remaining: float = health_remaining
         self.health_lost: float = health_lost
+        self.intended_outcome: str = intended_outcome
         self.failed_nodes: list[str] = failed_nodes if failed_nodes is not None else []
         self.failed_fraction: float = failed_fraction
         self.recovery_cost: float = recovery_cost
@@ -121,6 +124,7 @@ class Scenario:
             "summary": self.summary,
             "health_remaining": self.health_remaining,
             "health_lost": self.health_lost,
+            "intended_outcome": self.intended_outcome,
             "failed_nodes": self.failed_nodes,
             "failed_fraction": self.failed_fraction,
             "recovery_cost": self.recovery_cost,
@@ -404,8 +408,11 @@ def extract_scenarios(
         scenario = Scenario(
             severity=severity,
             severity_label=_severity_label(severity),
+            title=leaf.scenario_title,
+            summary=leaf.scenario_summary,
             health_remaining=leaf.H,
             health_lost=health_lost,
+            intended_outcome=leaf.expected_outcome,
             failed_nodes=failed,
             failed_fraction=failed_fraction,
             recovery_cost=leaf.recovery_cost,
@@ -848,6 +855,8 @@ def build_final_report(
                 "H": round(tn.H, 6),
                 "depth": tn.depth,
                 "agent": tn.agent,
+                "scenario_title": tn.scenario_title,
+                "expected_outcome": tn.expected_outcome,
                 "event_summary": (f"{tn.event.action} {tn.event.target}" if tn.event else "root"),
                 "failed_count": tn.failed_count,
             }
@@ -951,8 +960,11 @@ def _build_scenario_json(scenario: Scenario) -> str:
         "rank": scenario.rank,
         "severity": scenario.severity,
         "severity_label": scenario.severity_label,
+        "title": scenario.title,
+        "summary": scenario.summary,
         "health_remaining": scenario.health_remaining,
         "health_lost": scenario.health_lost,
+        "intended_outcome": scenario.intended_outcome,
         "failed_nodes": scenario.failed_nodes,
         "failed_fraction": scenario.failed_fraction,
         "recovery_cost": scenario.recovery_cost,
@@ -972,6 +984,8 @@ def _build_scenario_json(scenario: Scenario) -> str:
                 "H_after": step.get("H_after"),
                 "delta_H": step.get("delta_H"),
                 "new_failures": step.get("new_failures"),
+                "step_description": step.get("step_description"),
+                "expected_outcome": step.get("expected_outcome"),
             }
             for step in scenario.path
         ],
@@ -992,7 +1006,7 @@ async def generate_narrative(
     ``severity_label``, ``summary``, ``narrative``, ``timeline``,
     ``business_impact``, and ``recommendations``.
     """
-    from google import genai
+    import google.genai as genai
     from google.genai import types
 
     from achilles_api.gemini import generate_content_with_fallback

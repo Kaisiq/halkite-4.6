@@ -471,6 +471,8 @@ def create_all_agents(
     briefs: list[AgentBrief],
     *,
     mc_config: MCConfig | None = None,
+    graph: Graph | None = None,
+    vulnerability_report: VulnerabilityReport | None = None,
 ) -> list[Agent]:
     """Instantiate the correct ``Agent`` subclass for each brief.
 
@@ -507,7 +509,14 @@ def create_all_agents(
         if brief.agent_type == "monte_carlo":
             if mc_config is None:
                 raise ValueError("mc_config is required for monte_carlo agent.")
-            agents.append(agent_cls(brief, mc_config))  # type: ignore[call-arg]
+            agents.append(  # type: ignore[call-arg]
+                agent_cls(
+                    brief,
+                    mc_config,
+                    graph=graph,
+                    vulnerability_report=vulnerability_report,
+                )
+            )
         else:
             agents.append(agent_cls(brief))
 

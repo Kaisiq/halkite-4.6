@@ -160,6 +160,19 @@ class TestMonteCarloAgent:
             assert e.action == "cut_edge"
             assert isinstance(e.target, dict)
 
+    def test_path_metadata_is_available(self, small_graph: Graph) -> None:
+        cfg = MCConfig(branching_factor=4, max_depth=3)
+        brief = brief_monte_carlo(cfg)
+        agent = MonteCarloAgent(brief, cfg, graph=small_graph)
+
+        events = agent.select_events(small_graph, depth=0, path=[])
+        assert len(events) > 0
+
+        metadata = agent.describe_path([events[0]])
+        assert metadata is not None
+        assert metadata.scenario_title
+        assert metadata.expected_outcome
+
 
 # ---------------------------------------------------------------------------
 # Briefing & registry integration tests
@@ -272,6 +285,19 @@ class TestFullMCPipeline:
         # At least one non-root node should have agent="monte_carlo"
         mc_nodes = [n for n in tree.all_nodes if n.agent == "monte_carlo"]
         assert len(mc_nodes) > 0
+
+    def test_mc_agent_keeps_tree_compact(self, small_graph: Graph) -> None:
+        from nexus_api.engine.state_tree import ExplorationConfig, build_state_tree
+
+        cfg = MCConfig(branching_factor=6, max_depth=4)
+        brief = brief_monte_carlo(cfg)
+        agent = MonteCarloAgent(brief, cfg, graph=small_graph)
+
+        config = ExplorationConfig(max_depth=4, max_tree_nodes=200)
+        tree = build_state_tree(small_graph, [agent], config)
+
+        assert tree.total_nodes_explored <= 12
+        assert any(node.scenario_title for node in tree.all_nodes if node.agent == "monte_carlo")
 
     def test_mc_mixed_with_deterministic(self, medium_graph: Graph) -> None:
         """MC agent runs alongside a deterministic agent.
