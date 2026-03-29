@@ -606,121 +606,38 @@ export default function DataInputPage() {
 
       {/* Hero */}
       <section className="flex min-h-screen flex-col justify-center px-4 pt-24 pb-12 sm:px-6 sm:pt-28 sm:pb-16 md:px-10">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-8 sm:gap-12 lg:grid-cols-[minmax(0,1.2fr)_420px] lg:items-end">
-          <div>
-            <p className="mono-label">Deterministic Organizational Stress Testing</p>
-            <h1 className="display-face mt-4 max-w-[900px] text-[clamp(2.2rem,7.5vw,6.5rem)] font-bold leading-[1.05] tracking-[-0.035em] sm:mt-6">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-8 sm:gap-12">
+          <div className="text-center sm:text-left">
+            <p className="mono-label">AI generates. Math computes. AI explains.</p>
+            <h1 className="display-face mt-4 max-w-[1000px] text-[clamp(2.3rem,8vw,7rem)] font-bold leading-[1.05] tracking-[-0.035em] sm:mt-6">
               Find the dependencies
               that <span className="text-[var(--text-light)]">break</span> the
               organization.
             </h1>
-            <p className="mt-5 max-w-[640px] text-[17px] leading-[1.5] text-[var(--text-muted)] sm:mt-8 sm:text-[22px]">
+            <p className="mx-auto mt-5 max-w-[640px] text-[17px] leading-[1.5] text-[var(--text-muted)] sm:mx-0 sm:mt-8 sm:text-[22px]">
               Deterministic stress-testing for complex human and technical
               systems. Map, analyze, and preempt catastrophic failure paths.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3 sm:mt-12 sm:gap-4">
+            <div className="mt-8 flex flex-wrap justify-center gap-3 sm:mt-12 sm:justify-start sm:gap-4">
               <button
                 type="button"
                 onClick={() => {
                   const el = document.getElementById("upload-section");
                   el?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="border border-[var(--text)] bg-[var(--text)] px-8 py-3.5 text-[15px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)] sm:px-12 sm:py-4.5 sm:text-[17px]"
+                className="border border-[var(--text)] bg-[var(--text)] px-12 py-3.5 text-[15px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)] sm:px-16 sm:py-4.5 sm:text-[17px]"
               >
                 Get Started
               </button>
               <a
                 href="#launch-access"
-                className="border border-[var(--border-strong)] px-6 py-3.5 text-[14px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] sm:px-8 sm:py-4.5 sm:text-[15px]"
+                className="border border-[var(--border-strong)] px-10 py-3.5 text-[14px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] sm:px-14 sm:py-4.5 sm:text-[15px]"
               >
                 Join Launch List
               </a>
             </div>
           </div>
 
-          <aside
-            id="launch-access"
-            className="dark-section relative overflow-hidden border border-white/10 p-5 sm:p-7 md:p-8"
-          >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_40%)]" />
-            <div className="relative">
-              <p className="mono-label">Launch Access</p>
-              <h2 className="display-face mt-4 text-[clamp(2rem,4vw,2.8rem)] leading-[1.02] tracking-[-0.03em]">
-                Request first-contact when Achilles goes live.
-              </h2>
-              <p className="mt-4 max-w-sm text-[15px] leading-[1.7] text-white/68">
-                Leave a work email and we will notify you when launch access
-                opens. Abuse protection is enforced server-side.
-              </p>
-
-              <form className="mt-8 grid gap-4" onSubmit={handleWaitlistSubmit}>
-                <label className="grid gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
-                    Work Email
-                  </span>
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    value={waitlistEmail}
-                    onChange={(event) => setWaitlistEmail(event.target.value)}
-                    placeholder="team@company.com"
-                    className="border border-white/14 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/50"
-                    aria-invalid={waitlistError ? "true" : "false"}
-                  />
-                </label>
-
-                <label className="grid gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
-                    Company
-                  </span>
-                  <input
-                    type="text"
-                    autoComplete="organization"
-                    value={waitlistCompany}
-                    onChange={(event) => setWaitlistCompany(event.target.value)}
-                    placeholder="Optional"
-                    className="border border-white/14 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/50"
-                  />
-                </label>
-
-                <label
-                  className="pointer-events-none absolute -left-[9999px] top-auto h-px w-px overflow-hidden opacity-0"
-                  aria-hidden="true"
-                >
-                  <span>Website</span>
-                  <input
-                    type="text"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    value={waitlistWebsite}
-                    onChange={(event) => setWaitlistWebsite(event.target.value)}
-                  />
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={waitlistSubmitting}
-                  className="mt-2 border border-white bg-white px-6 py-3.5 text-[15px] font-medium text-black transition-all duration-200 hover:bg-transparent hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {waitlistSubmitting ? "Submitting..." : "Notify Me At Launch"}
-                </button>
-
-                {waitlistError ? (
-                  <p className="text-sm leading-relaxed text-[#ffb4b4]">
-                    {waitlistError}
-                  </p>
-                ) : null}
-
-                {waitlistSuccess ? (
-                  <p className="text-sm leading-relaxed text-[#b7f3d4]">
-                    {waitlistSuccess}
-                  </p>
-                ) : null}
-              </form>
-            </div>
-          </aside>
         </div>
       </section>
 
@@ -773,7 +690,7 @@ export default function DataInputPage() {
               </p>
             </div>
 
-            <div className="grid gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] lg:grid-cols-3">
+            <div className="grid gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-3">
               {PRICING_PLANS.map((plan) => {
                 const isDark = plan.theme === "dark";
                 const isMuted = plan.theme === "muted";
@@ -789,7 +706,7 @@ export default function DataInputPage() {
                           : "bg-white"
                     }`}
                   >
-                    <div className="flex flex-1 flex-col p-5 sm:p-8 md:p-10">
+                    <div className="flex flex-1 flex-col p-4 sm:p-8 md:p-10">
                       <div className="flex min-h-[6rem] items-start justify-between gap-4 sm:min-h-[7.5rem]">
                         <div>
                           <p
@@ -801,7 +718,7 @@ export default function DataInputPage() {
                           >
                             {plan.label}
                           </p>
-                          <h3 className="display-face mt-4 text-[2rem] leading-none tracking-[-0.03em]">
+                          <h3 className="display-face mt-4 text-[1.5rem] leading-none tracking-[-0.03em] sm:text-[2rem]">
                             {plan.name}
                           </h3>
                         </div>
@@ -832,11 +749,11 @@ export default function DataInputPage() {
                         >
                           Starting annual price
                         </p>
-                        <p className="display-face mt-3 text-[2.6rem] font-medium leading-none tracking-[-0.05em]">
+                        <p className="display-face mt-3 text-[2rem] font-medium leading-none tracking-[-0.05em] sm:text-[2.6rem]">
                           {plan.annualPrice}
                         </p>
                         <div
-                          className={`mt-6 grid gap-3 text-[14px] ${
+                          className={`mt-6 grid gap-3 text-[13px] sm:text-[14px] ${
                             isDark
                               ? "text-white/70"
                               : "text-[var(--text-muted)]"
@@ -973,7 +890,7 @@ export default function DataInputPage() {
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="border border-[var(--text)] bg-[var(--text)] px-6 py-3 text-[14px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)] sm:px-8 sm:py-3.5 sm:text-[15px]"
+                className="hidden border border-[var(--text)] bg-[var(--text)] px-6 py-3 text-[14px] font-medium text-white transition-all duration-200 hover:bg-white hover:text-[var(--text)] md:inline-block sm:px-8 sm:py-3.5 sm:text-[15px]"
               >
                 Upload Files
               </button>
@@ -981,7 +898,7 @@ export default function DataInputPage() {
                 type="button"
                 onClick={handleConnectGoogleDrive}
                 disabled={uploading || driveAuthPending}
-                className="flex items-center gap-2.5 border border-[var(--border-strong)] px-5 py-3 text-[14px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] disabled:opacity-30 sm:px-8 sm:py-3.5 sm:text-[15px]"
+                className="flex w-full items-center justify-center gap-2.5 border border-[var(--border-strong)] px-5 py-3 text-[14px] font-medium transition-all duration-200 hover:border-[var(--text)] hover:bg-[var(--bg-alt)] disabled:opacity-30 md:w-auto md:justify-start sm:px-8 sm:py-3.5 sm:text-[15px]"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -1473,6 +1390,91 @@ export default function DataInputPage() {
           </div>
         </section>
       )}
+
+      {/* Launch Access — Waitlist */}
+      <section
+        id="launch-access"
+        className="dark-section border-t border-white/10 px-4 py-16 sm:px-6 sm:py-24 md:px-10"
+      >
+        <div className="mx-auto grid w-full max-w-[1400px] gap-10 lg:grid-cols-[1fr_420px] lg:items-start">
+          <div>
+            <p className="mono-label">Launch Access</p>
+            <h2 className="display-face mt-4 max-w-[700px] text-[clamp(2rem,5vw,4rem)] leading-[1.05] tracking-[-0.03em]">
+              Request first-contact when Achilles goes live.
+            </h2>
+            <p className="mt-4 max-w-[540px] text-[16px] leading-[1.7] text-white/68 sm:text-[18px]">
+              Leave a work email and we will notify you when launch access
+              opens. Abuse protection is enforced server-side.
+            </p>
+          </div>
+
+          <form className="grid gap-4" onSubmit={handleWaitlistSubmit}>
+            <label className="grid gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
+                Work Email
+              </span>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={waitlistEmail}
+                onChange={(event) => setWaitlistEmail(event.target.value)}
+                placeholder="team@company.com"
+                className="border border-white/14 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/50"
+                aria-invalid={waitlistError ? "true" : "false"}
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
+                Company
+              </span>
+              <input
+                type="text"
+                autoComplete="organization"
+                value={waitlistCompany}
+                onChange={(event) => setWaitlistCompany(event.target.value)}
+                placeholder="Optional"
+                className="border border-white/14 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/50"
+              />
+            </label>
+
+            <label
+              className="pointer-events-none absolute -left-[9999px] top-auto h-px w-px overflow-hidden opacity-0"
+              aria-hidden="true"
+            >
+              <span>Website</span>
+              <input
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={waitlistWebsite}
+                onChange={(event) => setWaitlistWebsite(event.target.value)}
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={waitlistSubmitting}
+              className="mt-2 border border-white bg-white px-6 py-3.5 text-[15px] font-medium text-black transition-all duration-200 hover:bg-transparent hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {waitlistSubmitting ? "Submitting..." : "Notify Me At Launch"}
+            </button>
+
+            {waitlistError ? (
+              <p className="text-sm leading-relaxed text-[#ffb4b4]">
+                {waitlistError}
+              </p>
+            ) : null}
+
+            {waitlistSuccess ? (
+              <p className="text-sm leading-relaxed text-[#b7f3d4]">
+                {waitlistSuccess}
+              </p>
+            ) : null}
+          </form>
+        </div>
+      </section>
     </main>
   );
 }
