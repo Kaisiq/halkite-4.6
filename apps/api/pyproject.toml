@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "halkantir-api"
+name = "achilles-api"
 version = "0.1.0"
-description = "FastAPI backend for the Halkantir organizational stress-testing platform."
+description = "FastAPI backend for the Achilles organizational stress-testing platform."
 readme = "README.md"
 requires-python = ">=3.14,<3.15,!=3.14.1"
 dependencies = [
@@ -37,7 +37,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["nexus_api*"]
+include = ["achilles_api*"]
 
 # ==========================================================================
 # Ruff — linter + formatter
@@ -88,8 +88,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S106", "S105", "TCH001", "SIM300", "RUF059", "PT011"]
-"src/nexus_api/mc/resilience.py" = ["N815"]
-"src/nexus_api/ingestion/google_drive.py" = ["S310"]
+"src/achilles_api/mc/resilience.py" = ["N815"]
+"src/achilles_api/ingestion/google_drive.py" = ["S310"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -117,7 +117,7 @@ markers = [
 # Coverage
 # ==========================================================================
 [tool.coverage.run]
-source = ["nexus_api"]
+source = ["achilles_api"]
 branch = true
 omit = ["*/tests/*", "*/__pycache__/*"]
 

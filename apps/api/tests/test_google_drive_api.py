@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 os.environ.setdefault("GEMINI_API_KEY", "test-key")
 
-from nexus_api.main import app
+from achilles_api.main import app
 
 
 async def test_google_drive_import_persists_standard(monkeypatch, tmp_path) -> None:
@@ -44,13 +44,13 @@ async def test_google_drive_import_persists_standard(monkeypatch, tmp_path) -> N
         assert description == "desc"
         return graph_result
 
-    monkeypatch.setattr("nexus_api.ingestion.extractor.ingest", fake_ingest)
+    monkeypatch.setattr("achilles_api.ingestion.extractor.ingest", fake_ingest)
     monkeypatch.setattr(
-        "nexus_api.ingestion.google_drive.import_drive_folder",
+        "achilles_api.ingestion.google_drive.import_drive_folder",
         lambda access_token, folder_id: drive_bundle,
     )
     monkeypatch.setattr(
-        "nexus_api.ingestion.google_drive.extract_folder_id",
+        "achilles_api.ingestion.google_drive.extract_folder_id",
         lambda folder_id: folder_id,
     )
 
@@ -60,7 +60,7 @@ async def test_google_drive_import_persists_standard(monkeypatch, tmp_path) -> N
         saved["session_id"] = session_id
         saved["standard"] = standard
 
-    monkeypatch.setattr("nexus_api.ingestion.standard.save_standard", fake_save_standard)
+    monkeypatch.setattr("achilles_api.ingestion.standard.save_standard", fake_save_standard)
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

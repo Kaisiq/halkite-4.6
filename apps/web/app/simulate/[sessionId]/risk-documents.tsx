@@ -1024,7 +1024,7 @@ function buildMarkdownDocument(
     "## Governance Notes",
     ...doc.governanceNotes.map((note) => `- ${note}`),
     "",
-    "_Generated from Halkantir simulation outputs. Narrative organization is deterministic; underlying health, severity, and recovery values are unchanged._",
+    "_Generated from Achilles simulation outputs. Narrative organization is deterministic; underlying health, severity, and recovery values are unchanged._",
   ];
 
   return lines.join("\n");

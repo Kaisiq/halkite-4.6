@@ -1,8 +1,8 @@
-# Halkantir
+# Achilles
 
 **Prevent the predictable. Then move faster.**
 
-Halkantir is an organizational stress-testing platform. Upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists — and Halkantir maps your dependencies, finds your blind spots, and simulates worst-case failure scenarios before they happen.
+Achilles is an organizational stress-testing platform. Upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists — and Achilles maps your dependencies, finds your blind spots, and simulates worst-case failure scenarios before they happen.
 
 **AI generates. Math computes. AI explains.** — AI never touches the numbers.
 
@@ -54,8 +54,8 @@ See `docs/00_ARCHITECTURE.md` for full details and `docs/BUSINESS_PLAN.md` for t
 
 ```bash
 ./bin/dev                              # run both apps
-pnpm --filter @halkantir/api dev         # API only
-pnpm --filter @halkantir/web dev         # frontend only
+pnpm --filter @achilles/api dev         # API only
+pnpm --filter @achilles/web dev         # frontend only
 pnpm build                             # build all
 pnpm lint                              # lint all
 pnpm typecheck                         # typecheck all
@@ -69,13 +69,13 @@ The frontend includes a reproducible Playwright-based recorder for jury demos.
 Install the browser once:
 
 ```bash
-pnpm --filter @halkantir/web demo:setup
+pnpm --filter @achilles/web demo:setup
 ```
 
 Run the recorder from the repository root:
 
 ```bash
-DEMO_SESSION_ID=<session-id> pnpm --filter @halkantir/web demo:record
+DEMO_SESSION_ID=<session-id> pnpm --filter @achilles/web demo:record
 ```
 
 `DEMO_SESSION_ID` is the backend-generated session identifier used in routes like:
@@ -89,7 +89,7 @@ You can get it by opening the app, creating a session through upload, and copyin
 By default the video is written to:
 
 ```text
-apps/web/demo-output/halkantir-demo.webm
+apps/web/demo-output/achilles-demo.webm
 ```
 
 If `DEMO_SESSION_ID` is omitted, the script records the landing page only.

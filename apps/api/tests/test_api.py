@@ -1,7 +1,7 @@
-"""Tests for the Halkantir FastAPI routes (Module 5).
+"""Tests for the Achilles FastAPI routes (Module 5).
 
 Covers health, analyze, cascade, explore, graph, and reset endpoints
-from ``nexus_api.main``.  Uses httpx AsyncClient with ASGITransport
+from ``achilles_api.main``.  Uses httpx AsyncClient with ASGITransport
 for all requests.
 """
 
@@ -14,12 +14,12 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
-from nexus_api import main as api_main
-from nexus_api.main import _run_upload_job, app
-from nexus_api.models.graph import Edge, Graph, Node
-from nexus_api.session import store
-from nexus_api.upload_jobs import upload_jobs
-from nexus_api.waitlist import SlidingWindowRateLimiter, WaitlistStore
+from achilles_api import main as api_main
+from achilles_api.main import _run_upload_job, app
+from achilles_api.models.graph import Edge, Graph, Node
+from achilles_api.session import store
+from achilles_api.upload_jobs import upload_jobs
+from achilles_api.waitlist import SlidingWindowRateLimiter, WaitlistStore
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -45,7 +45,7 @@ def reset_waitlist_state(
 
 
 def test_api_bootstrap_requires_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    from nexus_api import main as api_main
+    from achilles_api import main as api_main
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
@@ -322,7 +322,7 @@ class TestUploadJobsEndpoint:
             coro.close()
             return SimpleNamespace()
 
-        monkeypatch.setattr("nexus_api.main.asyncio.create_task", fake_create_task)
+        monkeypatch.setattr("achilles_api.main.asyncio.create_task", fake_create_task)
 
         async with AsyncClient(transport=_transport(), base_url=_base_url()) as client:
             response = await client.post(
@@ -396,9 +396,9 @@ class TestUploadJobsEndpoint:
                 )
             return result
 
-        monkeypatch.setattr("nexus_api.ingestion.extractor.ingest", fake_ingest)
+        monkeypatch.setattr("achilles_api.ingestion.extractor.ingest", fake_ingest)
         monkeypatch.setattr(
-            "nexus_api.ingestion.standard.save_standard",
+            "achilles_api.ingestion.standard.save_standard",
             lambda session_id, standard: tmp_path / f"{session_id}.json",
         )
 

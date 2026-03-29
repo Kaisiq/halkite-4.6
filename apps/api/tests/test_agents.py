@@ -1,23 +1,23 @@
-"""Tests for nexus_api.agents.* and nexus_api.briefing.briefing."""
+"""Tests for achilles_api.agents.* and achilles_api.briefing.briefing."""
 
 from __future__ import annotations
 
 import pytest
 
-from nexus_api.agents.base import Agent, AgentBrief
-from nexus_api.agents.bridge_breaker import BridgeBreaker
-from nexus_api.agents.cascading_domino import CascadingDomino
-from nexus_api.agents.cluster_isolator import ClusterIsolator
-from nexus_api.agents.compound_exploiter import CompoundExploiter
-from nexus_api.agents.critical_node import CriticalNodeAttacker
-from nexus_api.agents.layer_assassin import LayerAssassin
-from nexus_api.agents.recovery_maximizer import RecoveryCostMaximizer
-from nexus_api.briefing.briefing import (
+from achilles_api.agents.base import Agent, AgentBrief
+from achilles_api.agents.bridge_breaker import BridgeBreaker
+from achilles_api.agents.cascading_domino import CascadingDomino
+from achilles_api.agents.cluster_isolator import ClusterIsolator
+from achilles_api.agents.compound_exploiter import CompoundExploiter
+from achilles_api.agents.critical_node import CriticalNodeAttacker
+from achilles_api.agents.layer_assassin import LayerAssassin
+from achilles_api.agents.recovery_maximizer import RecoveryCostMaximizer
+from achilles_api.briefing.briefing import (
     create_all_agents,
     generate_all_briefs,
 )
-from nexus_api.engine.weakpoint import VulnerabilityReport, run_full_analysis
-from nexus_api.models.graph import Edge, Graph, Node
+from achilles_api.engine.weakpoint import VulnerabilityReport, run_full_analysis
+from achilles_api.models.graph import Edge, Graph, Node
 
 # ======================================================================
 # Shared fixtures (built from medium_graph via conftest)

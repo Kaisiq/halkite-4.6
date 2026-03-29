@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from nexus_api.chat.knowledge import build_knowledge_context
+from achilles_api.chat.knowledge import build_knowledge_context
 
 
 def test_build_knowledge_context_handles_multi_target_scenarios(small_graph) -> None:

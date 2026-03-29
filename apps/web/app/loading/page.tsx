@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-import { useNexusStore } from "@/lib/store";
+import { useAchillesStore } from "@/lib/store";
 
 // ---------------------------------------------------------------------------
 // Fun facts — rotated every few seconds while the user waits
@@ -37,13 +37,13 @@ export default function LoadingPage() {
   const hasNavigated = useRef(false);
   const pendingFactSwapRef = useRef<number | null>(null);
 
-  const uploading = useNexusStore((s) => s.uploading);
-  const uploadError = useNexusStore((s) => s.uploadError);
-  const uploadProgress = useNexusStore((s) => s.uploadProgress);
-  const uploadProgressValue = useNexusStore((s) => s.uploadProgressValue);
-  const uploadStepIndex = useNexusStore((s) => s.uploadStepIndex);
-  const uploadTotalSteps = useNexusStore((s) => s.uploadTotalSteps);
-  const sessionId = useNexusStore((s) => s.sessionId);
+  const uploading = useAchillesStore((s) => s.uploading);
+  const uploadError = useAchillesStore((s) => s.uploadError);
+  const uploadProgress = useAchillesStore((s) => s.uploadProgress);
+  const uploadProgressValue = useAchillesStore((s) => s.uploadProgressValue);
+  const uploadStepIndex = useAchillesStore((s) => s.uploadStepIndex);
+  const uploadTotalSteps = useAchillesStore((s) => s.uploadTotalSteps);
+  const sessionId = useAchillesStore((s) => s.sessionId);
 
   const [factIndex, setFactIndex] = useState(() =>
     Math.floor(Math.random() * FUN_FACTS.length),
@@ -109,7 +109,7 @@ export default function LoadingPage() {
       <div className="mb-10 opacity-40 sm:mb-16">
         <Image
           src="/logo.svg"
-          alt="Halkantir"
+          alt="Achilles"
           width={40}
           height={48}
           className="invert"

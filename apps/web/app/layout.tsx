@@ -24,7 +24,7 @@ const displayFont = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Halkantir",
+  title: "Achilles",
   description: "Organizational stress-testing platform",
 };
 

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from nexus_api.agents.base import Agent, AgentBrief
-from nexus_api.agents.monte_carlo import MonteCarloAgent
-from nexus_api.briefing.briefing import brief_monte_carlo, create_all_agents
-from nexus_api.mc.config import MCConfig
-from nexus_api.mc.resilience import ResilienceProfile, run_resilience_analysis
-from nexus_api.models.events import Event
-from nexus_api.models.graph import Graph
+from achilles_api.agents.base import Agent, AgentBrief
+from achilles_api.agents.monte_carlo import MonteCarloAgent
+from achilles_api.briefing.briefing import brief_monte_carlo, create_all_agents
+from achilles_api.mc.config import MCConfig
+from achilles_api.mc.resilience import ResilienceProfile, run_resilience_analysis
+from achilles_api.models.events import Event
+from achilles_api.models.graph import Graph
 
 # ---------------------------------------------------------------------------
 # MCConfig tests
@@ -259,7 +259,7 @@ class TestResilienceAnalysis:
 class TestFullMCPipeline:
     def test_mc_agent_in_state_tree(self, small_graph: Graph) -> None:
         """MC agent explores alongside deterministic agents in the tree."""
-        from nexus_api.engine.state_tree import ExplorationConfig, build_state_tree
+        from achilles_api.engine.state_tree import ExplorationConfig, build_state_tree
 
         cfg = MCConfig(branching_factor=3, max_depth=2)
         brief = brief_monte_carlo(cfg)
@@ -279,13 +279,13 @@ class TestFullMCPipeline:
         Uses medium_graph (6 nodes) to ensure enough unique failure states
         for both agents to find non-duplicate branches.
         """
-        from nexus_api.agents.critical_node import CriticalNodeAttacker
-        from nexus_api.engine.state_tree import ExplorationConfig, build_state_tree
-        from nexus_api.engine.weakpoint import run_full_analysis
+        from achilles_api.agents.critical_node import CriticalNodeAttacker
+        from achilles_api.engine.state_tree import ExplorationConfig, build_state_tree
+        from achilles_api.engine.weakpoint import run_full_analysis
 
         report = run_full_analysis(medium_graph)
 
-        from nexus_api.briefing.briefing import brief_critical_node_attacker
+        from achilles_api.briefing.briefing import brief_critical_node_attacker
 
         det_brief = brief_critical_node_attacker(report)
         det_agent = CriticalNodeAttacker(det_brief)

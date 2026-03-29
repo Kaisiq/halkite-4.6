@@ -1,22 +1,22 @@
-"""Tests for the Halkantir results ranking module (Module 4A).
+"""Tests for the Achilles results ranking module (Module 4A).
 
 Covers extract_scenarios, generate_recommendations, precompute_animation,
 build_final_report, and the Scenario / Recommendation / FinalReport data
-classes from ``nexus_api.results.ranking``.
+classes from ``achilles_api.results.ranking``.
 """
 
 from __future__ import annotations
 
-from nexus_api.agents.base import Agent, AgentBrief
-from nexus_api.engine.state_tree import (
+from achilles_api.agents.base import Agent, AgentBrief
+from achilles_api.engine.state_tree import (
     ExplorationConfig,
     StateTree,
     build_state_tree,
 )
-from nexus_api.engine.weakpoint import VulnerabilityReport, run_full_analysis
-from nexus_api.models.events import Event
-from nexus_api.models.graph import Graph
-from nexus_api.results.ranking import (
+from achilles_api.engine.weakpoint import VulnerabilityReport, run_full_analysis
+from achilles_api.models.events import Event
+from achilles_api.models.graph import Graph
+from achilles_api.results.ranking import (
     AnimationFrame,
     FinalReport,
     build_final_report,

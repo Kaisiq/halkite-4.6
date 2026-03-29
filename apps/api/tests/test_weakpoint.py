@@ -1,10 +1,10 @@
-"""Tests for nexus_api.engine.weakpoint -- all 6 algorithms + VulnerabilityReport."""
+"""Tests for achilles_api.engine.weakpoint -- all 6 algorithms + VulnerabilityReport."""
 
 from __future__ import annotations
 
 import math
 
-from nexus_api.engine.weakpoint import (
+from achilles_api.engine.weakpoint import (
     VulnerabilityReport,
     bridge_node_detection,
     cluster_detection,

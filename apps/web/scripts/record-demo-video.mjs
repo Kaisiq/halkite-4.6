@@ -13,7 +13,7 @@ const OUTPUT_DIR = resolve(
   process.cwd(),
   process.env.DEMO_OUTPUT_DIR ?? "demo-output",
 );
-const OUTPUT_BASENAME = process.env.DEMO_OUTPUT_NAME ?? "halkantir-demo";
+const OUTPUT_BASENAME = process.env.DEMO_OUTPUT_NAME ?? "achilles-demo";
 const OUTPUT_FORMAT = (process.env.DEMO_OUTPUT_FORMAT ?? "webm").toLowerCase();
 const VIEWPORT = {
   width: Number(process.env.DEMO_VIEWPORT_WIDTH ?? 1600),

@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/web/package.json ./apps/web/package.json
 
-RUN pnpm install --frozen-lockfile --filter @halkantir/web...
+RUN pnpm install --frozen-lockfile --filter @achilles/web...
 
 FROM node:22-alpine AS builder
 
@@ -32,7 +32,7 @@ ENV API_INTERNAL_BASE_URL=http://api:8000
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
 
-RUN pnpm --filter @halkantir/web build
+RUN pnpm --filter @achilles/web build
 
 FROM node:22-alpine AS runtime
 
@@ -43,13 +43,13 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-RUN addgroup -S nexus && adduser -S nexus -G nexus
+RUN addgroup -S achilles && adduser -S achilles -G achilles
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
 
-USER nexus
+USER achilles
 
 EXPOSE 3000
 

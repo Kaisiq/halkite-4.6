@@ -27,13 +27,13 @@ export default function NavBar({ sessionId }: NavBarProps) {
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/logo.svg"
-            alt="Halkantir"
+            alt="Achilles"
             width={24}
             height={30}
             className="invert"
             style={{ width: 24, height: "auto" }}
           />
-          <span className="text-[15px] font-medium">Halkantir</span>
+          <span className="text-[15px] font-medium">Achilles</span>
         </Link>
 
         <div className="hidden items-center gap-10 md:flex">

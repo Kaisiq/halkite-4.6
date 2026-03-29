@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from nexus_api.ingestion.standard import (
+from achilles_api.ingestion.standard import (
     StandardFormat,
     build_graph_from_standard,
     detect_standard_format,

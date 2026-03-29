@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Halkantir API client
+// Achilles API client
 // Thin wrapper around axios for every backend endpoint (docs/05_API.md).
 // ---------------------------------------------------------------------------
 

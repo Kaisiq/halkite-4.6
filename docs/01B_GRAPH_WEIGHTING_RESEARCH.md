@@ -9,7 +9,7 @@ The current graph-building approach in [01_DATA_INGESTION.md](/home/kaisiq/Progr
 - there is no evidence trail for why a node or edge exists
 - there is no calibration loop from real incidents, outages, or near-misses
 
-For Halkantir, that is a problem. The platform is explicitly deterministic after graph construction. That means the graph must be the auditable, evidence-backed source of truth. If the graph is vibe-coded, the simulation results are also vibe-coded.
+For Achilles, that is a problem. The platform is explicitly deterministic after graph construction. That means the graph must be the auditable, evidence-backed source of truth. If the graph is vibe-coded, the simulation results are also vibe-coded.
 
 This deep dive reviews research papers that are most relevant to:
 
@@ -20,7 +20,7 @@ This deep dive reviews research papers that are most relevant to:
 
 ## Short conclusion
 
-The strongest approach for Halkantir is not to copy any single paper's model.
+The strongest approach for Achilles is not to copy any single paper's model.
 
 The best fit is a hybrid:
 
@@ -29,7 +29,7 @@ The best fit is a hybrid:
 3. Use structured expert judgment and pairwise comparisons when data is sparse.
 4. Use causal discovery and event-log analysis to validate edge direction and discover missing edges.
 5. Use cascading-failure literature to calibrate dependency semantics and detect threshold-like weakpoints.
-6. Keep the Halkantir runtime deterministic by freezing `θ`, `r`, and edge weights after calibration.
+6. Keep the Achilles runtime deterministic by freezing `θ`, `r`, and edge weights after calibration.
 7. Put probability only around exogenous future events, not inside the cascade math.
 
 For this product, the most valuable output is:
@@ -41,7 +41,7 @@ For this product, the most valuable output is:
 
 That gives you "prediction" in the form of conditional future risk ranking, which fits the product constraints much better than claiming a single probabilistic future.
 
-## Halkantir constraints from the docs
+## Achilles constraints from the docs
 
 From [01A_GRAPH_MODEL.md](/home/kaisiq/Programming/private/halkite46/docs/01A_GRAPH_MODEL.md), [02A_CASCADE_ENGINE.md](/home/kaisiq/Programming/private/halkite46/docs/02A_CASCADE_ENGINE.md), and [04_STATE_TREE.md](/home/kaisiq/Programming/private/halkite46/docs/04_STATE_TREE.md):
 
@@ -63,13 +63,13 @@ It is:
 
 The most important foundational paper here is Buldyrev et al. (2010), which showed that failures in interdependent networks can cascade abruptly across coupled systems rather than degrade smoothly.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - it validates the core design choice that cross-layer dependencies matter
 - it supports explicit modeling of people, technology, operations, suppliers, and finance in one graph
 - it warns that small local failures can trigger disproportionate global collapse if dependencies are tightly coupled
 
-Halkantir implication:
+Achilles implication:
 
 - do not simplify the graph into a single same-layer org chart
 - cross-layer edges should be first-class
@@ -88,13 +88,13 @@ Relevant source:
 
 Brummitt-style and follow-on interdependency papers, including work on multiple support-demand links and supply thresholds, show that real systems do not fail only because one link disappears. They fail because support is lost below some threshold, often with multiple substitutes.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - a node may depend on several suppliers, systems, or people at once
 - two moderate dependencies can jointly matter more than one strong dependency
 - substitutability is essential and should not be hidden in a single guessed weight
 
-Halkantir implication:
+Achilles implication:
 
 - keep the runtime edge model simple if needed
 - but during graph construction, capture enough metadata to compress many real-world dependency facts into one deterministic weight
@@ -117,7 +117,7 @@ Relevant source:
 
 Ozesmi and Ozesmi (2004) describe a multi-step fuzzy cognitive mapping approach where stakeholders externalize concepts and causal links in a system. This is especially useful when the available information is fragmented, qualitative, and distributed across people.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - organizations usually do not have complete machine-readable dependency maps
 - important dependencies are often tacit knowledge held by managers, operators, or subject-matter experts
@@ -128,14 +128,14 @@ What to use from the paper:
 - use workshops or interviews to elicit candidate nodes and links
 - merge maps across stakeholders
 - keep disagreements instead of averaging them away too early
-- convert the merged concept map into the Halkantir schema
+- convert the merged concept map into the Achilles schema
 
 What not to copy directly:
 
-- do not use fuzzy cognitive map simulation as the Halkantir runtime engine
-- Halkantir already has a deterministic cascade model; FCM is better used upstream for graph discovery and gap finding
+- do not use fuzzy cognitive map simulation as the Achilles runtime engine
+- Achilles already has a deterministic cascade model; FCM is better used upstream for graph discovery and gap finding
 
-Halkantir implication:
+Achilles implication:
 
 - FCM is a graph elicitation method, not the final simulation method
 - it is especially useful for `meta.evidence`, `meta.owner`, missing dependencies, and cross-layer link discovery
@@ -148,7 +148,7 @@ Relevant source:
 
 A major problem in the current workflow is that weight assignment is effectively expert judgment without structure. The structured expert judgment literature, especially Cooke's classical model and later validation work by Colson and Cooke, is relevant because it gives a defensible way to combine expert opinions.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - many organizations will not have enough incident data to estimate dependencies statistically
 - you will still need human judgment
@@ -160,7 +160,7 @@ What to use from the literature:
 - score experts on statistical accuracy and informativeness
 - use performance-based weighting instead of equal weighting or seniority weighting
 
-Halkantir implication:
+Achilles implication:
 
 - if three experts disagree on `θ` or on an edge weight, do not average them blindly
 - maintain expert-specific judgments and compute a weighted combination
@@ -174,12 +174,12 @@ Relevant source:
 
 In practice, experts often struggle to say "this edge is 0.63" but can reliably answer "A is more critical than B" or "the ERP system is more operationally central than payroll." Pairwise-comparison work used in Bayesian-network and fault-tree settings shows a practical way to turn these qualitative comparisons into numerical parameters.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - your prompt currently asks for raw numbers directly
 - humans are usually better at relative judgment than absolute judgment
 
-Halkantir implication:
+Achilles implication:
 
 - for `θ`, ask pairwise criticality comparisons within the same layer or function family
 - for edge weights, ask pairwise dependency comparisons for the same target node
@@ -193,11 +193,11 @@ Relevant source:
 
 ### 6. Causal-graph literature is essential for deciding edge direction and keeping the graph from encoding correlation as dependency
 
-Pearl's causal-graph work and later causal-discovery reviews matter because Halkantir needs directional dependencies. A graph where edges represent mere association will produce misleading cascades.
+Pearl's causal-graph work and later causal-discovery reviews matter because Achilles needs directional dependencies. A graph where edges represent mere association will produce misleading cascades.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
-- an edge in Halkantir means loss propagates from `from` to `to`
+- an edge in Achilles means loss propagates from `from` to `to`
 - that is a causal claim, not a semantic similarity claim
 - misdirected edges will corrupt every scenario result downstream
 
@@ -207,7 +207,7 @@ What to use from the literature:
 - separate confounders from direct dependencies where possible
 - when you have time series or event logs, use causal-discovery methods as an offline validation pass
 
-Halkantir implication:
+Achilles implication:
 
 - each edge should carry an evidence type such as `documented_process`, `system_architecture`, `incident_log`, `expert_claim`, or `causal_discovery_candidate`
 - low-evidence edges should be reviewed before being promoted to production graphs
@@ -219,9 +219,9 @@ Relevant sources:
 
 ### 7. Network-reconstruction papers are directly relevant if you want to learn hidden edges from incident history
 
-Wang, Yu, and Baroud (2022) propose a Bayesian approach to reconstructing interdependent infrastructure networks from observations of cascading failures. This is one of the closest papers to the Halkantir problem when historical failure sequences exist but the full dependency graph is not known.
+Wang, Yu, and Baroud (2022) propose a Bayesian approach to reconstructing interdependent infrastructure networks from observations of cascading failures. This is one of the closest papers to the Achilles problem when historical failure sequences exist but the full dependency graph is not known.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - many organizations know the incidents they had
 - they do not know the true graph that produced them
@@ -233,7 +233,7 @@ What to use from the paper:
 - treat graph reconstruction as an offline inference job
 - use the inferred edges as candidates for human review, not as auto-accepted truth
 
-Halkantir implication:
+Achilles implication:
 
 - build a "candidate edges from incidents" pipeline
 - compare reconstructed edges with LLM-extracted edges
@@ -245,9 +245,9 @@ Relevant source:
 
 ### 8. Cross-impact balance is useful for future scenario generation, but not for runtime cascade math
 
-Weimer-Jehle's Cross-Impact Balance (CIB) work is useful because Halkantir does not only need a graph; it needs a disciplined way to generate plausible future shock combinations.
+Weimer-Jehle's Cross-Impact Balance (CIB) work is useful because Achilles does not only need a graph; it needs a disciplined way to generate plausible future shock combinations.
 
-Why it matters for Halkantir:
+Why it matters for Achilles:
 
 - the state tree can branch infinitely if event generation is unconstrained
 - users want future-oriented prediction, not only single-node kill tests
@@ -259,7 +259,7 @@ What to use from the literature:
 - use these relationships to filter implausible future event sets
 - generate consistent scenario bundles before feeding them into the deterministic cascade engine
 
-Halkantir implication:
+Achilles implication:
 
 - CIB belongs in scenario selection, not in graph-weight estimation
 - use it to prioritize which branches the agents explore in Module 4
@@ -280,7 +280,7 @@ Recommended node metadata fields:
 {
   "type": "person | team | service | supplier | facility | process | asset | revenue_stream | control",
   "function": "free-text canonical business function",
-  "layer": "existing Halkantir layer",
+  "layer": "existing Achilles layer",
   "owner": "responsible person/team",
   "location": "site/region if relevant",
   "capacity": "normalized or raw if known",
@@ -313,7 +313,7 @@ Why these fields matter:
 
 ## How to assign `θ` without guessing
 
-In Halkantir, `θ` is described as network dependency or importance weight. That definition is directionally right, but it is too easy to set it subjectively.
+In Achilles, `θ` is described as network dependency or importance weight. That definition is directionally right, but it is too easy to set it subjectively.
 
 The literature suggests using a hybrid of:
 
@@ -347,7 +347,7 @@ Where:
 
 Why this is better than gut feel:
 
-- it uses the Halkantir engine itself to define part of node importance
+- it uses the Achilles engine itself to define part of node importance
 - it ties `θ` to consequences, not titles
 - it remains deterministic once the inputs are frozen
 
@@ -400,7 +400,7 @@ Examples:
 - an identity provider to production systems edge may be high because workaround delay and operational dependence are high
 - one supplier among five interchangeable suppliers should have low substitutability penalty and therefore lower weight
 
-## Best-fit methodology for Halkantir
+## Best-fit methodology for Achilles
 
 ### Recommended pipeline
 
@@ -455,7 +455,7 @@ Rules:
 
 #### Stage 4: Use historical failures to calibrate the graph
 
-Compare known incidents with Halkantir simulations:
+Compare known incidents with Achilles simulations:
 
 - if a real outage propagated but the graph did not, edges are missing or underweighted
 - if the graph predicts massive cascades that never happen, weights are too strong or substitutability is missing
@@ -474,11 +474,11 @@ Once `θ`, `r`, and edge weights are set:
 
 The phrase "giving a prediction" needs precision.
 
-Halkantir should not claim:
+Achilles should not claim:
 
 - "this exact future will happen"
 
-Halkantir can credibly claim:
+Achilles can credibly claim:
 
 - "if these disruptions happen, this is the deterministic outcome"
 - "these event bundles are more plausible than others"
@@ -588,7 +588,7 @@ If the question is "which papers are most valuable for our specific use case?", 
 
 ## Final recommendation
 
-For Halkantir, the most valuable design is:
+For Achilles, the most valuable design is:
 
 - use LLMs to extract candidate graph structure and evidence
 - use research-backed elicitation to fill gaps

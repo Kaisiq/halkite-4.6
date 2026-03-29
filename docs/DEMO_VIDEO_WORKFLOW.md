@@ -21,20 +21,20 @@ This is designed to be rerun after frontend design changes without editing the r
 
 - Frontend available locally, default `http://127.0.0.1:3000`
 - A valid demo session id for populated routes
-- Playwright Chromium installed once via `pnpm --filter @halkantir/web demo:setup`
+- Playwright Chromium installed once via `pnpm --filter @achilles/web demo:setup`
 
 ## Run
 
 From the repository root:
 
 ```bash
-DEMO_SESSION_ID=<session-id> pnpm --filter @halkantir/web demo:record
+DEMO_SESSION_ID=<session-id> pnpm --filter @achilles/web demo:record
 ```
 
 The recording is written by default to:
 
 ```text
-apps/web/demo-output/halkantir-demo.webm
+apps/web/demo-output/achilles-demo.webm
 ```
 
 ## Useful Environment Variables
@@ -53,7 +53,7 @@ Example:
 DEMO_SESSION_ID=demo-123 \
 DEMO_OUTPUT_FORMAT=mp4 \
 DEMO_OUTPUT_NAME=jury-demo \
-pnpm --filter @halkantir/web demo:record
+pnpm --filter @achilles/web demo:record
 ```
 
 ## Notes

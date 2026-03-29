@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Capture the strongest frontend/product patterns from the two reference systems and translate them into actionable design rules for Halkantir.
+Capture the strongest frontend/product patterns from the two reference systems and translate them into actionable design rules for Achilles.
 
 ## Reference 1: Contrast Graph
 
@@ -15,7 +15,7 @@ Capture the strongest frontend/product patterns from the two reference systems a
 
 ### What to borrow
 
-- Treat the Halkantir graph as the primary interface, not a supporting widget.
+- Treat the Achilles graph as the primary interface, not a supporting widget.
 - Make every risk item traceable to a visible path, layer, or dependency relation.
 - Use a live-system feel: streaming updates, active states, dynamic ranking, changing severity.
 - Show business context next to technical context instead of splitting them into separate screens.
@@ -24,7 +24,7 @@ Capture the strongest frontend/product patterns from the two reference systems a
 
 - Do not make the product look like an AppSec tool.
 - Do not overload the first screen with too many entity types.
-- Do not bury the narrative; Halkantir needs clearer scenario storytelling than a security operations console.
+- Do not bury the narrative; Achilles needs clearer scenario storytelling than a security operations console.
 
 ## Reference 2: Cye Attack Route Visualization
 
@@ -44,13 +44,13 @@ Capture the strongest frontend/product patterns from the two reference systems a
 
 ### What not to copy
 
-- Do not turn Halkantir into a cybersecurity-only product.
+- Do not turn Achilles into a cybersecurity-only product.
 - Do not rely on generic “exposure management” language.
 - Do not reduce the UI to a list of findings with a graph thumbnail.
 
 ## Combined design takeaway
 
-Halkantir should feel like a business-critical simulation cockpit:
+Achilles should feel like a business-critical simulation cockpit:
 
 - graph-first like Contrast
 - path-and-chokepoint legibility like Cye

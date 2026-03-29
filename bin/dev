@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="$ROOT_DIR/.venv"
-BACKEND_ENTRY="$ROOT_DIR/apps/api/src/nexus_api/main.py"
+BACKEND_ENTRY="$ROOT_DIR/apps/api/src/achilles_api/main.py"
 FRONTEND_LAYOUT="$ROOT_DIR/apps/web/app/layout.tsx"
 FRONTEND_PAGE="$ROOT_DIR/apps/web/app/page.tsx"
 
@@ -39,7 +39,7 @@ main() {
     exit 1
   fi
 
-  require_file "$BACKEND_ENTRY" "Missing backend entrypoint: apps/api/src/nexus_api/main.py"
+  require_file "$BACKEND_ENTRY" "Missing backend entrypoint: apps/api/src/achilles_api/main.py"
   require_file "$FRONTEND_LAYOUT" "Missing frontend layout: apps/web/app/layout.tsx"
   require_file "$FRONTEND_PAGE" "Missing frontend page: apps/web/app/page.tsx"
 
@@ -51,14 +51,14 @@ main() {
   echo "Starting backend..."
   (
     cd "$ROOT_DIR"
-    pnpm --filter @halkantir/api dev
+    pnpm --filter @achilles/api dev
   ) &
   API_PID=$!
 
   echo "Starting frontend..."
   (
     cd "$ROOT_DIR"
-    pnpm --filter @halkantir/web dev
+    pnpm --filter @achilles/web dev
   ) &
   WEB_PID=$!
 
