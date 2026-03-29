@@ -33,6 +33,8 @@ WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 
+RUN mkdir -p /app/data && chown nexus:nexus /app/data
+
 USER nexus
 
 EXPOSE 8000

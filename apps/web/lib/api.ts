@@ -22,6 +22,7 @@ import type {
   UploadJobResponse,
   UploadJobState,
   UploadResponse,
+  WaitlistSignupResponse,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -136,6 +137,19 @@ export async function createGoogleDriveImportJob(
       description: description ?? "",
     },
   );
+  return data;
+}
+
+export async function joinWaitlist(
+  email: string,
+  company?: string,
+  website?: string,
+): Promise<WaitlistSignupResponse> {
+  const { data } = await client.post<WaitlistSignupResponse>("/api/waitlist", {
+    email,
+    company: company ?? "",
+    website: website ?? "",
+  });
   return data;
 }
 

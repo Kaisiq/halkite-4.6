@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Halkantir - HackAUBG 8.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  :root{
+    --bg:#ffffff;
+    --bg-alt:#f7f7f7;
+    --text:#000000;
+    --text-secondary:#333333;
+    --text-muted:#666666;
+    --text-light:#999999;
+    --border:#e5e5e5;
+    --border-strong:#cccccc;
+    --danger:#b91c1c;
+    --warn:#92400e;
+    --healthy:#166534;
+  }
+
+  body{
+    font-family:'IBM Plex Sans',-apple-system,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    overflow:hidden;
+    width:100vw;height:100vh;
+    text-rendering:optimizeLegibility;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .slide{
+    width:100vw;height:100vh;
+    display:none;flex-direction:column;
+    justify-content:center;
+    padding:6vh 7vw;
+    position:relative;
+  }
+  .slide.active{display:flex}
+
+  /* Mono label — matches website */
+  .mono{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:clamp(9px,0.68vw,12px);
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+  }
+
+  .topbar{
+    position:absolute;top:3.5vh;left:7vw;right:7vw;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .topbar .logo{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;font-size:clamp(14px,1.1vw,20px);
+    letter-spacing:-0.02em;color:var(--text);
+  }
+
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(32px,4vw,76px);
+    font-weight:700;line-height:1.08;
+    letter-spacing:-0.03em;margin-bottom:2.5vh;
+    color:var(--text);
+  }
+
+  h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(24px,2.6vw,48px);
+    font-weight:700;line-height:1.15;
+    letter-spacing:-0.02em;margin-bottom:2vh;
+  }
+
+  h3{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:clamp(13px,1.05vw,19px);
+    font-weight:600;color:var(--text-secondary);
+    text-transform:uppercase;letter-spacing:0.06em;
+    margin-bottom:1.5vh;
+  }
+
+  .subtitle{
+    font-size:clamp(15px,1.35vw,25px);
+    font-weight:400;color:var(--text-muted);
+    line-height:1.55;max-width:52vw;margin-bottom:3vh;
+  }
+
+  .points{list-style:none;display:flex;flex-direction:column;gap:1.3vh}
+  .points li{
+    font-size:clamp(14px,1.3vw,24px);
+    font-weight:400;color:var(--text-secondary);
+    padding-left:1.8vw;position:relative;line-height:1.45;
+  }
+  .points li::before{
+    content:'';position:absolute;left:0;top:0.55em;
+    width:0.5vw;height:0.5vw;border-radius:50%;
+    background:var(--text);opacity:0.2;
+  }
+
+  .stat-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:1.2vw;margin-top:3vh;
+  }
+  .stat-card{
+    border:1px solid var(--border);
+    border-radius:0.6vw;padding:2.2vh 1.8vw;
+  }
+  .stat-card .number{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(28px,2.8vw,52px);
+    font-weight:700;color:var(--text);
+  }
+  .stat-card .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:clamp(9px,0.7vw,13px);
+    color:var(--text-light);margin-top:0.5vh;
+    text-transform:uppercase;letter-spacing:0.08em;
+  }
+
+  .two-col{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:4vw;align-items:start;
+  }
+
+  .tag{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:clamp(9px,0.65vw,12px);
+    font-weight:600;text-transform:uppercase;
+    letter-spacing:0.1em;color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:0.4vh 0.9vw;border-radius:100px;margin-bottom:1.8vh;
+  }
+
+  .pipeline{
+    display:flex;gap:0.6vw;margin-top:3vh;align-items:stretch;
+  }
+  .pipeline-step{
+    flex:1;border:1px solid var(--border);
+    border-radius:0.5vw;padding:2vh 1vw;text-align:center;
+  }
+  .pipeline-step .step-num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:clamp(9px,0.65vw,12px);
+    color:var(--text-light);margin-bottom:0.8vh;
+  }
+  .pipeline-step .step-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(13px,1vw,20px);font-weight:700;margin-bottom:0.5vh;
+  }
+  .pipeline-step .step-desc{
+    font-size:clamp(10px,0.75vw,14px);color:var(--text-muted);line-height:1.4;
+  }
+  .pipeline-arrow{
+    display:flex;align-items:center;
+    color:var(--text-light);
+    font-size:clamp(14px,1.2vw,24px);
+  }
+
+  table{width:100%;border-collapse:collapse;margin-top:1.5vh}
+  th{
+    text-align:left;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:clamp(9px,0.65vw,12px);
+    font-weight:600;text-transform:uppercase;
+    letter-spacing:0.08em;color:var(--text-muted);
+    padding:1vh 0.8vw;border-bottom:1px solid var(--border);
+  }
+  td{
+    font-size:clamp(14px,1vw,20px);
+    padding:1.1vh 0.8vw;
+    border-bottom:1px solid var(--border);
+    color:var(--text-secondary);
+  }
+  td:first-child{font-weight:600;color:var(--text)}
+  .urgency-imm{color:var(--danger);font-weight:600}
+  .urgency-high{color:var(--warn);font-weight:600}
+  .urgency-med{color:var(--text-muted);font-weight:500}
+
+  .card-list{display:flex;flex-direction:column;gap:0.6vh}
+  .card-item{
+    border:1px solid var(--border);
+    border-radius:0.4vw;padding:0.9vh 1.1vw;
+    font-size:clamp(12px,0.85vw,16px);color:var(--text-secondary);
+  }
+  .card-item strong{color:var(--text);font-weight:600}
+
+  .callout{
+    border-left:3px solid var(--text);
+    padding:1.5vh 1.8vw;margin-top:2vh;
+    background:var(--bg-alt);
+  }
+  .callout p{
+    font-size:clamp(14px,1.1vw,20px);color:var(--text-secondary);line-height:1.5;
+  }
+  .callout strong{color:var(--text)}
+
+  .bottom-bar{
+    position:absolute;bottom:3vh;left:7vw;right:7vw;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+
+  .nav-hint{
+    position:fixed;bottom:1.5vh;right:2vw;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;color:var(--text-light);z-index:100;
+  }
+
+  /* Dark slide variant */
+  .slide.dark{background:#000;color:#fff}
+  .slide.dark h1,.slide.dark h2{color:#fff}
+  .slide.dark .subtitle{color:rgba(255,255,255,0.5)}
+  .slide.dark .topbar .logo{color:#fff}
+  .slide.dark .mono{color:rgba(255,255,255,0.35)}
+  .slide.dark .tag{color:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.15)}
+  .slide.dark .stat-card{border-color:rgba(255,255,255,0.1)}
+  .slide.dark .stat-card .number{color:#fff}
+  .slide.dark .stat-card .label{color:rgba(255,255,255,0.35)}
+  .slide.dark .bottom-bar .mono{color:rgba(255,255,255,0.2)}
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: TITLE (dark) -->
+<div class="slide dark active" id="s1">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">HackAUBG 8.0</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div class="tag">Organizational Stress-Testing</div>
+    <h1>Prevent the predictable.<br>Then move faster.</h1>
+    <p class="subtitle">Upload your org data. AI builds the dependency graph.<br>Deterministic math finds every weakness. Eight adversarial agents attack your network before reality does.</p>
+    <div class="stat-grid" style="max-width:48vw">
+      <div class="stat-card"><div class="number">8</div><div class="label">Adversarial agents</div></div>
+      <div class="stat-card"><div class="number">6</div><div class="label">Math methods per edge</div></div>
+      <div class="stat-card"><div class="number">147</div><div class="label">Automated tests</div></div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">01 / 08</div></div>
+</div>
+
+<!-- SLIDE 2: PROBLEM -->
+<div class="slide" id="s2">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">The Problem</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <h1>The risks you don't see<br>are the ones that kill you</h1>
+    <ul class="points" style="max-width:54vw">
+      <li>One engineer leaves &mdash; deploys break &mdash; three teams blocked &mdash; revenue stops</li>
+      <li>One supplier ghosts you &mdash; product line halts &mdash; nobody knew it was single-sourced</li>
+      <li>Companies map these dependencies manually. It takes months. The map is outdated before it's done.</li>
+    </ul>
+    <div class="callout" style="max-width:54vw">
+      <p><strong>NIS2</strong> (Oct 2024) and <strong>DORA</strong> (Jan 2025) now require every bank, telco, insurer, and utility in Europe to map dependencies and test resilience.<br>First audits: <strong>June 2026</strong>. Fines: <strong>&euro;10M or 2% of global revenue</strong>.</p>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">02 / 08</div></div>
+</div>
+
+<!-- SLIDE 3: HOW IT WORKS -->
+<div class="slide" id="s3">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">How It Works</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div class="tag">Core Principle</div>
+    <h2>AI builds. Math computes. AI explains.</h2>
+    <p class="subtitle" style="margin-bottom:1.5vh">AI never touches the numbers. Every score traces back to a deterministic equation.</p>
+    <div class="pipeline">
+      <div class="pipeline-step"><div class="step-num">01</div><div class="step-title">Upload</div><div class="step-desc">Org charts, spreadsheets, system diagrams</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-num">02</div><div class="step-title">Graph</div><div class="step-desc">AI extracts a dependency network</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-num">03</div><div class="step-title">Analyze</div><div class="step-desc">Bridges, clusters, compound failures</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-num">04</div><div class="step-title">Simulate</div><div class="step-desc">8 agents run attack scenarios</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-num">05</div><div class="step-title">Report</div><div class="step-desc">Ranked scenarios + recommendations</div></div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">03 / 08</div></div>
+</div>
+
+<!-- SLIDE 4: DEMO (dark) -->
+<div class="slide dark" id="s4">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">Live Demo</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+    <div class="tag">NovaPay &mdash; Synthetic Fintech Dataset</div>
+    <h1 style="font-size:clamp(36px,4.5vw,80px)">Live Demo</h1>
+    <p class="subtitle" style="text-align:center;max-width:42vw">A European payment processor with realistic dependencies across people, technology, banking, and operations.</p>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,1.6vw,28px);color:rgba(255,255,255,0.8);margin:2vh 0;letter-spacing:0.02em">achilles.sislelabs.com</div>
+    <div style="display:flex;gap:1.2vw;margin-top:2vh;flex-wrap:wrap;justify-content:center">
+      <div class="stat-card" style="min-width:9vw"><div class="number" style="font-size:clamp(20px,1.8vw,36px)">1</div><div class="label">Upload</div></div>
+      <div class="stat-card" style="min-width:9vw"><div class="number" style="font-size:clamp(20px,1.8vw,36px)">2</div><div class="label">Graph</div></div>
+      <div class="stat-card" style="min-width:9vw"><div class="number" style="font-size:clamp(20px,1.8vw,36px)">3</div><div class="label">Analyze</div></div>
+      <div class="stat-card" style="min-width:9vw"><div class="number" style="font-size:clamp(20px,1.8vw,36px)">4</div><div class="label">Simulate</div></div>
+      <div class="stat-card" style="min-width:9vw"><div class="number" style="font-size:clamp(20px,1.8vw,36px)">5</div><div class="label">Report</div></div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">04 / 08</div></div>
+</div>
+
+<!-- SLIDE 5: COMPLEX FEATURE -->
+<div class="slide" id="s5">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">Complex Feature</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div class="tag">The Engine</div>
+    <h2>Six mathematical methods per edge.<br>Zero AI guessing.</h2>
+    <div class="two-col" style="margin-top:2vh">
+      <div>
+        <h3>Weight Inference</h3>
+        <div class="card-list">
+          <div class="card-item"><strong>Spectral</strong> &mdash; Fiedler algebraic connectivity</div>
+          <div class="card-item"><strong>Entropy</strong> &mdash; von Neumann information theory</div>
+          <div class="card-item"><strong>Cascade</strong> &mdash; Monte Carlo propagation</div>
+          <div class="card-item"><strong>Percolation</strong> &mdash; giant component survival</div>
+          <div class="card-item"><strong>GBB</strong> &mdash; Gao-Barzel-Barab&aacute;si dynamics</div>
+          <div class="card-item"><strong>Jacobian</strong> &mdash; perturbation response</div>
+        </div>
+        <p style="margin-top:1.2vh;font-size:clamp(11px,0.8vw,14px);color:var(--text-light)">Fused via Robust Rank Aggregation (beta-distribution CDF)</p>
+      </div>
+      <div>
+        <h3>8 Adversarial Agents</h3>
+        <div class="card-list">
+          <div class="card-item"><strong>Critical Node</strong> &mdash; kill what hurts most</div>
+          <div class="card-item"><strong>Bridge Breaker</strong> &mdash; fragment the network</div>
+          <div class="card-item"><strong>Compound Exploiter</strong> &mdash; synergy pairs</div>
+          <div class="card-item"><strong>Layer Assassin</strong> &mdash; destroy entire layers</div>
+          <div class="card-item"><strong>Cluster Isolator</strong> &mdash; cut off clusters</div>
+          <div class="card-item"><strong>Cascading Domino</strong> &mdash; longest chain reactions</div>
+          <div class="card-item"><strong>Recovery Maximizer</strong> &mdash; costliest disasters</div>
+          <div class="card-item"><strong>Monte Carlo</strong> &mdash; random exploration</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">05 / 08</div></div>
+</div>
+
+<!-- SLIDE 6: ARCHITECTURE -->
+<div class="slide" id="s6">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">Architecture</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <h2>Built for enterprise from day one</h2>
+    <div class="two-col" style="margin-top:2vh">
+      <div>
+        <h3>Stack</h3>
+        <div class="card-list">
+          <div class="card-item"><strong>Backend</strong> &mdash; Python 3.14, FastAPI, NetworkX, NumPy, SciPy</div>
+          <div class="card-item"><strong>Frontend</strong> &mdash; Next.js 16, React 19, D3.js, Zustand, Tailwind</div>
+          <div class="card-item"><strong>AI</strong> &mdash; Gemini 2.5 Flash (extraction + narratives)</div>
+          <div class="card-item"><strong>Database</strong> &mdash; MongoDB 7 (persistent sessions)</div>
+          <div class="card-item"><strong>Deploy</strong> &mdash; Docker Compose, on-prem ready</div>
+        </div>
+      </div>
+      <div>
+        <h3>Quality</h3>
+        <div class="card-list">
+          <div class="card-item"><strong>147 tests</strong> &mdash; pytest, strict MyPy, Ruff linting</div>
+          <div class="card-item"><strong>Security</strong> &mdash; CORS whitelist, upload limits, input validation</div>
+          <div class="card-item"><strong>Async</strong> &mdash; non-blocking exploration via asyncio</div>
+          <div class="card-item"><strong>On-prem</strong> &mdash; data never leaves the organization</div>
+          <div class="card-item"><strong>26 docs</strong> &mdash; architecture, specs, research, business plan</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">06 / 08</div></div>
+</div>
+
+<!-- SLIDE 7: MARKET -->
+<div class="slide" id="s7">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">Market &amp; Model</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <h2>$2.6B market, regulatory tailwind</h2>
+    <div class="two-col" style="margin-top:2vh">
+      <div>
+        <table>
+          <tr><th>Sector</th><th>Driver</th><th>Urgency</th></tr>
+          <tr><td>Banking &amp; Finance</td><td>DORA</td><td class="urgency-imm">Immediate</td></tr>
+          <tr><td>Insurance</td><td>DORA</td><td class="urgency-imm">Immediate</td></tr>
+          <tr><td>Telecom</td><td>NIS2</td><td class="urgency-high">High</td></tr>
+          <tr><td>Energy &amp; Utilities</td><td>NIS2</td><td class="urgency-high">High</td></tr>
+          <tr><td>Healthcare</td><td>NIS2</td><td class="urgency-high">High</td></tr>
+          <tr><td>Manufacturing</td><td>NIS2</td><td class="urgency-med">Medium</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>Business Model</h3>
+        <ul class="points" style="gap:1.2vh">
+          <li style="font-size:clamp(14px,1.15vw,21px)"><strong>Enterprise:</strong> &euro;15-50K/year licensing, on-prem</li>
+          <li style="font-size:clamp(14px,1.15vw,21px)"><strong>Scaleups:</strong> &euro;200-500/month SaaS</li>
+          <li style="font-size:clamp(14px,1.15vw,21px)"><strong>Land:</strong> Paid assessment, expand to monitoring</li>
+          <li style="font-size:clamp(14px,1.15vw,21px)"><strong>Channel:</strong> Consulting firms (Big 4, regional)</li>
+        </ul>
+        <div class="callout">
+          <p>Consultants charge <strong>&euro;45-90K</strong> per assessment.<br>Halkantir delivers comparable output in <strong>hours</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">07 / 08</div></div>
+</div>
+
+<!-- SLIDE 8: CLOSE (dark) -->
+<div class="slide dark" id="s8">
+  <div class="topbar"><div class="logo">Halkantir</div><div class="mono">HackAUBG 8.0</div></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
+    <h1 style="font-size:clamp(36px,4.5vw,80px)">Prevent the predictable.<br>Then move faster.</h1>
+    <p class="subtitle" style="text-align:center;max-width:44vw;font-size:clamp(16px,1.5vw,26px);margin-top:1vh">
+      The first time you use Halkantir, it finds what's broken.<br>
+      Every decision after that is stress-tested before you commit.
+    </p>
+    <div style="margin-top:5vh;display:flex;gap:3vw;align-items:center">
+      <div style="text-align:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(13px,1.1vw,20px);color:rgba(255,255,255,0.7);margin-bottom:0.5vh">achilles.sislelabs.com</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(9px,0.6vw,11px);color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em">Live demo</div>
+      </div>
+      <div style="width:1px;height:3.5vh;background:rgba(255,255,255,0.12)"></div>
+      <div style="text-align:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(13px,1.1vw,20px);color:rgba(255,255,255,0.7);margin-bottom:0.5vh">github.com/Kaisiq/halkite-4.6</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(9px,0.6vw,11px);color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em">Source code</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"><div class="mono">08 / 08</div></div>
+</div>
+
+<div class="nav-hint">&larr; &rarr; to navigate &bull; F for fullscreen</div>
+
+<script>
+const slides=document.querySelectorAll('.slide');
+let cur=0;
+function show(i){slides[cur].classList.remove('active');cur=Math.max(0,Math.min(i,slides.length-1));slides[cur].classList.add('active')}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ')show(cur+1);
+  if(e.key==='ArrowLeft')show(cur-1);
+  if(e.key==='f'||e.key==='F')document.documentElement.requestFullscreen?.();
+});
+</script>
+</body>
+</html>

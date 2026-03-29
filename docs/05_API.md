@@ -123,6 +123,29 @@ Errors:
     500: AI graph extraction failed
 ```
 
+### POST /api/waitlist
+
+Capture launch-interest emails from the landing page.
+
+```
+Request:
+{
+    "email": "team@company.com",
+    "company": "optional company name",
+    "website": ""   // honeypot field, must remain blank
+}
+
+Response:
+{
+    "status": "created" | "already_registered" | "accepted",
+    "message": "You are on the launch list."
+}
+
+Errors:
+    422: Invalid email address
+    429: Rate limit exceeded for the client IP
+```
+
 ### POST /api/graph/update
 
 Manually update the graph (add/remove/edit nodes and edges).

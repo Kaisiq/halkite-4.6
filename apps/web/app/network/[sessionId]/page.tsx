@@ -8,7 +8,7 @@ import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
 import { useNexusStore } from "@/lib/store";
 import { getGraph } from "@/lib/api";
-import type { GraphNode } from "@/lib/types";
+import type { GraphData, GraphNode, Scenario } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -80,6 +80,59 @@ type StoredNodeLayout = {
 };
 
 // ---------------------------------------------------------------------------
+// Scenario helpers
+// ---------------------------------------------------------------------------
+
+function severityColor(label: string): string {
+  switch (label.toUpperCase()) {
+    case "CRITICAL":
+      return "var(--danger)";
+    case "HIGH":
+      return "#555";
+    case "MEDIUM":
+      return "#888";
+    default:
+      return "var(--text-muted)";
+  }
+}
+
+function inferNodeLabel(nodeId: string, graph: GraphData): string {
+  return graph.nodes.find((n) => n.id === nodeId)?.name ?? nodeId;
+}
+
+function formatScenarioEvent(
+  event:
+    | { target: string | { from: string; to: string }; action: string; magnitude: number }
+    | null
+    | undefined,
+  graph: GraphData | null,
+): string {
+  if (!event) return "Initial state";
+  if (!graph) return `${event.action} ${event.target}`;
+
+  if (event.action === "cut_edge") {
+    const target = typeof event.target === "string" ? null : event.target;
+    const fromLabel = target?.from ? inferNodeLabel(target.from, graph) : String(event.target);
+    const toLabel = target?.to ? inferNodeLabel(target.to, graph) : String(event.target);
+    return `Dependency between ${fromLabel} and ${toLabel} severed`;
+  }
+
+  const targetId = typeof event.target === "string" ? event.target : "";
+  const node = graph.nodes.find((n) => n.id === targetId);
+  const label = node?.name ?? targetId;
+  if (event.action === "kill") return `${label} fails`;
+  const pct = Math.round(event.magnitude * 100);
+  return `${label} degrades (${pct}%)`;
+}
+
+function extractNarrativeText(narrative: Scenario["narrative"]): string {
+  if (!narrative) return "";
+  if (typeof narrative === "string") return narrative;
+  if (typeof narrative.narrative === "string") return narrative.narrative;
+  return "";
+}
+
+// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 
@@ -102,7 +155,12 @@ export default function NetworkPage({ params }: PageProps) {
   const selectedNodeId = useNexusStore((s) => s.selectedNodeId);
   const setSelectedNode = useNexusStore((s) => s.setSelectedNode);
   const runAnalysis = useNexusStore((s) => s.runAnalysis);
+  const runExploration = useNexusStore((s) => s.runExploration);
   const runCascade = useNexusStore((s) => s.runCascade);
+  const scenarios = useNexusStore((s) => s.scenarios);
+  const exploring = useNexusStore((s) => s.exploring);
+  const activeScenarioIndex = useNexusStore((s) => s.activeScenarioIndex);
+  const setActiveScenario = useNexusStore((s) => s.setActiveScenario);
   const setSessionId = useNexusStore((s) => s.setSessionId);
   const setGraph = useNexusStore((s) => s.setGraph);
 
@@ -162,6 +220,7 @@ export default function NetworkPage({ params }: PageProps) {
       .attr("refY", 0)
       .attr("markerWidth", 6)
       .attr("markerHeight", 6)
+      .attr("markerUnits", "userSpaceOnUse")
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,-4L10,0L0,4")
@@ -352,9 +411,11 @@ export default function NetworkPage({ params }: PageProps) {
             ? 1
             : selected && (link.fromId === selected || link.toId === selected)
               ? 0.8
-              : 0.6,
+              : 0.3 + link.weight * 0.5,
         )
-        .attr("stroke-width", (link) => Math.max(1, link.weight * 2.6))
+        .attr("stroke-width", (link) =>
+          Math.max(0.5, 0.5 + Math.pow(link.weight, 1.5) * 5),
+        )
         .attr("stroke-dasharray", (link) =>
           link.crossLayer ? "5 7" : "none",
         );
@@ -452,6 +513,13 @@ export default function NetworkPage({ params }: PageProps) {
 
   const topRisks = vulnerabilityReport?.node_rankings.slice(0, 5) ?? [];
   const highestSynergy = vulnerabilityReport?.compound_pairs?.[0] ?? null;
+  const sortedScenarios = scenarios
+    .map((scenario, originalIndex) => ({ scenario, originalIndex }))
+    .sort(
+      (a, b) =>
+        b.scenario.severity - a.scenario.severity ||
+        a.scenario.rank - b.scenario.rank,
+    );
   const impactByNodeId = new Map(
     (vulnerabilityReport?.node_rankings ?? []).map((entry) => [
       entry.node_id,
@@ -713,17 +781,215 @@ export default function NetworkPage({ params }: PageProps) {
             </section>
           )}
 
+          {/* Scenarios */}
+          {sortedScenarios.length > 0 && (
+            <section>
+              <p className="mono-label text-[9px] mb-3">
+                Attack Scenarios
+                <span className="ml-2 text-[var(--text-muted)]">
+                  {sortedScenarios.length}
+                </span>
+              </p>
+              <div className="divide-y divide-[var(--border)] border border-[var(--border)]">
+                {sortedScenarios.map(({ scenario, originalIndex }, i) => (
+                  <button
+                    key={`${scenario.rank}-${scenario.title}`}
+                    className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-alt)] ${
+                      activeScenarioIndex === originalIndex
+                        ? "bg-[var(--bg-alt)]"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setActiveScenario(
+                        activeScenarioIndex === originalIndex
+                          ? null
+                          : originalIndex,
+                      )
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[9px] text-[var(--text-light)]">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span
+                        className="font-mono text-[9px] px-1.5 py-0.5 border"
+                        style={{
+                          borderColor:
+                            scenario.severity > 0.7
+                              ? "var(--danger)"
+                              : scenario.severity > 0.4
+                                ? "var(--text-muted)"
+                                : "var(--border)",
+                          color:
+                            scenario.severity > 0.7
+                              ? "var(--danger)"
+                              : "var(--text-muted)",
+                        }}
+                      >
+                        {scenario.severity_label}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium leading-snug">
+                      {scenario.title}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] leading-relaxed line-clamp-2">
+                      {scenario.summary}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="font-mono text-[9px] text-[var(--text-light)]">
+                        H={scenario.health_remaining.toFixed(2)}
+                      </span>
+                      <span className="font-mono text-[9px] text-[var(--text-light)]">
+                        {scenario.failed_nodes.length} failed
+                      </span>
+                      <span className="font-mono text-[9px] text-[var(--text-light)]">
+                        ${(scenario.recovery_cost / 1000).toFixed(0)}K
+                      </span>
+                    </div>
+
+                    {/* Expanded detail */}
+                    {activeScenarioIndex === originalIndex && (
+                      <div className="mt-2 pt-2 border-t border-[var(--border)] flex flex-col gap-3">
+                        {/* Severity + metrics */}
+                        <div className="flex items-center justify-between">
+                          <span
+                            className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                            style={{
+                              color: severityColor(scenario.severity_label),
+                              background: `${severityColor(scenario.severity_label)}18`,
+                              border: `1px solid ${severityColor(scenario.severity_label)}33`,
+                            }}
+                          >
+                            {scenario.severity_label}
+                          </span>
+                          <div className="flex gap-3">
+                            <span className="font-mono text-[9px] text-[var(--danger)]">
+                              -{(1 - scenario.health_remaining).toFixed(2)} H
+                            </span>
+                            <span className="font-mono text-[9px] text-[var(--text-muted)]">
+                              depth {scenario.depth}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Narrative */}
+                        {extractNarrativeText(scenario.narrative) && (
+                          <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                            {extractNarrativeText(scenario.narrative)}
+                          </p>
+                        )}
+
+                        {/* Propagation sequence */}
+                        {scenario.path.length > 0 && (
+                          <div>
+                            <p className="mono-label text-[8px] mb-1.5">
+                              Propagation Sequence
+                            </p>
+                            <div className="flex flex-col gap-1">
+                              {scenario.path.map((step, si) => (
+                                <div
+                                  key={si}
+                                  className="flex items-center justify-between border border-[var(--border)] px-2.5 py-1.5"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-mono text-[8px] text-[var(--text-light)] shrink-0">
+                                      {String(step.step).padStart(2, "0")}
+                                    </span>
+                                    <span className="text-[10px] font-medium text-[var(--text)] truncate">
+                                      {formatScenarioEvent(step.event, graph)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="font-mono text-[9px] text-[var(--danger)]">
+                                      -{(step.H_before - step.H_after).toFixed(2)}
+                                    </span>
+                                    {step.new_failures.length > 0 && (
+                                      <span className="font-mono text-[8px] text-[var(--text-light)]">
+                                        +{step.new_failures.length} fail
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Failed nodes */}
+                        <div>
+                          <p className="mono-label text-[8px] mb-1.5">
+                            Failed Nodes
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {scenario.failed_nodes.map((nodeId) => {
+                              const node = graph?.nodes.find(
+                                (n) => n.id === nodeId,
+                              );
+                              return (
+                                <span
+                                  key={nodeId}
+                                  className="border border-[var(--danger)] text-[var(--danger)] px-1.5 py-0.5 font-mono text-[9px] cursor-pointer hover:bg-red-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedNode(nodeId);
+                                  }}
+                                >
+                                  {node?.name ?? nodeId}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Recommendations */}
+                        {scenario.recommendations.length > 0 && (
+                          <div>
+                            <p className="mono-label text-[8px] mb-1.5">
+                              Countermeasures
+                            </p>
+                            <div className="flex flex-col gap-1">
+                              {scenario.recommendations.map((rec, ri) => (
+                                <div
+                                  key={ri}
+                                  className="border border-[var(--border)] bg-[var(--bg-alt)] px-2.5 py-1.5"
+                                >
+                                  <p className="text-[10px] font-medium text-[var(--text)]">
+                                    {rec.action}
+                                  </p>
+                                  <p className="text-[9px] text-[var(--text-muted)] leading-relaxed mt-0.5">
+                                    {rec.reason}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col gap-2 mt-auto pt-6 border-t border-[var(--border)]">
             <button
               className="w-full border border-[var(--text)] bg-[var(--text)] py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--text-secondary)] disabled:opacity-30"
-              onClick={() => runAnalysis()}
-              disabled={analyzing || graphBuilding || graphBuildFailed}
+              onClick={async () => {
+                await runAnalysis();
+                runExploration();
+              }}
+              disabled={
+                analyzing || exploring || graphBuilding || graphBuildFailed
+              }
             >
               {graphBuilding
                 ? "Graph Still Building"
                 : analyzing
                   ? "Analyzing..."
+                  : exploring
+                    ? "Exploring scenarios..."
                   : "Run Analysis"}
             </button>
 

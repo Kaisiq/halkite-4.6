@@ -45,6 +45,8 @@ export interface NexusState {
   uploadStageMessage: string | null;
   uploadProgressValue: number;
   graphBuildState: "idle" | "building" | "complete" | "failed";
+  uploadStepIndex: number;
+  uploadTotalSteps: number;
   gaps: string[];
   followUpQuestions: string[];
   confidence: number | null;
@@ -103,6 +105,48 @@ export interface NexusState {
 // Initial (blank) values – useful for resetting slices of state
 // ---------------------------------------------------------------------------
 
+const UPLOAD_STEPS = [
+  "Analyzing documents...",
+  "Extracting entities...",
+  "Building dependency graph...",
+  "Mapping organizational layers...",
+  "Calculating dependencies...",
+  "Finalizing structure...",
+] as const;
+
+const DRIVE_UPLOAD_STEPS = [
+  "Connecting to Google Drive...",
+  "Scanning Google Drive files...",
+  "Extracting entities...",
+  "Building dependency graph...",
+  "Mapping organizational layers...",
+  "Finalizing structure...",
+] as const;
+
+function clampStepIndex(stepIndex: number, totalSteps: number): number {
+  if (totalSteps <= 0) return 0;
+  return Math.max(0, Math.min(stepIndex, totalSteps - 1));
+}
+
+function statusToStepIndex(status: UploadJobStatus, totalSteps: number): number {
+  switch (status) {
+    case "queued":
+      return 0;
+    case "parsing":
+      return clampStepIndex(1, totalSteps);
+    case "extracting":
+      return clampStepIndex(2, totalSteps);
+    case "merging":
+      return clampStepIndex(3, totalSteps);
+    case "refining":
+      return clampStepIndex(4, totalSteps);
+    case "completed":
+      return clampStepIndex(totalSteps - 1, totalSteps);
+    case "failed":
+      return clampStepIndex(totalSteps - 2, totalSteps);
+  }
+}
+
 const INITIAL_UPLOAD = {
   uploading: false,
   uploadError: null as string | null,
@@ -111,6 +155,8 @@ const INITIAL_UPLOAD = {
   uploadStageMessage: null as string | null,
   uploadProgressValue: 0,
   graphBuildState: "idle" as "idle" | "building" | "complete" | "failed",
+  uploadStepIndex: 0,
+  uploadTotalSteps: UPLOAD_STEPS.length,
   gaps: [] as string[],
   followUpQuestions: [] as string[],
   confidence: null as number | null,
@@ -150,6 +196,7 @@ function completeUploadReveal(): void {
     return;
   }
   pendingUploadCompletion = null;
+  const { uploadTotalSteps } = useNexusStore.getState();
   useNexusStore.setState({
     sessionId: completion.session_id,
     graph: completion.graph,
@@ -159,6 +206,7 @@ function completeUploadReveal(): void {
     uploadProgress: null,
     uploadProgressValue: 1,
     graphBuildState: "complete",
+    uploadStepIndex: statusToStepIndex("completed", uploadTotalSteps),
     confidence: completion.confidence,
     gaps: completion.gaps,
     followUpQuestions: completion.follow_up_questions,
@@ -339,11 +387,12 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       uploadStageMessage: "Queueing upload...",
       uploadProgressValue: 0,
       graphBuildState: "building",
+      uploadStepIndex: 0,
+      uploadTotalSteps: UPLOAD_STEPS.length,
       cascadeError: null,
       selectedNodeId: null,
       activeScenarioIndex: null,
     });
-
     try {
       const res = await api.createUploadJob(files, description);
       set({
@@ -364,11 +413,16 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             const event = JSON.parse(message.data) as UploadJobEvent;
 
             if (event.type === "job_status") {
+              const uploadTotalSteps = get().uploadTotalSteps;
               set({
                 uploadStatus: event.status,
                 uploadStageMessage: event.stage_message,
                 uploadProgress: event.stage_message,
                 uploadProgressValue: event.progress,
+                uploadStepIndex: statusToStepIndex(
+                  event.status,
+                  uploadTotalSteps,
+                ),
                 graphBuildState:
                   event.status === "failed"
                     ? "failed"
@@ -414,11 +468,16 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             if (event.type === "job_complete") {
               const currentGraph = get().graph;
               pendingUploadCompletion = event;
+              const uploadTotalSteps = get().uploadTotalSteps;
               set((state) => ({
                 uploadStatus: "refining",
                 uploadStageMessage: "Rendering final graph",
                 uploadProgress: "Rendering final graph",
                 uploadProgressValue: Math.max(state.uploadProgressValue, 0.9),
+                uploadStepIndex: statusToStepIndex(
+                  "refining",
+                  uploadTotalSteps,
+                ),
               }));
               for (const node of event.graph.nodes) {
                 if (!currentGraph?.nodes.some((existing) => existing.id === node.id)) {
@@ -468,11 +527,16 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             }
             try {
               const job = await api.getUploadJob(jobId);
+              const uploadTotalSteps = get().uploadTotalSteps;
               set({
                 uploadStatus: job.status,
                 uploadStageMessage: job.stage_message,
                 uploadProgress: job.stage_message,
                 uploadProgressValue: job.progress,
+                uploadStepIndex: statusToStepIndex(
+                  job.status,
+                  uploadTotalSteps,
+                ),
                 graph: job.graph_preview,
                 graphBuildState:
                   job.status === "failed"
@@ -532,11 +596,12 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
       uploadStageMessage: "Connecting to Google Drive...",
       uploadProgressValue: 0,
       graphBuildState: "building",
+      uploadStepIndex: 0,
+      uploadTotalSteps: DRIVE_UPLOAD_STEPS.length,
       cascadeError: null,
       selectedNodeId: null,
       activeScenarioIndex: null,
     });
-
     try {
       const res = await api.createGoogleDriveImportJob(
         accessToken,
@@ -562,11 +627,16 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             const event = JSON.parse(message.data) as UploadJobEvent;
 
             if (event.type === "job_status") {
+              const uploadTotalSteps = get().uploadTotalSteps;
               set({
                 uploadStatus: event.status,
                 uploadStageMessage: event.stage_message,
                 uploadProgress: event.stage_message,
                 uploadProgressValue: event.progress,
+                uploadStepIndex: statusToStepIndex(
+                  event.status,
+                  uploadTotalSteps,
+                ),
                 graphBuildState:
                   event.status === "failed"
                     ? "failed"
@@ -612,11 +682,16 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             if (event.type === "job_complete") {
               const currentGraph = get().graph;
               pendingUploadCompletion = event;
+              const uploadTotalSteps = get().uploadTotalSteps;
               set((state) => ({
                 uploadStatus: "refining",
                 uploadStageMessage: "Rendering final graph",
                 uploadProgress: "Rendering final graph",
                 uploadProgressValue: Math.max(state.uploadProgressValue, 0.9),
+                uploadStepIndex: statusToStepIndex(
+                  "refining",
+                  uploadTotalSteps,
+                ),
               }));
               for (const node of event.graph.nodes) {
                 if (!currentGraph?.nodes.some((existing) => existing.id === node.id)) {
@@ -666,11 +741,16 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             }
             try {
               const job = await api.getUploadJob(jobId);
+              const uploadTotalSteps = get().uploadTotalSteps;
               set({
                 uploadStatus: job.status,
                 uploadStageMessage: job.stage_message,
                 uploadProgress: job.stage_message,
                 uploadProgressValue: job.progress,
+                uploadStepIndex: statusToStepIndex(
+                  job.status,
+                  uploadTotalSteps,
+                ),
                 graph: job.graph_preview,
                 graphBuildState:
                   job.status === "failed"
