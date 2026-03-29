@@ -820,7 +820,7 @@ export default function DataInputPage() {
                         >
                           Starting annual price
                         </p>
-                        <p className="mt-3 text-[2.6rem] font-semibold leading-none tracking-[-0.05em]">
+                        <p className="display-face mt-3 text-[2.6rem] font-medium leading-none tracking-[-0.05em]">
                           {plan.annualPrice}
                         </p>
                         <div
