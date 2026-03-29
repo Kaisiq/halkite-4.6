@@ -6,6 +6,8 @@ The state tree is the data structure that stores all explored failure scenarios.
 
 Exploration should stay compact. AI-guided scenario agents propose only a few plausible, high-impact branches with clear intended outcomes, and the tree retains only the strongest child branches at each expansion step.
 
+For scenario quality, AI should not invent arbitrary step order. It should select from graph-grounded candidate paths so each branch shows a believable causal route from trigger to outcome.
+
 ---
 
 ## Data Structure
