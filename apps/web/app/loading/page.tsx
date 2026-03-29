@@ -104,9 +104,9 @@ export default function LoadingPage() {
     : 100;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg)] px-6">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg)] px-4 sm:px-6">
       {/* Logo */}
-      <div className="mb-16 opacity-40">
+      <div className="mb-10 opacity-40 sm:mb-16">
         <Image
           src="/logo.svg"
           alt="Halkantir"
@@ -118,7 +118,7 @@ export default function LoadingPage() {
       </div>
 
       {/* Fun fact */}
-      <div className="mx-auto mb-12 h-[72px] max-w-xl text-center">
+      <div className="mx-auto mb-8 h-[72px] max-w-xl text-center sm:mb-12">
         <p
           className="text-sm leading-relaxed text-[var(--text-muted)] transition-opacity duration-400"
           style={{ opacity: factVisible ? 1 : 0 }}

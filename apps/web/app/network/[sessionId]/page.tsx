@@ -577,9 +577,9 @@ export default function NetworkPage({ params }: PageProps) {
         </div>
       )}
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 flex-col min-h-0 md:flex-row">
         {/* D3 Graph Canvas */}
-        <div className="relative flex-[7] min-w-0 border-r border-[var(--border)]">
+        <div className="relative h-[50vh] min-h-[280px] min-w-0 border-b border-[var(--border)] md:h-auto md:flex-[7] md:border-b-0 md:border-r">
           {waitingForFirstNode && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/92 backdrop-blur-sm">
               <div className="text-center">
@@ -618,22 +618,21 @@ export default function NetworkPage({ params }: PageProps) {
               </div>
             </div>
           )}
-
           {/* Legend */}
-          <div className="pointer-events-none absolute left-6 top-6 z-10">
-            <div className="border border-[var(--border)] bg-white p-4">
-              <p className="mono-label text-[9px] mb-2">Legend</p>
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+          <div className="pointer-events-none absolute left-3 top-3 z-10 sm:left-6 sm:top-6">
+            <div className="border border-[var(--border)] bg-white p-2.5 sm:p-4">
+              <p className="mono-label text-[9px] mb-1.5 sm:mb-2">Legend</p>
+              <p className="hidden text-xs text-[var(--text-muted)] leading-relaxed sm:block">
                 Node size = impact weight.
                 <br />
                 Edge thickness = dependency strength.
               </p>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="font-mono text-[9px] text-[var(--text-light)]">
+              <div className="mt-2 flex items-center justify-between gap-2 sm:mt-3 sm:gap-3">
+                <span className="font-mono text-[8px] text-[var(--text-light)] sm:text-[9px]">
                   Stable
                 </span>
-                <div className="h-1 flex-1 bg-gradient-to-r from-[#999999] to-[#b91c1c]" />
-                <span className="font-mono text-[9px] text-[var(--text-light)]">
+                <div className="h-1 w-12 bg-gradient-to-r from-[#999999] to-[#b91c1c] sm:flex-1" />
+                <span className="font-mono text-[8px] text-[var(--text-light)] sm:text-[9px]">
                   Critical
                 </span>
               </div>
@@ -654,18 +653,18 @@ export default function NetworkPage({ params }: PageProps) {
           </svg>
 
           {/* Layer toggles */}
-          <div className="absolute bottom-6 left-6 border border-[var(--border)] bg-white p-4">
-            <p className="mono-label text-[9px] mb-3">Layers</p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="absolute bottom-3 left-3 border border-[var(--border)] bg-white p-2.5 sm:bottom-6 sm:left-6 sm:p-4">
+            <p className="mono-label text-[9px] mb-2 sm:mb-3">Layers</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5 sm:grid sm:gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {layers.map((layer) => (
                 <label
                   key={layer}
-                  className="flex items-center gap-2 cursor-pointer select-none text-xs"
+                  className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] sm:gap-2 sm:text-xs"
                   style={{ opacity: hiddenLayers.has(layer) ? 0.3 : 1 }}
                 >
-                  <div className="relative flex h-3.5 w-3.5 items-center justify-center border border-[var(--border)]">
+                  <div className="relative flex h-3 w-3 items-center justify-center border border-[var(--border)] sm:h-3.5 sm:w-3.5">
                     {!hiddenLayers.has(layer) && (
-                      <div className="h-2 w-2 bg-[var(--text)]" />
+                      <div className="h-1.5 w-1.5 bg-[var(--text)] sm:h-2 sm:w-2" />
                     )}
                     <input
                       type="checkbox"
@@ -682,12 +681,12 @@ export default function NetworkPage({ params }: PageProps) {
         </div>
 
         {/* Right Panel */}
-        <aside className="flex-[3] min-w-0 overflow-y-auto p-6 flex flex-col gap-6 bg-white">
+        <aside className="flex-1 min-w-0 overflow-y-auto p-4 flex flex-col gap-4 bg-white sm:p-6 sm:gap-6 md:flex-[3]">
           {/* Network Health */}
           <section>
             <p className="mono-label text-[9px] mb-3">Network Health</p>
-            <div className="border border-[var(--border)] p-6 text-center">
-              <p className="display-face text-5xl font-normal tracking-tight tabular-nums">
+            <div className="border border-[var(--border)] p-4 text-center sm:p-6">
+              <p className="display-face text-3xl font-normal tracking-tight tabular-nums sm:text-5xl">
                 {vulnerabilityReport
                   ? vulnerabilityReport.network_health.toFixed(2)
                   : "0.00"}
@@ -973,7 +972,7 @@ export default function NetworkPage({ params }: PageProps) {
           )}
 
           {/* Actions */}
-          <div className="flex flex-col gap-2 mt-auto pt-6 border-t border-[var(--border)]">
+          <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-[var(--border)] sm:pt-6">
             <button
               className="w-full border border-[var(--text)] bg-[var(--text)] py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--text-secondary)] disabled:opacity-30"
               onClick={async () => {
@@ -1018,7 +1017,7 @@ export default function NetworkPage({ params }: PageProps) {
 
           {/* Node Detail Panel */}
           {selectedNode && (
-            <section className="absolute bottom-6 right-6 z-20 w-[340px] border border-[var(--border)] bg-white p-6 shadow-lg fade-rise">
+            <section className="border border-[var(--border)] bg-white p-4 shadow-lg fade-rise sm:p-6 md:absolute md:bottom-6 md:right-6 md:z-20 md:w-[340px]">
               <div className="mb-4 flex items-start justify-between">
                 <div>
                   <p className="mono-label text-[9px] mb-1">Node</p>
