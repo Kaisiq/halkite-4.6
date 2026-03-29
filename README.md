@@ -1,129 +1,131 @@
 # Achilles
 
-**Prevent the predictable. Then move faster.**
+**Organizational stress-testing platform.**
 
-Achilles is an organizational stress-testing platform. Upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists — and Achilles maps your dependencies, finds your blind spots, and simulates worst-case failure scenarios before they happen.
+Upload documents about your organization. AI builds a dependency graph. Deterministic math finds weakpoints and simulates cascading failures. AI explains the results.
 
 **AI generates. Math computes. AI explains.** — AI never touches the numbers.
 
-## How It Works
+## Pipeline
 
-1. **Upload** — drag-and-drop documents (PDF, DOCX, XLSX, CSV, images, JSON)
-2. **Graph** — AI reads your data and builds a dependency network across people, technology, supply chain, operations, and more
-3. **Analyze** — deterministic graph algorithms identify bridge nodes, fragile clusters, compound failure points, and layer vulnerabilities
-4. **Simulate** — five adversarial agents run thousands of attack simulations against your network
-5. **Report** — ranked worst-case scenarios with narratives, cascade breakdowns, and actionable recommendations
+```
+Upload → Data Ingestion (AI) → Weakpoint Analysis (Math) → Agent Briefing → State Tree Exploration (Math) → Report (AI narrative)
+```
+
+| Stage | What happens | AI involved? |
+|-------|-------------|--------------|
+| **Data Ingestion** | Parse files (PDF, DOCX, XLSX, CSV, images, JSON), AI extracts entities and dependencies into a weighted graph | Yes — graph construction |
+| **Weakpoint Analysis** | 6 algorithms: node impact ranking, critical edge detection, bridge nodes, cluster detection, compound vulnerability pairs, layer dependency analysis | No — pure math |
+| **Agent Briefing** | Convert analysis into targeted attack briefs for each adversarial agent | No — deterministic mapping |
+| **State Tree Exploration** | Multi-agent depth-first search across failure scenarios with cascade propagation at each step | No — pure math |
+| **Results & Narrative** | Rank top 10 worst-case scenarios, generate step-by-step cascade breakdowns and recommendations | Yes — narrative generation |
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Python 3.14, FastAPI, Uvicorn |
+| **Graph Engine** | NetworkX, NumPy, SciPy |
+| **AI** | Google Gemini 2.5 Flash |
+| **Frontend** | Next.js 16, React 19, TypeScript |
+| **Visualization** | D3.js (force-directed graphs, tree layouts, cascade animation) |
+| **State Management** | Zustand |
+| **Styling** | Tailwind CSS v4 |
+| **File Parsing** | PyPDF2, python-docx, openpyxl, Pillow |
+| **Monorepo** | pnpm workspaces + Turborepo |
+| **Deployment** | Docker, docker-compose, on-prem ready |
+
+## Architecture
+
+```
+apps/
+  api/    Python backend — ingestion, graph engine, cascade simulation, adversarial agents, ranking
+  web/    Next.js frontend — upload, network visualization, simulation controls, report
+docs/     Product specs, architecture docs (source of truth)
+demo/     Sample datasets
+```
+
+### Backend Modules (~11,500 lines)
+
+```
+achilles_api/
+├── ingestion/          # File parsing, AI extraction, deterministic scoring
+│   ├── parser.py       # PDF, DOCX, XLSX, CSV, images, JSON, XML
+│   ├── extractor.py    # Gemini-powered entity & edge extraction
+│   ├── scoring.py      # Deterministic θ (importance), r (recovery cost), edge weights
+│   └── google_drive.py # Google Drive folder import via OAuth
+├── engine/             # Pure math — no AI
+│   ├── weakpoint.py    # 6 analysis algorithms (impact, edges, bridges, clusters, pairs, layers)
+│   ├── cascade.py      # Cascade propagation with damage spreading and health thresholds
+│   ├── state_tree.py   # Depth-first adversarial search with memoization and pruning
+│   └── weight_inference.py  # Graph weight refinement
+├── agents/             # 7 adversarial agents
+│   ├── critical_node.py      # Kill highest-impact nodes
+│   ├── bridge_breaker.py     # Fragment the network
+│   ├── compound_exploiter.py # Multi-node failure combinations
+│   ├── layer_assassin.py     # Attack entire layers
+│   ├── cluster_isolator.py   # Isolate fragile clusters
+│   ├── cascading_domino.py   # Chain reaction targeting
+│   └── recovery_maximizer.py # Maximize recovery cost
+├── briefing/           # Analysis → agent-specific attack briefs
+├── results/            # Top 10 scenario ranking + AI narrative generation
+├── models/             # Graph, Node, Edge, State, Event data structures
+└── main.py             # FastAPI app — 18 REST endpoints + 3 WebSocket channels
+```
+
+### Frontend Routes (~8,200 lines)
+
+| Route | Page |
+|-------|------|
+| `/` | Landing page — hero, pipeline visualization, pricing, waitlist |
+| `/network/:sessionId` | D3 force-directed graph with layer toggles and analysis panel |
+| `/simulate/:sessionId` | Agent controls, state tree visualization, live progress |
+| `/report/:sessionId` | Top 10 scenarios, cascade breakdowns, recommendations |
+| `/chat/:sessionId` | Interactive Q&A about findings |
+
+### API Surface
+
+**REST:** upload, upload-jobs, google-drive import, graph CRUD, analyze, cascade, explore, report, chat, waitlist, health
+
+**WebSocket:** real-time upload progress, exploration progress, chat streaming
+
+## Testing
+
+15 test files covering graph model, cascade engine, weakpoint analysis, state tree exploration, agents, ingestion, API endpoints, and chat.
+
+```bash
+source .venv/bin/activate
+python -m pytest                        # all tests
+python -m pytest tests/test_cascade.py  # single file
+```
 
 ## Quick Start
 
 ```bash
-./bin/setup          # install all dependencies
+./bin/setup          # install pnpm deps + create .venv + pip install backend
 ./bin/dev            # start API (port 8000) + frontend (port 3000)
 ```
 
-Then open http://localhost:3000 and upload a file. A demo dataset is available at `demo/mclimate.json`.
-
-## Repo Layout
-
-```text
-apps/
-  api/    Python 3.14 + FastAPI backend (graph engine, analysis, simulation)
-  web/    Next.js 16 + React 19 frontend (D3 visualization, dashboards)
-docs/     Product specs, architecture, business plan
-demo/     Sample datasets for showcase
-```
-
-## Architecture
-
-Monorepo managed by **pnpm workspaces** + **Turbo**:
-
-| App        | Stack                                          | Purpose                                                                  |
-| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
-| `apps/api` | Python 3.14, FastAPI, NetworkX, NumPy          | Ingestion, graph engine, cascade simulation, adversarial agents, ranking |
-| `apps/web` | Next.js 16, React 19, D3.js, Zustand, Tailwind | Upload, network graph visualization, simulation controls, report         |
-
-### Module Pipeline
-
-```
-Upload → [1] Data Ingestion (AI) → [2] Weakpoint Analysis (Math) → [3] Agent Briefing → [4] State Tree Exploration (Math) → Report (AI narrative)
-```
-
-See `docs/00_ARCHITECTURE.md` for full details and `docs/BUSINESS_PLAN.md` for the pitch kit.
+Open http://localhost:3000 and upload a file. Demo dataset available at `demo/novapay.json`.
 
 ## Commands
 
 ```bash
-./bin/dev                              # run both apps
-pnpm --filter @achilles/api dev         # API only
-pnpm --filter @achilles/web dev         # frontend only
-pnpm build                             # build all
-pnpm lint                              # lint all
-pnpm typecheck                         # typecheck all
-pnpm format                            # format all
+pnpm build           # build all (via Turbo)
+pnpm lint            # lint all
+pnpm typecheck       # typecheck all
+pnpm format          # format all
 ```
-
-## Demo Video Recording
-
-The frontend includes a reproducible Playwright-based recorder for jury demos.
-
-Install the browser once:
-
-```bash
-pnpm --filter @achilles/web demo:setup
-```
-
-Run the recorder from the repository root:
-
-```bash
-DEMO_SESSION_ID=<session-id> pnpm --filter @achilles/web demo:record
-```
-
-`DEMO_SESSION_ID` is the backend-generated session identifier used in routes like:
-
-- `/network/<session-id>`
-- `/simulate/<session-id>`
-- `/report/<session-id>`
-
-You can get it by opening the app, creating a session through upload, and copying the id from the URL.
-
-By default the video is written to:
-
-```text
-apps/web/demo-output/achilles-demo.webm
-```
-
-If `DEMO_SESSION_ID` is omitted, the script records the landing page only.
-For more options, see `docs/DEMO_VIDEO_WORKFLOW.md`.
-
-## Environment
-
-Copy `.env.example` to `.env` and add your `ANTHROPIC_API_KEY`. App-specific templates:
-
-- `apps/web/.env.local.example`
-- `apps/api/.env.example`
-
-`NEXT_PUBLIC_GOOGLE_CLIENT_ID` is only needed if you want Google Drive folder import in the web app.
-For Google Drive import, use a Google OAuth "Web application" client and add
-the exact frontend origin to Authorized JavaScript origins, such as
-`http://localhost:3000`.
 
 ## Docker Deployment
-
-For on-prem delivery:
-
-- `apps/api/Dockerfile`
-- `apps/web/Dockerfile`
-- `docker-compose.yml`
-- `docs/07_DEPLOYMENT.md`
 
 ```bash
 cp .env.example .env
 docker compose up --build -d
 ```
 
-The frontend is served on port `3000` and proxies backend requests to the API container internally.
+On-prem ready. See `docs/07_DEPLOYMENT.md`.
 
 ## License
 
-This repository is source-available, not open source. See [LICENSE](LICENSE).
-No permission is granted to use, copy, modify, or distribute this software.
+Source-available, not open source. See [LICENSE](LICENSE).

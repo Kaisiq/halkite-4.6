@@ -26,6 +26,9 @@ const displayFont = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Achilles",
   description: "Organizational stress-testing platform",
+  icons: {
+    icon: "/logo.svg",
+  },
 };
 
 type RootLayoutProps = Readonly<{
