@@ -15,21 +15,21 @@ import type { GraphData, GraphNode, Scenario } from "@/lib/types";
 // ---------------------------------------------------------------------------
 
 const LAYER_COLORS: Record<string, string> = {
-  People: "var(--layer-people)",
-  Technology: "var(--layer-tech)",
-  Supply: "var(--layer-supply)",
-  Financial: "var(--layer-financial)",
-  Facilities: "var(--layer-facilities)",
-  Operations: "var(--layer-ops)",
+  People: "#2563eb",
+  Technology: "#059669",
+  Supply: "#d97706",
+  Financial: "#ca8a04",
+  Facilities: "#dc2626",
+  Operations: "#7c3aed",
 };
 
 const FALLBACK_COLORS = [
-  "var(--layer-people)",
-  "var(--layer-tech)",
-  "var(--layer-supply)",
-  "var(--layer-financial)",
-  "var(--layer-facilities)",
-  "var(--layer-ops)",
+  "#2563eb",
+  "#059669",
+  "#d97706",
+  "#ca8a04",
+  "#dc2626",
+  "#7c3aed",
 ];
 
 function layerColor(layer: string): string {
@@ -45,12 +45,22 @@ function layerColor(layer: string): string {
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
 }
 
-function impactColor(impact: number, failed: boolean): string {
+function impactColor(layer: string, impact: number, failed: boolean): string {
   if (failed) return "#b91c1c";
   const normalized = Math.max(0, Math.min(1, impact));
   if (normalized > 0.7) return "#b91c1c";
-  if (normalized > 0.4) return "#666666";
-  return "#999999";
+  if (normalized > 0.4) {
+    return layerColor(layer);
+  }
+  return "#f8fafc";
+}
+
+function outerNodeRadius(theta: number): number {
+  return 9 + theta * 10;
+}
+
+function innerNodeRadius(theta: number): number {
+  return Math.max(4.5, outerNodeRadius(theta) - 4);
 }
 
 interface OrbitNode extends GraphNode {
@@ -233,17 +243,6 @@ export default function NetworkPage({ params }: PageProps) {
       .on("zoom", (event) => g.attr("transform", event.transform));
     svg.call(zoom);
 
-    const impactMap = new Map(
-      (vulnerabilityReport?.node_rankings ?? []).map((entry) => [
-        entry.node_id,
-        entry.health_loss,
-      ]),
-    );
-    const impactMax = Math.max(
-      ...graph.nodes.map((node) => impactMap.get(node.id) ?? node.theta),
-      1,
-    );
-
     const storedLayouts = layoutRef.current;
     const existingLayouts = graph.nodes
       .map((node) => storedLayouts.get(node.id))
@@ -269,7 +268,7 @@ export default function NetworkPage({ params }: PageProps) {
         (anchorY + (Math.random() - 0.5) * 42),
       fx: storedLayouts.get(node.id)?.fx ?? null,
       fy: storedLayouts.get(node.id)?.fy ?? null,
-      impact: (impactMap.get(node.id) ?? node.theta) / impactMax,
+      impact: node.theta,
     }));
 
     const nodeMap = new Map(orbitNodes.map((node) => [node.id, node]));
@@ -313,9 +312,14 @@ export default function NetworkPage({ params }: PageProps) {
 
     nodeSel
       .append("circle")
-      .attr("class", "node-core")
+      .attr("class", "node-layer-ring")
       .attr("r", 8)
       .attr("stroke-width", 1.5);
+
+    nodeSel
+      .append("circle")
+      .attr("class", "node-core")
+      .attr("r", 5);
 
     nodeSel
       .append("text")
@@ -432,6 +436,7 @@ export default function NetworkPage({ params }: PageProps) {
 
       nodeSel
         .select("circle.node-halo")
+        .attr("r", (node) => outerNodeRadius(node.theta) + 6)
         .attr("opacity", (node) =>
           hovered === node.id || selected === node.id ? 0.95 : 0,
         )
@@ -442,23 +447,37 @@ export default function NetworkPage({ params }: PageProps) {
         );
 
       nodeSel
+        .select("circle.node-layer-ring")
+        .attr("r", (node) => outerNodeRadius(node.theta))
+        .attr("fill", (node) => layerColor(node.layer))
+        .attr("fill-opacity", (node) => (node.phi ? 0.92 : 0.9))
+        .attr("stroke", (node) => {
+          if (node.phi) return "#7f1d1d";
+          if (hovered === node.id || selected === node.id) return "#000000";
+          return "rgba(0, 0, 0, 0.12)";
+        })
+        .attr("stroke-width", (node) =>
+          hovered === node.id || selected === node.id || node.phi ? 2.4 : 1.2,
+        );
+
+      nodeSel
         .select("circle.node-core")
-        .attr("r", (node) => 8 + node.theta * 10)
-        .attr("fill", (node) => impactColor(node.impact, node.phi))
+        .attr("r", (node) => innerNodeRadius(node.theta))
+        .attr("fill", (node) => impactColor(node.layer, node.impact, node.phi))
         .attr("fill-opacity", (node) => (node.phi ? 1 : 0.94))
         .attr("stroke", (node) => {
           if (node.phi) return "#b91c1c";
           if (hovered === node.id) return "#000000";
           if (selected === node.id) return "#000000";
-          return "rgba(0, 0, 0, 0.15)";
+          return "rgba(255, 255, 255, 0.75)";
         })
         .attr("stroke-width", (node) =>
-          hovered === node.id || selected === node.id || node.phi ? 2.4 : 1.4,
+          hovered === node.id || selected === node.id || node.phi ? 1.8 : 1.1,
         );
 
       nodeSel
         .select("text.node-label")
-        .attr("y", (node) => -(18 + node.theta * 9))
+        .attr("y", (node) => -(outerNodeRadius(node.theta) + 10))
         .attr("opacity", (node) =>
           hovered === node.id || selected === node.id || node.theta > 0.72
             ? 1
@@ -664,7 +683,10 @@ export default function NetworkPage({ params }: PageProps) {
                 >
                   <div className="relative flex h-3 w-3 items-center justify-center border border-[var(--border)] sm:h-3.5 sm:w-3.5">
                     {!hiddenLayers.has(layer) && (
-                      <div className="h-1.5 w-1.5 bg-[var(--text)] sm:h-2 sm:w-2" />
+                      <div
+                        className="h-1.5 w-1.5 sm:h-2 sm:w-2"
+                        style={{ backgroundColor: layerColor(layer) }}
+                      />
                     )}
                     <input
                       type="checkbox"
@@ -673,7 +695,12 @@ export default function NetworkPage({ params }: PageProps) {
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
                   </div>
-                  <span className="text-[var(--text-secondary)]">{layer}</span>
+                  <span
+                    className="font-medium"
+                    style={{ color: layerColor(layer) }}
+                  >
+                    {layer}
+                  </span>
                 </label>
               ))}
             </div>

@@ -216,7 +216,7 @@ export default function DataInputPage() {
     driveFolderPath.find((folder) => folder.id === driveFolderId) ??
     null;
 
-  // Navigation after upload is handled by the /loading page.
+  // Uploads now stream directly into the network screen.
   // This effect only covers the case where user returns here with
   // a completed session and no gaps (e.g. browser back button).
   useEffect(() => {
@@ -402,11 +402,12 @@ export default function DataInputPage() {
   const handleBuild = async () => {
     if (activeSource !== "files" || files.length === 0) return;
     await uploadFiles(files, description || undefined);
-    const { uploadJobId, uploadError } = useAchillesStore.getState();
-    if (uploadError || !uploadJobId) {
+    const { sessionId: nextSessionId, uploadJobId, uploadError } =
+      useAchillesStore.getState();
+    if (uploadError || !uploadJobId || !nextSessionId) {
       return;
     }
-    router.push("/loading" as Route);
+    router.push(`/network/${nextSessionId}` as Route);
   };
 
   const handleProceed = () => {
@@ -533,7 +534,11 @@ export default function DataInputPage() {
       return;
     }
     setDriveDialogOpen(false);
-    router.push("/loading" as Route);
+    const { sessionId: nextSessionId } = useAchillesStore.getState();
+    if (!nextSessionId) {
+      return;
+    }
+    router.push(`/network/${nextSessionId}` as Route);
   }, [description, driveFolderId, importGoogleDriveFolder, router]);
 
   const handleWaitlistSubmit = useCallback(
