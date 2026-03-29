@@ -227,6 +227,57 @@ class TestMonteCarloAgent:
         assert len(plans) == 1
         assert [step.event for step in plans[0].steps] == candidate.events
 
+    def test_fallback_step_descriptions_are_plain_english(
+        self,
+        medium_graph: Graph,
+    ) -> None:
+        cfg = MCConfig(branching_factor=4, max_depth=3)
+        brief = brief_monte_carlo(cfg)
+        agent = MonteCarloAgent(brief, cfg, graph=medium_graph)
+
+        plans = agent._get_or_build_plans(medium_graph)
+        assert plans
+        for plan in plans:
+            for step in plan.steps:
+                description = step.description.lower()
+                assert "kill " not in description
+                assert "damage " not in description
+                assert "cut_edge" not in description
+                assert any(
+                    word in description
+                    for word in ("because", "which", "leading", "support", "depends", "loses")
+                )
+
+    def test_ai_descriptions_with_technical_commands_are_normalized(
+        self,
+        small_graph: Graph,
+    ) -> None:
+        cfg = MCConfig(branching_factor=3, max_depth=3)
+        brief = brief_monte_carlo(cfg)
+        agent = MonteCarloAgent(brief, cfg, graph=small_graph)
+
+        candidates = agent._build_candidate_catalog(small_graph)
+        candidate = candidates[0]
+        payload = {
+            "scenarios": [
+                {
+                    "candidate_id": candidate.candidate_id,
+                    "title": "Chosen scenario",
+                    "summary": "Uses a real dependency chain.",
+                    "outcome": "Leads to a clear downstream operating failure.",
+                    "step_descriptions": ["Kill node X", "damage node y", "cut_edge"][: len(candidate.events)],
+                }
+            ]
+        }
+
+        plans = agent._parse_scenario_payload(payload, candidates)
+        assert len(plans) == 1
+        for step in plans[0].steps:
+            lowered = step.description.lower()
+            assert "kill " not in lowered
+            assert "damage " not in lowered
+            assert "cut_edge" not in lowered
+
 
 # ---------------------------------------------------------------------------
 # Briefing & registry integration tests
