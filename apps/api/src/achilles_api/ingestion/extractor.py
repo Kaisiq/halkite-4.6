@@ -591,7 +591,11 @@ def build_graph_from_dict(
             continue
         seen_ids.add(node_id)
 
-        name = str(raw_node.get("name", node_id))
+        raw_name = raw_node.get("name")
+        if raw_name and str(raw_name).strip() and str(raw_name) != node_id:
+            name = str(raw_name)
+        else:
+            name = _humanize_id(node_id)
         layer = str(raw_node.get("layer", ""))
 
         # Ensure the layer is in the layers list
@@ -856,6 +860,11 @@ _SINGLE_FILE_CHUNK_TARGET_CHARS = int(
 def _slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
     return slug[:64] or "node"
+
+
+def _humanize_id(slug: str) -> str:
+    """Convert a snake_case ID back into a human-readable Title Case name."""
+    return " ".join(word.capitalize() for word in slug.split("_") if word)
 
 
 def _guess_layer(name: str, context_hint: str = "") -> str:
