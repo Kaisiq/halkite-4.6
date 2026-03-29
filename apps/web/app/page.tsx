@@ -399,9 +399,13 @@ export default function DataInputPage() {
     [addFiles],
   );
 
-  const handleBuild = () => {
+  const handleBuild = async () => {
     if (activeSource !== "files" || files.length === 0) return;
-    uploadFiles(files, description || undefined);
+    await uploadFiles(files, description || undefined);
+    const { uploadJobId, uploadError } = useAchillesStore.getState();
+    if (uploadError || !uploadJobId) {
+      return;
+    }
     router.push("/loading" as Route);
   };
 
@@ -520,11 +524,14 @@ export default function DataInputPage() {
     setActiveSource("drive");
     setFiles([]);
     useAchillesStore.setState({ driveFolder: null, uploadError: null });
-    importGoogleDriveFolder(
+    const started = await importGoogleDriveFolder(
       driveAccessTokenRef.current,
       driveFolderId.trim(),
       description || undefined,
     );
+    if (!started) {
+      return;
+    }
     setDriveDialogOpen(false);
     router.push("/loading" as Route);
   }, [description, driveFolderId, importGoogleDriveFolder, router]);

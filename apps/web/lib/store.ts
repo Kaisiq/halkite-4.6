@@ -1004,3 +1004,5 @@ export const useAchillesStore = create<AchillesState>()((set, get) => ({
     }
   },
 }));
+
+export const useNexusStore = useAchillesStore;
