@@ -333,7 +333,7 @@ function resolveScenarioFocusNode(
   scenario: Scenario | null | undefined,
   rootTreeNode: TreeNode | null,
   childrenByNodeId: Map<string, TreeNode[]>,
-  graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]> | null,
+  graph: NonNullable<ReturnType<typeof useAchillesStore.getState>["graph"]> | null,
 ): TreeNode | null {
   if (!scenario || !rootTreeNode) return null;
 
