@@ -17,9 +17,14 @@ from collections.abc import Awaitable, Callable
 from pathlib import PurePath
 from typing import Any, cast
 
-import google.genai as genai
 import numpy as np
-from google.genai import types
+
+try:
+    import google.genai as genai
+    from google.genai import types
+except ImportError:  # pragma: no cover - optional dependency in tests
+    genai = None
+    types = None
 
 from achilles_api.gemini import generate_content_with_fallback
 from achilles_api.ingestion.parser import ParsedFile
@@ -40,6 +45,11 @@ ProgressCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
 # ---------------------------------------------------------------------------
 
 _MODEL = "gemini-2.5-flash"
+
+
+def _ensure_genai_available() -> None:
+    if genai is None or types is None:
+        raise RuntimeError("google-genai is required for document ingestion")
 
 _SYSTEM_PROMPT = """\
 You are a network analyst. You will receive the contents of documents from \
@@ -309,6 +319,7 @@ def _build_user_content(
     is added as an inline bytes part so Gemini can extract entities from
     diagrams and org charts.
     """
+    _ensure_genai_available()
     blocks: list[str | types.Part] = []
 
     # Image blocks first so the model sees the visual context before the
@@ -517,6 +528,7 @@ async def extract_graph(
     Exception
         If the API call itself fails.
     """
+    _ensure_genai_available()
     api_key = os.environ["GEMINI_API_KEY"]
     client = genai.Client(api_key=api_key)
 

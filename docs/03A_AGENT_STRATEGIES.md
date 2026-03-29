@@ -24,6 +24,8 @@ The state tree (Module 4) calls `select_events` at each tree node. The agent ret
 
 For scenario-generation agents, AI may propose a small set of realistic, high-impact plans as long as the cascade math and ranking stay deterministic.
 
+The preferred pattern is to build graph-grounded candidate paths first and let AI choose and explain only those candidates. That keeps every scenario tied to a real dependency path, isolation cut, or converging failure mechanism instead of producing unrelated node sequences.
+
 ---
 
 ## Agent 1: Critical Node Attacker

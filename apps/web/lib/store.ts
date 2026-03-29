@@ -213,6 +213,14 @@ function completeUploadReveal(): void {
     driveFolder: completion.drive_folder ?? null,
   });
   closeUploadSocket();
+
+  if (typeof window !== "undefined") {
+    window.setTimeout(() => {
+      const state = useAchillesStore.getState();
+      if (!state.sessionId || state.exploring) return;
+      void state.runExploration();
+    }, 0);
+  }
 }
 
 function mergePreviewGraph(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 from achilles_api.agents.base import Agent, AgentBrief
@@ -173,6 +175,58 @@ class TestMonteCarloAgent:
         assert metadata.scenario_title
         assert metadata.expected_outcome
 
+    def test_fallback_candidates_follow_real_dependency_paths(
+        self,
+        small_graph: Graph,
+    ) -> None:
+        cfg = MCConfig(branching_factor=4, max_depth=4)
+        brief = brief_monte_carlo(cfg)
+        agent = MonteCarloAgent(brief, cfg, graph=small_graph)
+
+        plans = agent._get_or_build_plans(small_graph)
+        assert plans
+
+        edge_pairs = {(edge.from_id, edge.to_id) for edge in small_graph.edges}
+        for plan in plans:
+            node_steps = [
+                step.event.target
+                for step in plan.steps
+                if isinstance(step.event.target, str)
+            ]
+            for left, right in itertools.pairwise(node_steps):
+                assert (left, right) in edge_pairs
+            assert plan.summary
+            assert plan.outcome
+
+    def test_ai_payload_can_only_select_graph_grounded_candidates(
+        self,
+        small_graph: Graph,
+    ) -> None:
+        cfg = MCConfig(branching_factor=4, max_depth=3)
+        brief = brief_monte_carlo(cfg)
+        agent = MonteCarloAgent(brief, cfg, graph=small_graph)
+
+        candidates = agent._build_candidate_catalog(small_graph)
+        assert candidates
+        candidate = candidates[0]
+
+        payload = {
+            "scenarios": [
+                {
+                    "candidate_id": candidate.candidate_id,
+                    "title": "Chosen scenario",
+                    "summary": "Uses a real dependency chain.",
+                    "outcome": "Leads to a clear downstream operating failure.",
+                    "step_descriptions": ["Step follows the dependency path."]
+                    * len(candidate.events),
+                }
+            ]
+        }
+
+        plans = agent._parse_scenario_payload(payload, candidates)
+        assert len(plans) == 1
+        assert [step.event for step in plans[0].steps] == candidate.events
+
 
 # ---------------------------------------------------------------------------
 # Briefing & registry integration tests
@@ -287,7 +341,7 @@ class TestFullMCPipeline:
         assert len(mc_nodes) > 0
 
     def test_mc_agent_keeps_tree_compact(self, small_graph: Graph) -> None:
-        from nexus_api.engine.state_tree import ExplorationConfig, build_state_tree
+        from achilles_api.engine.state_tree import ExplorationConfig, build_state_tree
 
         cfg = MCConfig(branching_factor=6, max_depth=4)
         brief = brief_monte_carlo(cfg)
