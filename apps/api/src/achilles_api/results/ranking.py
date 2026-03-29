@@ -856,6 +856,7 @@ def build_final_report(
                 "depth": tn.depth,
                 "agent": tn.agent,
                 "scenario_title": tn.scenario_title,
+                "step_description": tn.step_description,
                 "expected_outcome": tn.expected_outcome,
                 "event_summary": (f"{tn.event.action} {tn.event.target}" if tn.event else "root"),
                 "failed_count": tn.failed_count,

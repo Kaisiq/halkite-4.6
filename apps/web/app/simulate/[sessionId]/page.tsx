@@ -15,6 +15,7 @@ interface TreeNode {
   event_key: string;
   event_summary: string;
   scenario_title?: string;
+  step_description?: string;
   expected_outcome?: string;
   failed_count: number;
   depth: number;
@@ -165,7 +166,7 @@ function TreeBranch({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[var(--text)]">
-                  {node.depth === 0 ? "Initial organization state" : node.event_summary}
+                  {node.depth === 0 ? "Initial organization state" : (node.step_description || node.event_summary)}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
                   {node.expected_outcome || node.scenario_title || "Dependency pressure continues through this branch."}
@@ -253,6 +254,7 @@ export default function SimulatePage() {
       event_summary?: string;
       failed_count?: number;
       scenario_title?: string;
+      step_description?: string;
       expected_outcome?: string;
     }>;
 
@@ -264,6 +266,7 @@ export default function SimulatePage() {
       event_key: formatTreeEventSummary(node.event_summary, graph),
       event_summary: formatTreeEventSummary(node.event_summary, graph),
       scenario_title: node.scenario_title,
+      step_description: node.step_description,
       expected_outcome: node.expected_outcome,
       failed_count: node.failed_count ?? 0,
       parent_id: parentByNodeId.get(node.id) ?? null,

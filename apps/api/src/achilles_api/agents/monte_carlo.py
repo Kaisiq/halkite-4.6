@@ -41,7 +41,8 @@ Important rules:
 - Do not invent new steps, nodes, edges, or actions.
 - Keep the exact event order from the chosen candidate.
 - Every scenario must describe one clear business outcome.
-- Every step description must explain the causal logic of that step.
+- Every step description must be a plain-English sentence about what happens in the organization, not a technical command like "kill node X".
+- Each step must connect logically to the previous one and explain the causal bridge between them.
 - Prefer a few severe, easy-to-follow branches over broad coverage.
 - Return valid JSON only.
 """
@@ -90,6 +91,7 @@ class MonteCarloAgent(Agent):
         super().__init__(brief)
         self.mc_config: MCConfig = mc_config
         self._initial_graph: Graph | None = graph.deep_copy() if graph is not None else None
+        self._planning_graph: Graph | None = None
         self._vulnerability_report: VulnerabilityReport | None = vulnerability_report
         self._scenario_plans: list[ScenarioPlan] | None = None
 
@@ -149,6 +151,7 @@ class MonteCarloAgent(Agent):
             source_graph = graph.deep_copy()
         if self._initial_graph is not None:
             source_graph.reset()
+        self._planning_graph = source_graph.deep_copy()
 
         candidates = self._build_candidate_catalog(source_graph)
         plans = self._generate_ai_scenario_plans(source_graph, candidates)
@@ -269,6 +272,7 @@ class MonteCarloAgent(Agent):
                         f"title_hint: {candidate.title_hint}",
                         f"summary_hint: {candidate.summary_hint}",
                         f"outcome_hint: {candidate.outcome_hint}",
+                        "preferred_style: plain-English, context-aware scenario sentences",
                         "events:",
                         *step_lines,
                     ]
@@ -320,6 +324,7 @@ class MonteCarloAgent(Agent):
                     description = descriptions[step_index].strip()
                 if not description:
                     description = self._default_step_description(candidate, step_index)
+                description = self._normalize_step_description(candidate, step_index, description)
                 steps.append(
                     PlannedStep(
                         event=event,
@@ -473,27 +478,16 @@ class MonteCarloAgent(Agent):
                     kind="edge_isolation",
                     title_hint=f"{self._node_name(graph, edge.to_id)} becomes isolated",
                     summary_hint=(
-                        f"The dependency link from "
-                        f"{self._node_name(graph, edge.from_id)} to "
-                        f"{self._node_name(graph, edge.to_id)} is "
-                        f"severed, isolating a key downstream path."
+                        f"{self._node_name(graph, edge.to_id)} loses a critical support link from "
+                        f"{self._node_name(graph, edge.from_id)}, isolating a real downstream path in the organization."
                     ),
                     outcome_hint=(
-                        f"{self._node_name(graph, path[-1])} loses "
-                        f"upstream support and the dependent "
-                        f"capability degrades."
+                        f"{self._node_name(graph, path[-1])} ends up exposed because upstream support is no longer available."
                     ),
                     causal_path=path,
-                    events=[
-                        Event(
-                            target={"from": edge.from_id, "to": edge.to_id},
-                            action="cut_edge",
-                        ),
-                    ],
+                    events=[Event(target={"from": edge.from_id, "to": edge.to_id}, action="cut_edge")],
                     step_outcomes=[
-                        f"The support path into "
-                        f"{self._node_name(graph, edge.to_id)} is "
-                        f"broken, exposing downstream operations."
+                        self._edge_break_outcome(graph, edge.from_id, edge.to_id, path[-1])
                     ],
                     score=(
                         self._path_score(path, adjacency, graph, node_priority)
@@ -521,12 +515,9 @@ class MonteCarloAgent(Agent):
             terminal = shared[0] if shared else None
             causal_path = [pair.node_a, pair.node_b]
             step_outcomes = [
-                "Simultaneous failure removes two reinforcing "
-                "supports from the organization.",
+                self._compound_step_outcome(graph, pair.node_a, pair.node_b),
             ]
-            events = [
-                Event(target=[pair.node_a, pair.node_b], action="kill"),
-            ]
+            events = [Event(target=[pair.node_a, pair.node_b], action="kill")]
 
             not_pair = terminal not in {pair.node_a, pair.node_b}
             if terminal and not_pair and len(events) < self.mc_config.max_depth:
@@ -536,11 +527,7 @@ class MonteCarloAgent(Agent):
                     )
                 )
                 causal_path.append(terminal)
-                step_outcomes.append(
-                    f"{self._node_name(graph, terminal)} becomes "
-                    f"the shared downstream bottleneck and tips "
-                    f"into failure."
-                )
+                step_outcomes.append(self._terminal_outcome(graph, terminal))
 
             score = pair.synergy + sum(
                 node_priority.get(node_id, 0.0) for node_id in causal_path
@@ -551,15 +538,11 @@ class MonteCarloAgent(Agent):
                     kind="compound_convergence",
                     title_hint="Reinforcing failures converge on one capability",
                     summary_hint=(
-                        f"{self._node_name(graph, pair.node_a)} and "
-                        f"{self._node_name(graph, pair.node_b)} fail "
-                        f"together, stacking pressure on the same "
-                        f"downstream capability."
+                        f"{self._node_name(graph, pair.node_a)} and {self._node_name(graph, pair.node_b)} weaken the same downstream path, "
+                        "so the second shock lands before the first one can be absorbed."
                     ),
                     outcome_hint=(
-                        "The combined shock produces a sharper "
-                        "collapse than either failure would create "
-                        "on its own."
+                        f"The combined disruption produces a sharper business failure than either disruption would cause alone."
                     ),
                     causal_path=causal_path,
                     events=events,
@@ -588,33 +571,18 @@ class MonteCarloAgent(Agent):
         for idx, node_id in enumerate(causal_path):
             if idx + 1 < len(causal_path):
                 next_id = causal_path[idx + 1]
-                step_outcomes.append(
-                    f"Pressure moves from "
-                    f"{self._node_name(graph, node_id)} into "
-                    f"{self._node_name(graph, next_id)}, "
-                    f"which depends on it."
-                )
+                step_outcomes.append(self._causal_transition_outcome(graph, node_id, next_id))
             else:
-                step_outcomes.append(
-                    f"{self._node_name(graph, terminal_id)} loses "
-                    f"enough support to become the terminal "
-                    f"business failure in this branch."
-                )
+                step_outcomes.append(self._terminal_outcome(graph, terminal_id))
 
-        start_name = self._node_name(graph, start_id)
-        terminal_name = self._node_name(graph, terminal_id)
-        title = (
-            f"{start_name} disruption cascades to {terminal_name}"
-        )
+        title = f"{self._node_name(graph, start_id)} disruption cascades to {self._node_name(graph, terminal_id)}"
         summary = (
-            f"This branch follows the real dependency path "
-            f"from {start_name} to {terminal_name} instead of "
-            f"mixing unrelated node failures."
+            f"This branch follows a real dependency path from {self._node_name(graph, start_id)} to "
+            f"{self._node_name(graph, terminal_id)}, with each step building on the previous disruption."
         )
-        terminal_layer = graph.get_node(terminal_id).layer.lower()
         outcome = (
-            f"The disruption reaches {terminal_name} and causes "
-            f"a clear {terminal_layer}-layer operating failure."
+            f"The disruption reaches {self._node_name(graph, terminal_id)} and ends in "
+            f"{self._business_impact_phrase(graph.get_node(terminal_id))}."
         )
 
         return ScenarioCandidate(
@@ -633,31 +601,33 @@ class MonteCarloAgent(Agent):
         event = candidate.events[step_index]
         if event.action == "cut_edge":
             target = cast("dict[str, str]", event.target)
-            return (
-                f"Sever the support link from {target['from']} "
-                f"to {target['to']} so the downstream path "
-                f"loses a real dependency."
-            )
+            return self._edge_break_description(candidate, step_index, target["from"], target["to"])
 
-        target_ids = (
-            event.target
-            if isinstance(event.target, list)
-            else [cast("str", event.target)]
-        )
-        target_label = ", ".join(target_ids)
+        target_ids = event.target if isinstance(event.target, list) else [cast("str", event.target)]
         if step_index == 0:
-            return (
-                f"Trigger the branch at {target_label}, the "
-                f"start of the selected causal path."
-            )
+            if len(target_ids) > 1:
+                return self._compound_step_description(candidate, step_index, target_ids)
+            return self._opening_step_description(candidate, step_index, target_ids[0])
 
-        previous_ids = candidate.events[step_index - 1].target_node_ids()
-        previous_label = ", ".join(previous_ids)
-        return (
-            f"Follow the pressure from {previous_label} into "
-            f"{target_label}, which sits next on the "
-            f"dependency path."
-        )
+        return self._follow_on_step_description(candidate, step_index, target_ids[0])
+
+    def _normalize_step_description(
+        self,
+        candidate: ScenarioCandidate,
+        step_index: int,
+        description: str,
+    ) -> str:
+        normalized = " ".join(description.split())
+        if not normalized:
+            return self._default_step_description(candidate, step_index)
+
+        lowered = normalized.lower()
+        if any(fragment in lowered for fragment in ("kill ", "damage ", "cut_edge", "node ")):
+            return self._default_step_description(candidate, step_index)
+
+        if not normalized.endswith((".", "!", "?")):
+            normalized += "."
+        return normalized
 
     def _make_node_event(self, graph: Graph, node_id: str, *, preferred_action: str) -> Event:
         allowed = self._allowed_actions(graph)
@@ -873,14 +843,160 @@ class MonteCarloAgent(Agent):
         if event.action == "cut_edge":
             target = cast("dict[str, str]", event.target)
             return (
-                f"Cut edge {self._node_name(graph, target['from'])} -> "
+                f"{self._node_name(graph, target['from'])} can no longer support "
                 f"{self._node_name(graph, target['to'])}"
             )
 
         node_names = [self._node_name(graph, node_id) for node_id in event.target_node_ids()]
         if event.action == "damage":
-            return f"Damage {' + '.join(node_names)}"
-        return f"Kill {' + '.join(node_names)}"
+            return f"{' and '.join(node_names)} become impaired"
+        return f"{' and '.join(node_names)} become unavailable"
+
+    def _opening_step_description(
+        self,
+        candidate: ScenarioCandidate,
+        step_index: int,
+        node_id: str,
+    ) -> str:
+        current_node = self._candidate_node(node_id)
+        next_node = self._candidate_next_node(candidate, step_index)
+        trigger = self._trigger_phrase(current_node)
+        if next_node is None:
+            return f"{trigger}, immediately putting {self._node_brief(current_node)} at risk."
+        return f"{trigger}, which removes support for {self._node_brief(next_node)} and starts the cascade."
+
+    def _follow_on_step_description(
+        self,
+        candidate: ScenarioCandidate,
+        step_index: int,
+        node_id: str,
+    ) -> str:
+        current_node = self._candidate_node(node_id)
+        previous_node = self._candidate_previous_node(candidate, step_index)
+        next_node = self._candidate_next_node(candidate, step_index)
+        if previous_node is None:
+            return self._opening_step_description(candidate, step_index, node_id)
+
+        bridge = self._dependency_bridge(previous_node, current_node)
+        if next_node is None:
+            return (
+                f"With {self._node_brief(previous_node)} already weakened, {self._node_brief(current_node)} {bridge}, "
+                f"leading to {self._business_impact_phrase(current_node)}."
+            )
+        return (
+            f"Because {self._node_brief(previous_node)} is already disrupted, {self._node_brief(current_node)} {bridge}, "
+            f"which then puts {self._node_brief(next_node)} under pressure."
+        )
+
+    def _compound_step_description(
+        self,
+        candidate: ScenarioCandidate,
+        step_index: int,
+        node_ids: list[str],
+    ) -> str:
+        nodes = [self._candidate_node(node_id) for node_id in node_ids]
+        labels = " and ".join(self._node_brief(node) for node in nodes)
+        next_node = self._candidate_next_node(candidate, step_index)
+        if next_node is None:
+            return f"{labels} are disrupted at the same time, creating a combined shock the organization cannot absorb cleanly."
+        return (
+            f"{labels} are disrupted at the same time, so {self._node_brief(next_node)} loses two supports at once."
+        )
+
+    def _edge_break_description(
+        self,
+        candidate: ScenarioCandidate,
+        step_index: int,
+        from_id: str,
+        to_id: str,
+    ) -> str:
+        source = self._candidate_node(from_id)
+        target = self._candidate_node(to_id)
+        next_node = self._candidate_next_node(candidate, step_index + 1)
+        if next_node is None:
+            return f"The link from {self._node_brief(source)} to {self._node_brief(target)} breaks, leaving that capability exposed."
+        return (
+            f"The link from {self._node_brief(source)} to {self._node_brief(target)} breaks, which starts to starve {self._node_brief(next_node)} of support."
+        )
+
+    def _causal_transition_outcome(self, graph: Graph, from_id: str, to_id: str) -> str:
+        from_node = graph.get_node(from_id)
+        to_node = graph.get_node(to_id)
+        return f"Once {self._node_brief(from_node)} is weakened, {self._node_brief(to_node)} starts to slip because it depends on that support."
+
+    def _terminal_outcome(self, graph: Graph, node_id: str) -> str:
+        node = graph.get_node(node_id)
+        return f"{self._node_brief(node)} can no longer hold, leading to {self._business_impact_phrase(node)}."
+
+    def _edge_break_outcome(self, graph: Graph, from_id: str, to_id: str, terminal_id: str) -> str:
+        target = graph.get_node(to_id)
+        terminal = graph.get_node(terminal_id)
+        return f"Without the support coming from {self._node_name(graph, from_id)}, {self._node_brief(target)} becomes isolated and the branch ends in {self._business_impact_phrase(terminal)}."
+
+    def _compound_step_outcome(self, graph: Graph, node_a: str, node_b: str) -> str:
+        first = graph.get_node(node_a)
+        second = graph.get_node(node_b)
+        return f"{self._node_brief(first)} and {self._node_brief(second)} fail together, removing two supporting capabilities from the same operating path."
+
+    @staticmethod
+    def _business_impact_phrase(node: Node) -> str:
+        layer = node.layer.strip().lower()
+        if any(keyword in layer for keyword in ("people", "human", "team", "staff")):
+            return f"a people-side delivery gap around {node.name}"
+        if any(keyword in layer for keyword in ("tech", "it", "platform", "system", "application")):
+            return f"a technology outage around {node.name}"
+        if any(keyword in layer for keyword in ("supply", "vendor", "partner", "procurement")):
+            return f"a supply-side disruption around {node.name}"
+        if any(keyword in layer for keyword in ("client", "customer", "sales", "account")):
+            return f"a client-facing loss around {node.name}"
+        if any(keyword in layer for keyword in ("finance", "payment", "billing")):
+            return f"a financial operations failure around {node.name}"
+        return f"an operational failure around {node.name}"
+
+    @staticmethod
+    def _node_brief(node: Node) -> str:
+        function = str(node.meta.get("function", "")).strip() if isinstance(node.meta, dict) else ""
+        if function:
+            return f"{node.name} ({function})"
+        return node.name
+
+    def _trigger_phrase(self, node: Node) -> str:
+        layer = node.layer.strip().lower()
+        if any(keyword in layer for keyword in ("people", "human", "team", "staff")):
+            return f"{self._node_brief(node)} becomes unexpectedly unavailable"
+        if any(keyword in layer for keyword in ("tech", "it", "platform", "system", "application")):
+            return f"{self._node_brief(node)} goes down"
+        if any(keyword in layer for keyword in ("supply", "vendor", "partner", "procurement")):
+            return f"{self._node_brief(node)} stops delivering"
+        if any(keyword in layer for keyword in ("client", "customer", "sales", "account")):
+            return f"{self._node_brief(node)} drops out of the operating loop"
+        return f"{self._node_brief(node)} is disrupted"
+
+    @staticmethod
+    def _dependency_bridge(previous_node: Node, current_node: Node) -> str:
+        if previous_node.layer.strip().lower() == current_node.layer.strip().lower():
+            return "loses backup inside the same operating area"
+        return f"loses the support it normally receives from {previous_node.name}"
+
+    def _candidate_node(self, node_id: str) -> Node:
+        graph = self._planning_graph or self._initial_graph
+        if graph is None:
+            raise KeyError(f"Node {node_id!r} not available without initial graph")
+        return graph.get_node(node_id)
+
+    def _candidate_previous_node(self, candidate: ScenarioCandidate, step_index: int) -> Node | None:
+        if step_index <= 0:
+            return None
+        previous_ids = candidate.events[step_index - 1].target_node_ids()
+        if not previous_ids:
+            return None
+        return self._candidate_node(previous_ids[0])
+
+    def _candidate_next_node(self, candidate: ScenarioCandidate, step_index: int) -> Node | None:
+        next_index = step_index + 1
+        if next_index >= len(candidate.causal_path):
+            return None
+        return self._candidate_node(candidate.causal_path[next_index])
 
     @staticmethod
     def _node_name(graph: Graph, node_id: str) -> str:
