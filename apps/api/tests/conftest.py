@@ -1,10 +1,10 @@
-"""Shared test fixtures for the Halkantir API test suite."""
+"""Shared test fixtures for the Achilles API test suite."""
 
 from __future__ import annotations
 
 import pytest
 
-from nexus_api.models.graph import Edge, Graph, Node
+from achilles_api.models.graph import Edge, Graph, Node
 
 
 @pytest.fixture

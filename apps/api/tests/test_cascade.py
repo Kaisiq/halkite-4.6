@@ -1,16 +1,16 @@
-"""Tests for the Halkantir cascade engine (Module 2A).
+"""Tests for the Achilles cascade engine (Module 2A).
 
 Covers ``apply_event``, ``cascade``, and ``cascade_compound`` from
-``nexus_api.engine.cascade``.
+``achilles_api.engine.cascade``.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from nexus_api.engine.cascade import apply_event, cascade, cascade_compound
-from nexus_api.models.events import Event
-from nexus_api.models.graph import Edge, Graph, Node
+from achilles_api.engine.cascade import apply_event, cascade, cascade_compound
+from achilles_api.models.events import Event
+from achilles_api.models.graph import Edge, Graph, Node
 
 # ======================================================================
 # apply_event

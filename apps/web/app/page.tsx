@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { AnimatedBeam } from "@/components/ui/animated-beam";
 import { extractErrorMessage, joinWaitlist } from "@/lib/api";
-import { useNexusStore } from "@/lib/store";
+import { useAchillesStore } from "@/lib/store";
 
 const ACCEPT_TYPES = [
   ".pdf",
@@ -182,7 +182,7 @@ export default function DataInputPage() {
     followUpQuestions,
     confidence,
     driveFolder,
-  } = useNexusStore();
+  } = useAchillesStore();
 
   const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
@@ -361,7 +361,7 @@ export default function DataInputPage() {
     setDriveDialogOpen(false);
     setDriveFolderId("");
     setDriveError(null);
-    useNexusStore.setState({ driveFolder: null, uploadError: null });
+    useAchillesStore.setState({ driveFolder: null, uploadError: null });
     setFiles((prev) => {
       const existing = new Set(prev.map((file) => file.name + file.size));
       const deduped = arr.filter(
@@ -519,7 +519,7 @@ export default function DataInputPage() {
     setDriveError(null);
     setActiveSource("drive");
     setFiles([]);
-    useNexusStore.setState({ driveFolder: null, uploadError: null });
+    useAchillesStore.setState({ driveFolder: null, uploadError: null });
     importGoogleDriveFolder(
       driveAccessTokenRef.current,
       driveFolderId.trim(),
@@ -569,13 +569,13 @@ export default function DataInputPage() {
           <div className="flex items-center gap-3">
             <Image
               src="/logo.svg"
-              alt="Halkantir"
+              alt="Achilles"
               width={32}
               height={40}
               className="invert"
               style={{ width: 32, height: "auto" }}
             />
-            <span className="text-[17px] font-semibold">Halkantir</span>
+            <span className="text-[17px] font-semibold">Achilles</span>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -635,7 +635,7 @@ export default function DataInputPage() {
             <div className="relative">
               <p className="mono-label">Launch Access</p>
               <h2 className="display-face mt-4 text-[clamp(2rem,4vw,2.8rem)] leading-[1.02] tracking-[-0.03em]">
-                Request first-contact when Halkantir goes live.
+                Request first-contact when Achilles goes live.
               </h2>
               <p className="mt-4 max-w-sm text-[15px] leading-[1.7] text-white/68">
                 Leave a work email and we will notify you when launch access
@@ -755,7 +755,7 @@ export default function DataInputPage() {
                 Enterprise-first pricing by company size.
               </h2>
               <p className="mt-4 text-[15px] leading-[1.7] text-[var(--text-muted)] sm:mt-6 sm:text-[17px]">
-                Halkantir is sold on annual terms, priced primarily by employee
+                Achilles is sold on annual terms, priced primarily by employee
                 count, and shaped to keep smaller teams moving while preserving
                 enterprise delivery depth.
               </p>
@@ -1539,7 +1539,7 @@ function IntegrationDiagram() {
             className="mb-3"
             style={{ width: 32, height: "auto" }}
           />
-          <span className="text-[17px] font-semibold">Halkantir</span>
+          <span className="text-[17px] font-semibold">Achilles</span>
           <span className="text-[11px] text-white/60">Resilience Engine</span>
         </div>
 
@@ -1664,7 +1664,7 @@ function IntegrationDiagram() {
             className="mb-2"
             style={{ width: 28, height: "auto" }}
           />
-          <span className="text-[15px] font-semibold">Halkantir</span>
+          <span className="text-[15px] font-semibold">Achilles</span>
           <span className="text-[10px] text-white/60">Resilience Engine</span>
         </div>
 

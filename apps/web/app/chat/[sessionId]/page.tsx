@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
-import { useNexusStore } from "@/lib/store";
+import { useAchillesStore } from "@/lib/store";
 import type { ChatMessage } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -217,7 +217,7 @@ export default function ChatPage() {
     sendChatMessage,
     loadChatHistory,
     clearChat,
-  } = useNexusStore();
+  } = useAchillesStore();
 
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);

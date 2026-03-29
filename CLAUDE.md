@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Summary
 
-Halkantir is an organizational stress-testing platform. Users upload documents about their organization, AI builds a dependency graph, deterministic math computes weakpoints/cascades/adversarial simulations, and AI explains outputs with narratives. The core principle: **AI generates. Math computes. AI explains.** — AI never touches the numbers. See `docs/BUSINESS_PLAN.md` for the full pitch kit.
+Achilles is an organizational stress-testing platform. Users upload documents about their organization, AI builds a dependency graph, deterministic math computes weakpoints/cascades/adversarial simulations, and AI explains outputs with narratives. The core principle: **AI generates. Math computes. AI explains.** — AI never touches the numbers. See `docs/BUSINESS_PLAN.md` for the full pitch kit.
 
 ## Docs as Source of Truth
 
@@ -27,8 +27,8 @@ Read the relevant files in `docs/` before making changes. The `docs/` directory 
 ### Individual app dev servers
 
 ```bash
-pnpm --filter @halkantir/api dev   # FastAPI dev server (apps/api)
-pnpm --filter @halkantir/web dev   # Next.js dev server (apps/web)
+pnpm --filter @achilles/api dev   # FastAPI dev server (apps/api)
+pnpm --filter @achilles/web dev   # Next.js dev server (apps/web)
 ```
 
 ### Build, lint, typecheck (via Turbo across workspaces)
@@ -56,7 +56,7 @@ python -m mypy src tests               # typecheck
 
 Monorepo managed by **pnpm workspaces** + **Turbo**. Two apps:
 
-- **`apps/api`** — Python 3.14 + FastAPI backend. Source in `apps/api/src/nexus_api/`. Package name: `nexus-api`. Uses setuptools with editable install. Entry point: `main.py`.
+- **`apps/api`** — Python 3.14 + FastAPI backend. Source in `apps/api/src/achilles_api/`. Package name: `achilles-api`. Uses setuptools with editable install. Entry point: `main.py`.
 - **`apps/web`** — Next.js 16 + React 19 frontend. Uses App Router (`apps/web/app/`). State via Zustand. Visualization via D3 and Recharts. Styled with Tailwind CSS v4.
 
 ### Module pipeline (maps to `docs/` files)

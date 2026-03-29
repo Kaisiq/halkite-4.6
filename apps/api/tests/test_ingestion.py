@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from nexus_api.ingestion.extractor import build_draft_graph, _chunk_single_large_file
-from nexus_api.ingestion.parser import ParsedFile
+from achilles_api.ingestion.extractor import build_draft_graph, _chunk_single_large_file
+from achilles_api.ingestion.parser import ParsedFile
 
 
 def test_build_draft_graph_seeds_nodes_and_edges() -> None:
@@ -28,11 +28,11 @@ def test_build_draft_graph_seeds_nodes_and_edges() -> None:
 
 def test_chunk_single_large_file_splits_long_text(monkeypatch) -> None:
     monkeypatch.setattr(
-        "nexus_api.ingestion.extractor._SINGLE_FILE_CHUNK_THRESHOLD_CHARS",
+        "achilles_api.ingestion.extractor._SINGLE_FILE_CHUNK_THRESHOLD_CHARS",
         100,
     )
     monkeypatch.setattr(
-        "nexus_api.ingestion.extractor._SINGLE_FILE_CHUNK_TARGET_CHARS",
+        "achilles_api.ingestion.extractor._SINGLE_FILE_CHUNK_TARGET_CHARS",
         80,
     )
 

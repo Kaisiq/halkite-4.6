@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Containerized on-prem deployment for Halkantir. The goal is to hand clients a
+Containerized on-prem deployment for Achilles. The goal is to hand clients a
 repeatable Docker-based package that runs the FastAPI backend and Next.js
 frontend with minimal environment-specific changes.
 
@@ -25,10 +25,10 @@ browsers only need to reach the web service.
 Client Browser
       |
       v
-Halkantir Web Container (Next.js, port 3000)
+Achilles Web Container (Next.js, port 3000)
       |
       v
-Halkantir API Container (FastAPI, port 8000)
+Achilles API Container (FastAPI, port 8000)
       |
       v
 MongoDB Container (port 27017, persistent volume)
@@ -42,7 +42,7 @@ MongoDB Container (port 27017, persistent volume)
 
 - `GEMINI_API_KEY`: required when AI-backed ingestion or narrative generation is enabled.
 - `GEMINI_MODEL_FALLBACKS`: optional comma-separated ordered fallback list used when the primary Gemini model returns `429 RESOURCE_EXHAUSTED`. Default fallback chain is `gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash`.
-- `MONGODB_URI`: MongoDB connection string. Default `mongodb://mongo:27017/halkantir` in Docker. When unset, the API falls back to in-memory session storage (sessions lost on restart).
+- `MONGODB_URI`: MongoDB connection string. Default `mongodb://mongo:27017/achilles` in Docker. When unset, the API falls back to in-memory session storage (sessions lost on restart).
 - `API_HOST`: bind host inside the container. Default `0.0.0.0`.
 - `API_PORT`: bind port inside the container. Default `8000`.
 - `LOG_LEVEL`: Uvicorn log level. Default `info`. Uppercase values are normalized in the container.

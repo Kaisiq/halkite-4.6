@@ -1,4 +1,4 @@
-# Halkantir — 3-Minute Jury Pitch
+# Achilles — 3-Minute Jury Pitch
 
 Use the six core slides below. Keep each slide light and speak the narrative around it. Target roughly 25 to 30 seconds per slide.
 
@@ -88,4 +88,4 @@ Our immediate goal is to win the first pilot as fast as possible. We start with 
 
 ## Closing Line
 
-Halkantir helps enterprises move from manually guessing where they are fragile to deterministically seeing how failure spreads and what to fix first.
+Achilles helps enterprises move from manually guessing where they are fragile to deterministically seeing how failure spreads and what to fix first.

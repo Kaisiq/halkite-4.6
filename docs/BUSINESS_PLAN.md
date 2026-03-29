@@ -14,15 +14,15 @@ The problem isn't the risks you know about. It's the ones you don't. A single-so
 
 - **NIS2** (EU Directive 2022/2555) took effect October 2024 and mandates cybersecurity risk management, supply chain security assessments, and business continuity planning for all medium-to-large entities across 18 critical sectors. First formal compliance audits are due **June 30, 2026**. Fines reach **€10M or 2% of global annual turnover**.
 - **DORA** (Digital Operational Resilience Act) has been directly applicable since January 17, 2025, requiring all EU financial entities — banks, insurers, investment firms, payment providers, and their critical ICT suppliers — to implement comprehensive operational resilience frameworks, including third-party dependency mapping, scenario-based testing, and incident management.
-- These regulations create a **forced buying event**. Companies don't have a choice — they need to map dependencies, assess risks, and test resilience. The question is whether they do it with consultants over 6 months, or with Halkantir in an hour.
+- These regulations create a **forced buying event**. Companies don't have a choice — they need to map dependencies, assess risks, and test resilience. The question is whether they do it with consultants over 6 months, or with Achilles in an hour.
 
-**The gap in the market:** Existing business continuity management (BCM) tools focus on _plans and documents_ — they help you write a disaster recovery playbook. Halkantir focuses on _structural analysis_ — it finds the disaster scenarios you didn't know to plan for.
+**The gap in the market:** Existing business continuity management (BCM) tools focus on _plans and documents_ — they help you write a disaster recovery playbook. Achilles focuses on _structural analysis_ — it finds the disaster scenarios you didn't know to plan for.
 
 ---
 
 ## 2. THE SOLUTION
 
-Halkantir is an organizational stress-testing platform. You upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists, even whiteboard photos — and Halkantir:
+Achilles is an organizational stress-testing platform. You upload whatever you have about your organization — org charts, spreadsheets, system diagrams, supplier lists, even whiteboard photos — and Achilles:
 
 1. **AI builds the graph** — reads unstructured data and constructs a dependency network of people, teams, systems, suppliers, and processes
 2. **Math finds the truth** — deterministic graph algorithms (no AI guessing, no hallucination) identify every bridge node, every fragile cluster, every compound failure point
@@ -35,7 +35,7 @@ Halkantir is an organizational stress-testing platform. You upload whatever you 
 **The two-phase value proposition:**
 
 - **Phase 1 — Risk audit:** First use finds your blind spots. Single points of failure, brittle clusters, compound vulnerabilities. This alone is worth what consultants charge for weeks of work.
-- **Phase 2 — Strategic development:** From then on, every reorg, every new hire, every supplier change, every M&A decision gets stress-tested before you commit. Halkantir becomes your structural decision-making layer.
+- **Phase 2 — Strategic development:** From then on, every reorg, every new hire, every supplier change, every M&A decision gets stress-tested before you commit. Achilles becomes your structural decision-making layer.
 
 _First it helps you survive. Then it helps you move faster._
 
@@ -47,7 +47,7 @@ _First it helps you survive. Then it helps you move faster._
 
 **Who:** Banks, telcos, utilities, insurers, healthcare providers, critical infrastructure operators across the EU.
 
-**Why they buy:** NIS2 and DORA compliance is mandatory. They need dependency mapping, risk assessments, supply chain security reviews, and business continuity testing — all of which Halkantir provides as automated output. The alternative is hiring consultants at €1,500/day for months.
+**Why they buy:** NIS2 and DORA compliance is mandatory. They need dependency mapping, risk assessments, supply chain security reviews, and business continuity testing — all of which Achilles provides as automated output. The alternative is hiring consultants at €1,500/day for months.
 
 **Sectors (in priority order):**
 
@@ -74,17 +74,17 @@ _First it helps you survive. Then it helps you move faster._
 
 The global business continuity management solutions market is valued at approximately **$2.6B in 2026**, growing at **~11% CAGR** to reach **~$4B by 2030**. The broader risk management software market is projected at **$21B+ by 2026**.
 
-Halkantir targets a specific wedge of this market: **automated structural risk analysis**, which sits between traditional BCM tools (plan-focused) and GRC platforms (compliance-focused). This is a greenfield category.
+Achilles targets a specific wedge of this market: **automated structural risk analysis**, which sits between traditional BCM tools (plan-focused) and GRC platforms (compliance-focused). This is a greenfield category.
 
 ---
 
 ## 4. COMPETITIVE LANDSCAPE
 
-| Category         | Examples                                         | What they do                                                              | Halkantir advantage                                                                           |
+| Category         | Examples                                         | What they do                                                              | Achilles advantage                                                                           |
 | ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| BCM Software     | Fusion Risk Management, LogicManager, Quantivate | Plan creation, document management, recovery workflows                    | Halkantir _finds_ the risks; these tools help you _document_ the plan                         |
-| GRC Platforms    | MetricStream, SAI360, NAVEX                      | Compliance tracking, audit management, policy enforcement                 | Halkantir provides the structural analysis that feeds GRC workflows                           |
-| Consulting       | Big 4, Deloitte, KPMG                            | Manual dependency mapping, risk assessments                               | Weeks of work → 1 hour. Halkantir doesn't replace consultants but makes them 10x faster       |
+| BCM Software     | Fusion Risk Management, LogicManager, Quantivate | Plan creation, document management, recovery workflows                    | Achilles _finds_ the risks; these tools help you _document_ the plan                         |
+| GRC Platforms    | MetricStream, SAI360, NAVEX                      | Compliance tracking, audit management, policy enforcement                 | Achilles provides the structural analysis that feeds GRC workflows                           |
+| Consulting       | Big 4, Deloitte, KPMG                            | Manual dependency mapping, risk assessments                               | Weeks of work → 1 hour. Achilles doesn't replace consultants but makes them 10x faster       |
 | Plan A (analogy) | Plan A (plana.earth)                             | Carbon accounting — simple calculator that rides EU emissions regulations | Same playbook: simple tool that rides a regulatory wave (NIS2/DORA instead of CSRD/emissions) |
 
 **The moat:** The graph construction pipeline (AI reading unstructured org data) combined with the adversarial simulation engine (deterministic, not AI-guessed). Competitors would need to build both, and the simulation layer is pure algorithmic IP.
@@ -104,7 +104,7 @@ Halkantir targets a specific wedge of this market: **automated structural risk a
 **Pricing anchors:**
 
 - A compliance consultant costs €1,500/day × 30-60 days = **€45K-90K per assessment**
-- Halkantir delivers comparable output in hours
+- Achilles delivers comparable output in hours
 - Enterprise license: annual pricing by employee band, starting at **€35K/year** for enterprise accounts
 - Land with an initial assessment engagement, expand to ongoing monitoring
 
@@ -126,7 +126,7 @@ For the full packaging, billing cadence, triennial terms, and qualification rule
 
 ### The Plan A Playbook: Ride the Regulatory Wave
 
-Just as Plan A built a simple carbon calculator that became essential when EU emissions regulations hit, Halkantir builds a dependency analysis tool that becomes essential as NIS2 and DORA enforcement ramps up in 2025-2026.
+Just as Plan A built a simple carbon calculator that became essential when EU emissions regulations hit, Achilles builds a dependency analysis tool that becomes essential as NIS2 and DORA enforcement ramps up in 2025-2026.
 
 **Phase 1: First 10 Customers (Months 1-6)**
 
@@ -138,8 +138,8 @@ Just as Plan A built a simple carbon calculator that became essential when EU em
 
 **Phase 2: Scale (Months 6-18)**
 
-1. **Channel partnerships** — partner with consulting firms (Big 4, regional firms) who already do risk assessments manually. Halkantir makes them faster; they bring the clients.
-2. **Content marketing** — track regulatory framework changes, publish alerts when new requirements create new risk categories. Position Halkantir as the thought leader on structural organizational risk.
+1. **Channel partnerships** — partner with consulting firms (Big 4, regional firms) who already do risk assessments manually. Achilles makes them faster; they bring the clients.
+2. **Content marketing** — track regulatory framework changes, publish alerts when new requirements create new risk categories. Position Achilles as the thought leader on structural organizational risk.
 3. **Monitor pending regulatory changes** — stay ahead of what's coming next. Every new regulation is a new sales trigger.
 
 ### How We Reach Decision-Makers
@@ -154,7 +154,7 @@ Just as Plan A built a simple carbon calculator that became essential when EU em
 
 ## 7. RISK CATEGORIES (WHAT ACHILLES MAPS)
 
-Halkantir analyzes organizational risk across six categories:
+Achilles analyzes organizational risk across six categories:
 
 1. **People** — key person dependencies, single points of knowledge, succession gaps, hiring pipeline risks
 2. **Technology** — single-maintainer systems, unowned infrastructure, no failover, technical debt clusters, deployment dependencies
@@ -231,7 +231,7 @@ _"The theme of this hackathon is survival. And most companies don't die from one
 
 ### Product (40 seconds)
 
-_"Halkantir finds it before it finds you._
+_"Achilles finds it before it finds you._
 
 _You upload whatever you have about your organization — org charts, spreadsheets, documents. AI reads it all and builds a dependency graph. Then pure math takes over — deterministic algorithms that identify every bridge node, every fragile cluster, every pair of failures that together are catastrophic._
 
@@ -253,7 +253,7 @@ _"Enterprise licensing for regulated industries — on-prem, compliant, document
 
 ### Close (10 seconds)
 
-_"The first time you use Halkantir, it finds what's broken. From then on, every decision you make is stress-tested before you commit._
+_"The first time you use Achilles, it finds what's broken. From then on, every decision you make is stress-tested before you commit._
 
 _Prevent the predictable. Then move faster."_
 
@@ -266,7 +266,7 @@ _Prevent the predictable. Then move faster."_
 - **Status:** Transposition deadline was October 17, 2024. Many EU member states still completing national implementation.
 - **First compliance audits:** Target date June 30, 2026
 - **Scope:** 18 critical sectors, all medium-to-large entities. Includes energy, transport, banking, healthcare, digital infrastructure, telecom, manufacturing, and more.
-- **Key requirements relevant to Halkantir:**
+- **Key requirements relevant to Achilles:**
   - Risk assessments and security policies for information systems
   - Supply chain security — must evaluate cybersecurity posture of third-party vendors
   - Business continuity planning
@@ -278,7 +278,7 @@ _Prevent the predictable. Then move faster."_
 
 - **Status:** Directly applicable across all EU member states since January 17, 2025
 - **Scope:** 20+ types of financial entities — banks, insurance companies, investment firms, payment providers, crypto-asset service providers — plus their critical ICT third-party providers
-- **Key requirements relevant to Halkantir:**
+- **Key requirements relevant to Achilles:**
   - Comprehensive ICT risk management framework
   - Third-party dependency mapping and oversight
   - Scenario-based resilience testing
@@ -287,9 +287,9 @@ _Prevent the predictable. Then move faster."_
 - **Penalties:** Up to €10M or 2% of global revenue; management accountability
 - **DORA takes precedence** over NIS2 for financial sector entities
 
-### What this means for Halkantir
+### What this means for Achilles
 
-Both regulations mandate exactly what Halkantir provides: **dependency mapping, risk assessment, scenario-based testing, and business continuity planning.** The output of Halkantir maps directly to regulatory requirements, making the product not a nice-to-have but a compliance tool.
+Both regulations mandate exactly what Achilles provides: **dependency mapping, risk assessment, scenario-based testing, and business continuity planning.** The output of Achilles maps directly to regulatory requirements, making the product not a nice-to-have but a compliance tool.
 
 ---
 
@@ -297,7 +297,7 @@ Both regulations mandate exactly what Halkantir provides: **dependency mapping, 
 
 Based on the hackathon grading criteria (total: 115 points):
 
-| Category                          | Points | How Halkantir scores                                                                     |
+| Category                          | Points | How Achilles scores                                                                     |
 | --------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
 | **Innovative idea & originality** | 8      | Adversarial simulation on org graphs is novel — not BCM, not GRC, a new category         |
 | **Market research**               | 5      | NIS2, DORA, BCM market size ($2.6B), Plan A analogy, sector analysis                     |
@@ -322,7 +322,7 @@ Based on the hackathon grading criteria (total: 115 points):
 ## APPENDIX D: KEY TALKING POINTS FOR Q&A
 
 **"How is this different from existing risk management tools?"**
-Existing tools help you document plans for risks you already know about. Halkantir finds the risks you don't know about through structural graph analysis and adversarial simulation. We're not replacing BCM — we're the intelligence layer that tells BCM what to plan for.
+Existing tools help you document plans for risks you already know about. Achilles finds the risks you don't know about through structural graph analysis and adversarial simulation. We're not replacing BCM — we're the intelligence layer that tells BCM what to plan for.
 
 **"How do you handle data security?"**
 On-prem deployment option from day one. Data never leaves the organization. Segmented access by department. We can start in a garage with the level of security a bank requires.
@@ -334,7 +334,7 @@ The AI only does two things: parse documents into a graph, and explain results i
 Compliance deadline pressure. Companies facing June 2026 NIS2 audits need this yesterday. We lead with a paid assessment engagement, prove value immediately, convert to ongoing monitoring.
 
 **"What about the quality of input data?"**
-Garbage in, garbage out is real. But that's also a feature — if you can't even produce decent org data for Halkantir, that itself is a finding. The snowball method works: start with one department, expand outward. Perfect is the enemy of good.
+Garbage in, garbage out is real. But that's also a feature — if you can't even produce decent org data for Achilles, that itself is a finding. The snowball method works: start with one department, expand outward. Perfect is the enemy of good.
 
 **"How do you optimize token usage?"**
 [Be prepared to show awareness of AI costs — batch processing, caching parsed graphs, only using AI for initial parsing and final explanation, not for the core computation]

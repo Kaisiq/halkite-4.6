@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import * as d3 from "d3";
 import NavBar from "@/components/NavBar";
 import { getGraph } from "@/lib/api";
-import { useNexusStore } from "@/lib/store";
+import { useAchillesStore } from "@/lib/store";
 import type {
   ExploreConfig,
   ExploreMonteCarloConfig,
@@ -191,7 +191,7 @@ function isPeopleLayer(layer: string | undefined): boolean {
   );
 }
 
-function inferNodeLabel(nodeId: string, graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]>): string {
+function inferNodeLabel(nodeId: string, graph: NonNullable<ReturnType<typeof useAchillesStore.getState>["graph"]>): string {
   return graph.nodes.find((node) => node.id === nodeId)?.name ?? nodeId;
 }
 
@@ -262,7 +262,7 @@ function formatScenarioEvent(
       }
     | null
     | undefined,
-  graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]> | null,
+  graph: NonNullable<ReturnType<typeof useAchillesStore.getState>["graph"]> | null,
   options?: { includeMagnitude?: boolean },
 ): string {
   if (!event) return "Initial state";
@@ -294,7 +294,7 @@ function formatScenarioEvent(
 
 function formatTreeEventSummary(
   summary: string | undefined,
-  graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]> | null,
+  graph: NonNullable<ReturnType<typeof useAchillesStore.getState>["graph"]> | null,
 ): string {
   if (!summary || summary === "root") return "Initial state";
   const match = summary.match(/^(kill|damage|cut_edge)\s+(.+)$/);
@@ -329,17 +329,17 @@ export default function SimulatePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
 
   // -- Store slices --
-  const exploring = useNexusStore((s) => s.exploring);
-  const graph = useNexusStore((s) => s.graph);
-  const scenarios = useNexusStore((s) => s.scenarios);
-  const treeStats = useNexusStore((s) => s.treeStats);
-  const vizData = useNexusStore((s) => s.vizData);
-  const resilienceProfile = useNexusStore((s) => s.resilienceProfile);
-  const exploreError = useNexusStore((s) => s.exploreError);
-  const runExploration = useNexusStore((s) => s.runExploration);
-  const activeScenarioIndex = useNexusStore((s) => s.activeScenarioIndex);
-  const setActiveScenario = useNexusStore((s) => s.setActiveScenario);
-  const setGraph = useNexusStore((s) => s.setGraph);
+  const exploring = useAchillesStore((s) => s.exploring);
+  const graph = useAchillesStore((s) => s.graph);
+  const scenarios = useAchillesStore((s) => s.scenarios);
+  const treeStats = useAchillesStore((s) => s.treeStats);
+  const vizData = useAchillesStore((s) => s.vizData);
+  const resilienceProfile = useAchillesStore((s) => s.resilienceProfile);
+  const exploreError = useAchillesStore((s) => s.exploreError);
+  const runExploration = useAchillesStore((s) => s.runExploration);
+  const activeScenarioIndex = useAchillesStore((s) => s.activeScenarioIndex);
+  const setActiveScenario = useAchillesStore((s) => s.setActiveScenario);
+  const setGraph = useAchillesStore((s) => s.setGraph);
 
   // -- Local state --
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(
@@ -365,8 +365,8 @@ export default function SimulatePage() {
   const lastCenteredNodeRef = useRef<string | null>(null);
 
   // -- Sync sessionId to store --
-  const storeSessionId = useNexusStore((s) => s.sessionId);
-  const setSessionId = useNexusStore((s) => s.setSessionId);
+  const storeSessionId = useAchillesStore((s) => s.sessionId);
+  const setSessionId = useAchillesStore((s) => s.setSessionId);
   useEffect(() => {
     if (sessionId && storeSessionId !== sessionId) {
       // Keep this non-destructive -- just use whatever already exists

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define how Halkantir should behave when presented live to a jury.
+Define how Achilles should behave when presented live to a jury.
 
 ## Demo principle
 

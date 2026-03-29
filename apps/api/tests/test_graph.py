@@ -1,15 +1,15 @@
-"""Tests for the Halkantir graph model (Module 1A).
+"""Tests for the Achilles graph model (Module 1A).
 
 Covers Node, Edge, Graph, State, and ValidationResult from
-``nexus_api.models.graph``.
+``achilles_api.models.graph``.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from nexus_api.ingestion.scoring import build_default_scoring_policy
-from nexus_api.models.graph import Edge, Graph, Node
+from achilles_api.ingestion.scoring import build_default_scoring_policy
+from achilles_api.models.graph import Edge, Graph, Node
 
 # ======================================================================
 # Node

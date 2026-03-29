@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nexus_api.ingestion.google_drive import extract_folder_id
+from achilles_api.ingestion.google_drive import extract_folder_id
 
 
 def test_extract_folder_id_from_folders_url() -> None:

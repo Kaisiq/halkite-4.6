@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
-import { useNexusStore } from "@/lib/store";
+import { useAchillesStore } from "@/lib/store";
 import { getGraph, getReport } from "@/lib/api";
 import type { Scenario, Recommendation, ScenarioPath } from "@/lib/types";
 
@@ -311,16 +311,16 @@ export default function ReportPage() {
   const params = useParams<{ sessionId: string }>();
   const sessionId = params.sessionId;
 
-  const scenarios = useNexusStore((s) => s.scenarios);
-  const recommendations = useNexusStore((s) => s.recommendations);
-  const graph = useNexusStore((s) => s.graph);
-  const setGraph = useNexusStore((s) => s.setGraph);
+  const scenarios = useAchillesStore((s) => s.scenarios);
+  const recommendations = useAchillesStore((s) => s.recommendations);
+  const graph = useAchillesStore((s) => s.graph);
+  const setGraph = useAchillesStore((s) => s.setGraph);
 
   useEffect(() => {
     if (scenarios.length === 0 && sessionId) {
       getReport(sessionId)
         .then((report) => {
-          useNexusStore.setState({
+          useAchillesStore.setState({
             scenarios: report.worst_scenarios ?? [],
             recommendations: report.recommendations ?? [],
           });

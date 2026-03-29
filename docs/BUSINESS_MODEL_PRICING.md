@@ -1,14 +1,14 @@
-# Halkantir — Business Model And Pricing
+# Achilles — Business Model And Pricing
 
-Detailed packaging, pricing, billing cadence, and contract terms for Halkantir.
+Detailed packaging, pricing, billing cadence, and contract terms for Achilles.
 
 ## 1. Positioning
 
-Halkantir is built primarily for enterprise buyers in regulated and operationally complex industries. The company target is an `80% Enterprise / 20% SMB` revenue mix, with enterprise as the core sales motion, core deployment shape, and core roadmap driver.
+Achilles is built primarily for enterprise buyers in regulated and operationally complex industries. The company target is an `80% Enterprise / 20% SMB` revenue mix, with enterprise as the core sales motion, core deployment shape, and core roadmap driver.
 
 SMB exists as a feeder tier and expansion pool, not as the main company focus. The SMB offer should prove value quickly, generate expansion candidates, and avoid pulling product or support resources away from enterprise delivery.
 
-Halkantir automates large parts of the structural risk analysis work now done manually by risk, resilience, compliance, continuity, and consulting teams. It replaces substantial dependency-mapping, scenario-testing, and audit-preparation effort, while final risk ownership stays with the client.
+Achilles automates large parts of the structural risk analysis work now done manually by risk, resilience, compliance, continuity, and consulting teams. It replaces substantial dependency-mapping, scenario-testing, and audit-preparation effort, while final risk ownership stays with the client.
 
 ## 2. Segmentation And Revenue Mix
 
@@ -119,7 +119,7 @@ Halkantir automates large parts of the structural risk analysis work now done ma
 
 ### Annual Contract Policy
 
-All plans are sold on annual terms only. Halkantir does not offer month-to-month subscriptions.
+All plans are sold on annual terms only. Achilles does not offer month-to-month subscriptions.
 
 ### Quarterly Invoicing Policy
 
@@ -176,14 +176,14 @@ Separating services from license pricing protects margin and keeps enterprise ex
 
 Use this message consistently:
 
-- Halkantir is enterprise-first.
+- Achilles is enterprise-first.
 - It automates structural risk analysis and replaces large parts of manual dependency mapping, scenario preparation, and audit-pack generation.
 - It does not remove client accountability for risk ownership or decision-making.
 - SMB is intentionally constrained and exists to prove value fast, not to mirror enterprise feature depth.
 
 Avoid:
 
-- positioning Halkantir as a generic low-cost SMB tool
+- positioning Achilles as a generic low-cost SMB tool
 - implying that risk ownership is outsourced to the platform
 - reintroducing monthly pricing language in sales or product copy
 

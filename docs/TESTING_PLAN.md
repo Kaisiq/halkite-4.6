@@ -1,4 +1,4 @@
-# Halkantir Testing Plan
+# Achilles Testing Plan
 
 Step-by-step quality assurance process for reviewing the entire application.
 
@@ -16,21 +16,21 @@ pnpm test                           # all tests
 pnpm test:cov                       # backend tests with coverage
 
 # Backend only
-pnpm --filter @halkantir/api lint     # ruff check
-pnpm --filter @halkantir/api format:check  # ruff format check
-pnpm --filter @halkantir/api typecheck     # mypy strict
-pnpm --filter @halkantir/api test          # pytest
-pnpm --filter @halkantir/api test:cov      # pytest + coverage
-pnpm --filter @halkantir/api test:unit     # fast tests only (skip slow/integration)
+pnpm --filter @achilles/api lint     # ruff check
+pnpm --filter @achilles/api format:check  # ruff format check
+pnpm --filter @achilles/api typecheck     # mypy strict
+pnpm --filter @achilles/api test          # pytest
+pnpm --filter @achilles/api test:cov      # pytest + coverage
+pnpm --filter @achilles/api test:unit     # fast tests only (skip slow/integration)
 
 # Frontend only
-pnpm --filter @halkantir/web lint          # eslint
-pnpm --filter @halkantir/web typecheck     # tsc --noEmit
-pnpm --filter @halkantir/web build         # next build (catches runtime issues)
+pnpm --filter @achilles/web lint          # eslint
+pnpm --filter @achilles/web typecheck     # tsc --noEmit
+pnpm --filter @achilles/web build         # next build (catches runtime issues)
 
 # Formatting
 pnpm format:check                   # prettier (global)
-pnpm --filter @halkantir/api format:check  # ruff format (python)
+pnpm --filter @achilles/api format:check  # ruff format (python)
 ```
 
 ---
@@ -42,7 +42,7 @@ Run these first. They catch issues without executing any code.
 ### Step 1.1: Python linting (Ruff)
 
 ```bash
-pnpm --filter @halkantir/api lint
+pnpm --filter @achilles/api lint
 ```
 
 **Rules enforced:** pycodestyle, pyflakes, isort, bugbear, pyupgrade, pep8-naming, bandit (security), builtins, comprehensions, simplify, type-checking, pytest-style, return.
@@ -56,7 +56,7 @@ pnpm --filter @halkantir/api lint
 ### Step 1.2: Python formatting (Ruff)
 
 ```bash
-pnpm --filter @halkantir/api format:check
+pnpm --filter @achilles/api format:check
 ```
 
 **What to look for:**
@@ -66,7 +66,7 @@ pnpm --filter @halkantir/api format:check
 ### Step 1.3: Python type checking (MyPy)
 
 ```bash
-pnpm --filter @halkantir/api typecheck
+pnpm --filter @achilles/api typecheck
 ```
 
 **Configuration:** strict mode, all warnings enabled.
@@ -80,7 +80,7 @@ pnpm --filter @halkantir/api typecheck
 ### Step 1.4: TypeScript type checking
 
 ```bash
-pnpm --filter @halkantir/web typecheck
+pnpm --filter @achilles/web typecheck
 ```
 
 **What to look for:**
@@ -91,7 +91,7 @@ pnpm --filter @halkantir/web typecheck
 ### Step 1.5: Frontend linting (ESLint)
 
 ```bash
-pnpm --filter @halkantir/web lint
+pnpm --filter @achilles/web lint
 ```
 
 **Rules enforced:** next/core-web-vitals, react-hooks/rules-of-hooks, no-duplicate-imports.
@@ -118,7 +118,7 @@ pnpm format:check
 These test individual modules in isolation. No network calls, no AI API.
 
 ```bash
-pnpm --filter @halkantir/api test:unit
+pnpm --filter @achilles/api test:unit
 ```
 
 ### Step 2.1: Graph Model (`test_graph.py`)
@@ -269,7 +269,7 @@ Tests the FastAPI endpoints with an in-process test client (httpx).
 ### Step 3.2: Full Pipeline Test (marked `@pytest.mark.slow`)
 
 ```bash
-pnpm --filter @halkantir/api test  # includes slow tests
+pnpm --filter @achilles/api test  # includes slow tests
 ```
 
 This test creates a graph, runs analysis, exploration, and report generation end-to-end. It validates that every module integrates correctly.
@@ -285,7 +285,7 @@ This test creates a graph, runs analysis, exploration, and report generation end
 ## Phase 4 — Coverage Report
 
 ```bash
-pnpm --filter @halkantir/api test:cov
+pnpm --filter @achilles/api test:cov
 ```
 
 **Coverage targets:**
@@ -317,13 +317,13 @@ pnpm --filter @halkantir/api test:cov
 ### Step 5.1: Backend compiles
 
 ```bash
-pnpm --filter @halkantir/api build
+pnpm --filter @achilles/api build
 ```
 
 ### Step 5.2: Frontend builds
 
 ```bash
-pnpm --filter @halkantir/web build
+pnpm --filter @achilles/web build
 ```
 
 **What to look for:**
@@ -361,7 +361,7 @@ curl -s http://localhost:8000/docs | head -5
 
 Open http://localhost:3000 in a browser.
 
-- [ ] Halkantir landing page renders
+- [ ] Achilles landing page renders
 - [ ] Dark theme with gradient background
 - [ ] File drop zone visible
 - [ ] "Build Network" button visible

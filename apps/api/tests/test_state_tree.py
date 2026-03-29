@@ -1,23 +1,23 @@
-"""Tests for the Halkantir state tree engine (Module 4).
+"""Tests for the Achilles state tree engine (Module 4).
 
 Covers build_state_tree, explore, backpropagate, extract_path, duplicate
 pruning, ExplorationConfig, and TreeNode / StateTree data classes from
-``nexus_api.engine.state_tree``.
+``achilles_api.engine.state_tree``.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from nexus_api.agents.base import Agent, AgentBrief
-from nexus_api.engine.state_tree import (
+from achilles_api.agents.base import Agent, AgentBrief
+from achilles_api.engine.state_tree import (
     ExplorationConfig,
     StateTree,
     build_state_tree,
     extract_path,
 )
-from nexus_api.models.events import Event
-from nexus_api.models.graph import Graph
+from achilles_api.models.events import Event
+from achilles_api.models.graph import Graph
 
 # ---------------------------------------------------------------------------
 # Minimal agent stub for controlled tree construction

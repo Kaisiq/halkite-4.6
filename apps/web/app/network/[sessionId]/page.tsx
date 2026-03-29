@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import * as d3 from "d3";
 
 import NavBar from "@/components/NavBar";
-import { useNexusStore } from "@/lib/store";
+import { useAchillesStore } from "@/lib/store";
 import { getGraph } from "@/lib/api";
 import type { GraphData, GraphNode, Scenario } from "@/lib/types";
 
@@ -145,24 +145,24 @@ export default function NetworkPage({ params }: PageProps) {
   const router = useRouter();
 
   // ---- Store selectors ----
-  const graph = useNexusStore((s) => s.graph);
-  const graphBuildState = useNexusStore((s) => s.graphBuildState);
-  const uploadStageMessage = useNexusStore((s) => s.uploadStageMessage);
-  const uploadProgressValue = useNexusStore((s) => s.uploadProgressValue);
-  const uploadError = useNexusStore((s) => s.uploadError);
-  const vulnerabilityReport = useNexusStore((s) => s.vulnerabilityReport);
-  const analyzing = useNexusStore((s) => s.analyzing);
-  const selectedNodeId = useNexusStore((s) => s.selectedNodeId);
-  const setSelectedNode = useNexusStore((s) => s.setSelectedNode);
-  const runAnalysis = useNexusStore((s) => s.runAnalysis);
-  const runExploration = useNexusStore((s) => s.runExploration);
-  const runCascade = useNexusStore((s) => s.runCascade);
-  const scenarios = useNexusStore((s) => s.scenarios);
-  const exploring = useNexusStore((s) => s.exploring);
-  const activeScenarioIndex = useNexusStore((s) => s.activeScenarioIndex);
-  const setActiveScenario = useNexusStore((s) => s.setActiveScenario);
-  const setSessionId = useNexusStore((s) => s.setSessionId);
-  const setGraph = useNexusStore((s) => s.setGraph);
+  const graph = useAchillesStore((s) => s.graph);
+  const graphBuildState = useAchillesStore((s) => s.graphBuildState);
+  const uploadStageMessage = useAchillesStore((s) => s.uploadStageMessage);
+  const uploadProgressValue = useAchillesStore((s) => s.uploadProgressValue);
+  const uploadError = useAchillesStore((s) => s.uploadError);
+  const vulnerabilityReport = useAchillesStore((s) => s.vulnerabilityReport);
+  const analyzing = useAchillesStore((s) => s.analyzing);
+  const selectedNodeId = useAchillesStore((s) => s.selectedNodeId);
+  const setSelectedNode = useAchillesStore((s) => s.setSelectedNode);
+  const runAnalysis = useAchillesStore((s) => s.runAnalysis);
+  const runExploration = useAchillesStore((s) => s.runExploration);
+  const runCascade = useAchillesStore((s) => s.runCascade);
+  const scenarios = useAchillesStore((s) => s.scenarios);
+  const exploring = useAchillesStore((s) => s.exploring);
+  const activeScenarioIndex = useAchillesStore((s) => s.activeScenarioIndex);
+  const setActiveScenario = useAchillesStore((s) => s.setActiveScenario);
+  const setSessionId = useAchillesStore((s) => s.setSessionId);
+  const setGraph = useAchillesStore((s) => s.setGraph);
 
   // ---- Local state ----
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
@@ -612,7 +612,7 @@ export default function NetworkPage({ params }: PageProps) {
                   />
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">
-                  The draft graph is on screen. Halkantir is still enriching it
+                  The draft graph is on screen. Achilles is still enriching it
                   with evidence, missing relationships, and deterministic scores.
                 </p>
               </div>

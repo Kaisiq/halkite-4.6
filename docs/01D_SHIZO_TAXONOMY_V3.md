@@ -1,6 +1,6 @@
 # Shizo Algo: High-Dimensional Semantic Taxonomy (V3 - Ultra-Scale)
 
-This document outlines the **High-Dimensional Semantic Taxonomy** for node impact analysis in the Halkantir Shizo Algo. This version moves beyond a simple keyword list into a hierarchical tree of concepts, synonyms, and contextual triggers.
+This document outlines the **High-Dimensional Semantic Taxonomy** for node impact analysis in the Achilles Shizo Algo. This version moves beyond a simple keyword list into a hierarchical tree of concepts, synonyms, and contextual triggers.
 
 ---
 
@@ -71,13 +71,13 @@ The Shizo Algo distinguishes between **Siphoned** (colloquial/informal/slang) an
 | `ticking time bomb`   | `Deterministic Failure Point`       | Hist. Vulnerability |
 | `crown jewels`        | `Primary Strategic Business Asset`  | Mission Criticality |
 
-The full mapping is available in `apps/api/src/nexus_api/ingestion/shizo_siphoned_dictionary.json`.
+The full mapping is available in `apps/api/src/achilles_api/ingestion/shizo_siphoned_dictionary.json`.
 
 ---
 
 ## 5. Large-Scale Taxonomy JSON (Reference)
 
-The full taxonomy is stored in `apps/api/src/nexus_api/ingestion/shizo_taxonomy_v3.json`. It contains **over 1,000 unique semantic markers**.
+The full taxonomy is stored in `apps/api/src/achilles_api/ingestion/shizo_taxonomy_v3.json`. It contains **over 1,000 unique semantic markers**.
 
 ### Example: "Irreplaceability" Node
 

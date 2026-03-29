@@ -27,16 +27,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     API_PORT=8000 \
     LOG_LEVEL=info
 
-RUN addgroup --system nexus && adduser --system --ingroup nexus nexus
+RUN addgroup --system achilles && adduser --system --ingroup achilles achilles
 
 WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 
-RUN mkdir -p /app/data && chown nexus:nexus /app/data
+RUN mkdir -p /app/data && chown achilles:achilles /app/data
 
-USER nexus
+USER achilles
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn nexus_api.main:app --host \"${API_HOST}\" --port \"${API_PORT}\" --timeout-keep-alive 300 --log-level \"$(printf '%s' \"${LOG_LEVEL}\" | tr '[:upper:]' '[:lower:]')\""]
+CMD ["sh", "-c", "uvicorn achilles_api.main:app --host \"${API_HOST}\" --port \"${API_PORT}\" --timeout-keep-alive 300 --log-level \"$(printf '%s' \"${LOG_LEVEL}\" | tr '[:upper:]' '[:lower:]')\""]

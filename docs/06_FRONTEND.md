@@ -26,7 +26,7 @@ API calls: fetch or axios
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Halkantir — Organizational Stress Testing              │
+│  Achilles — Organizational Stress Testing              │
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  ┌───────────────────────────────────────────┐  │
@@ -80,7 +80,7 @@ API calls: fetch or axios
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Halkantir [Network] [Simulate] [Scenarios] [Report]         │
+│  Achilles [Network] [Simulate] [Scenarios] [Report]         │
 ├──────────────────────────────────────────────────────────────┤
 │                                          │                   │
 │                                          │  ANALYSIS PANEL   │
@@ -150,7 +150,7 @@ Interactions:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Halkantir [Network] [Simulate] [Scenarios] [Report]         │
+│  Achilles [Network] [Simulate] [Scenarios] [Report]         │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  AGENT CONTROL                                               │
@@ -205,7 +205,7 @@ Interactions:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Halkantir [Network] [Simulate] [Scenarios] [Report]         │
+│  Achilles [Network] [Simulate] [Scenarios] [Report]         │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  WORST-CASE SCENARIOS                                        │

@@ -1,12 +1,12 @@
 # Shizo Algo: Ultra-Extensive Node Impact Keyword Dictionary (V2)
 
-This document provides a comprehensive, multi-domain dictionary of keywords used to identify and score node impact ($\theta$) and dependency weights within the Halkantir Shizo Algo. This version expands the scope to include specialized domains: IT, Finance, Human Capital, Supply Chain, and Legal/Regulatory.
+This document provides a comprehensive, multi-domain dictionary of keywords used to identify and score node impact ($\theta$) and dependency weights within the Achilles Shizo Algo. This version expands the scope to include specialized domains: IT, Finance, Human Capital, Supply Chain, and Legal/Regulatory.
 
 ---
 
 ## 1. Node Impact ($\theta$) Scoring Features: Deep Taxonomy
 
-In the Halkantir model, $\theta$ represents the intrinsic importance or "fragility" of a node.
+In the Achilles model, $\theta$ represents the intrinsic importance or "fragility" of a node.
 
 ### A. Operational Criticality (Weight: 0.20)
 

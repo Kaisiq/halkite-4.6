@@ -1,6 +1,6 @@
-# Halkantir — Documentation
+# Achilles — Documentation
 
-Product specs, architecture, and business plan for the Halkantir organizational stress-testing platform.
+Product specs, architecture, and business plan for the Achilles organizational stress-testing platform.
 
 - `BUSINESS_MODEL_PRICING.md` — detailed packaging, pricing, billing cadence, and contract terms
 - `BUSINESS_PLAN.md` — pitch kit and market positioning

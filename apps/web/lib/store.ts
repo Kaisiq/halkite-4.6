@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Halkantir – global Zustand store
+// Achilles – global Zustand store
 // ---------------------------------------------------------------------------
 
 import { create } from "zustand";
@@ -29,7 +29,7 @@ import type {
 // State shape
 // ---------------------------------------------------------------------------
 
-export interface NexusState {
+export interface AchillesState {
   // Session
   sessionId: string | null;
   uploadJobId: string | null;
@@ -196,8 +196,8 @@ function completeUploadReveal(): void {
     return;
   }
   pendingUploadCompletion = null;
-  const { uploadTotalSteps } = useNexusStore.getState();
-  useNexusStore.setState({
+  const { uploadTotalSteps } = useAchillesStore.getState();
+  useAchillesStore.setState({
     sessionId: completion.session_id,
     graph: completion.graph,
     uploading: false,
@@ -252,18 +252,18 @@ function flushPreviewQueues(): void {
   previewFlushTimer = null;
   const nextNode = previewNodeQueue.shift();
   if (nextNode) {
-    useNexusStore.setState((state) => ({
+    useAchillesStore.setState((state) => ({
       graph: mergePreviewGraph(state.graph, nextNode),
     }));
   } else {
     const nextEdge = previewEdgeQueue.shift();
     if (nextEdge) {
-      const state = useNexusStore.getState();
+      const state = useAchillesStore.getState();
       const graph = state.graph;
       const hasFrom = graph?.nodes.some((node) => node.id === nextEdge.from);
       const hasTo = graph?.nodes.some((node) => node.id === nextEdge.to);
       if (hasFrom && hasTo) {
-        useNexusStore.setState((current) => ({
+        useAchillesStore.setState((current) => ({
           graph: mergePreviewGraph(current.graph, undefined, nextEdge),
         }));
       } else {
@@ -281,7 +281,7 @@ function flushPreviewQueues(): void {
 }
 
 function enqueuePreviewNode(node: GraphNode): void {
-  const currentGraph = useNexusStore.getState().graph;
+  const currentGraph = useAchillesStore.getState().graph;
   if (
     currentGraph?.nodes.some((existing) => existing.id === node.id) ||
     previewNodeQueue.some((existing) => existing.id === node.id)
@@ -295,7 +295,7 @@ function enqueuePreviewNode(node: GraphNode): void {
 }
 
 function enqueuePreviewEdge(edge: GraphEdge): void {
-  const currentGraph = useNexusStore.getState().graph;
+  const currentGraph = useAchillesStore.getState().graph;
   if (
     currentGraph?.edges.some(
       (existing) => existing.from === edge.from && existing.to === edge.to,
@@ -332,7 +332,7 @@ const INITIAL_EXPLORE = {
 // Store
 // ---------------------------------------------------------------------------
 
-export const useNexusStore = create<NexusState>()((set, get) => ({
+export const useAchillesStore = create<AchillesState>()((set, get) => ({
   // -- Session ---------------------------------------------------------------
   sessionId: null,
   uploadJobId: null,
@@ -933,7 +933,7 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
 
       if (res.validation_warnings.length > 0) {
         console.warn(
-          "[Halkantir] Graph update warnings:",
+          "[Achilles] Graph update warnings:",
           res.validation_warnings,
         );
       }
