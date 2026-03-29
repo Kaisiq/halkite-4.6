@@ -185,6 +185,7 @@ export default function NetworkPage({ params }: PageProps) {
   // ---- Local state ----
   const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(new Set());
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     setSessionId(sessionId);
@@ -197,23 +198,46 @@ export default function NetworkPage({ params }: PageProps) {
       .catch((err) => console.error("[network] graph fetch error:", err));
   }, [graph, sessionId, setGraph]);
 
+  // Auto-run analysis when graph is ready and hasn't been analyzed yet
+  const analysisTriggered = useRef(false);
+  useEffect(() => {
+    if (
+      !graph ||
+      graphBuildState === "building" ||
+      graphBuildState === "failed" ||
+      analyzing ||
+      vulnerabilityReport ||
+      analysisTriggered.current
+    )
+      return;
+    analysisTriggered.current = true;
+    (async () => {
+      await runAnalysis();
+      runExploration();
+    })();
+  }, [graph, graphBuildState, analyzing, vulnerabilityReport, runAnalysis, runExploration]);
+
   // ---- D3 ----
   const svgRef = useRef<SVGSVGElement | null>(null);
   const hiddenLayersRef = useRef(hiddenLayers);
   const selectedNodeRef = useRef(selectedNodeId);
   const hoveredNodeRef = useRef(hoveredNodeId);
   const layoutRef = useRef<Map<string, StoredNodeLayout>>(new Map());
+  const renderRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     hiddenLayersRef.current = hiddenLayers;
+    renderRef.current?.();
   }, [hiddenLayers]);
 
   useEffect(() => {
     selectedNodeRef.current = selectedNodeId;
+    renderRef.current?.();
   }, [selectedNodeId]);
 
   useEffect(() => {
     hoveredNodeRef.current = hoveredNodeId;
+    renderRef.current?.();
   }, [hoveredNodeId]);
 
   useEffect(() => {
@@ -493,10 +517,12 @@ export default function NetworkPage({ params }: PageProps) {
         );
     };
 
+    renderRef.current = render;
     simulation.on("tick", render);
     render();
 
     return () => {
+      renderRef.current = null;
       layoutRef.current = new Map(
         orbitNodes.map((node) => [
           node.id,
@@ -511,7 +537,7 @@ export default function NetworkPage({ params }: PageProps) {
       simulation.stop();
       svg.selectAll("*").remove();
     };
-  }, [graph, graphBuildState, setSelectedNode, vulnerabilityReport]);
+  }, [graph, graphBuildState, setSelectedNode]);
 
   // ---- Layer toggle handler ----
   const toggleLayer = useCallback((layer: string) => {
@@ -604,9 +630,9 @@ export default function NetworkPage({ params }: PageProps) {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col min-h-0 md:flex-row">
+      <div className="relative flex flex-1 flex-col min-h-0 md:flex-row">
         {/* D3 Graph Canvas */}
-        <div className="relative h-[50vh] min-h-[280px] min-w-0 border-b border-[var(--border)] md:h-auto md:flex-[7] md:border-b-0 md:border-r">
+        <div className="relative flex-1 min-h-[280px] min-w-0">
           {waitingForFirstNode && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/92 backdrop-blur-sm">
               <div className="text-center">
@@ -713,10 +739,121 @@ export default function NetworkPage({ params }: PageProps) {
               ))}
             </div>
           </div>
+          {/* Analysis panel toggle */}
+          <button
+            className={`absolute right-3 top-3 z-10 flex items-center gap-2 border border-[var(--border)] bg-white px-3 py-2 text-xs font-medium shadow-sm transition-all hover:border-[var(--text)] sm:right-6 sm:top-6 ${
+              analyzing || exploring
+                ? "animate-pulse"
+                : vulnerabilityReport
+                  ? ""
+                  : "opacity-40 pointer-events-none"
+            }`}
+            onClick={() => setPanelOpen(true)}
+            disabled={!vulnerabilityReport && !analyzing && !exploring}
+          >
+            {analyzing
+              ? "Analyzing..."
+              : exploring
+                ? "Exploring scenarios..."
+                : vulnerabilityReport
+                  ? `Analysis Ready${scenarios.length > 0 ? ` \u00B7 ${scenarios.length} scenarios` : ""}`
+                  : "Waiting for analysis"}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+
+          {/* Node Detail Panel (floating on graph) */}
+          {selectedNode && (
+            <section className="absolute bottom-3 right-3 z-20 w-[300px] border border-[var(--border)] bg-white p-4 shadow-lg fade-rise sm:bottom-6 sm:right-6 sm:w-[340px] sm:p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <p className="mono-label text-[9px] mb-1">Node</p>
+                  <h3 className="text-lg font-medium">{selectedNode.name}</h3>
+                </div>
+                <button
+                  className="text-xs text-[var(--text-light)] hover:text-[var(--text)]"
+                  onClick={() => setSelectedNode(null)}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mb-4 inline-block border border-[var(--border)] px-2 py-0.5 text-[10px] font-medium">
+                {selectedNode.layer}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <NodeStat
+                  label="Impact"
+                  value={(
+                    impactByNodeId.get(selectedNode.id) ?? selectedNode.theta
+                  ).toFixed(3)}
+                />
+                <NodeStat
+                  label="Health"
+                  value={selectedNode.h.toFixed(3)}
+                  alert={selectedNode.phi}
+                />
+                <NodeStat
+                  label="Theta"
+                  value={selectedNode.theta.toFixed(3)}
+                />
+                <NodeStat
+                  label="Recovery"
+                  value={`$${(selectedNode.r / 1000).toFixed(0)}K`}
+                />
+                <div className="col-span-2 pt-2 border-t border-[var(--border)]">
+                  <p className="mono-label text-[8px] mb-2">Connections</p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedEdges.map((e, i) => {
+                      const otherId =
+                        e.from === selectedNode.id ? e.to : e.from;
+                      const otherNode = graph.nodes.find(
+                        (n) => n.id === otherId,
+                      );
+                      return (
+                        <span
+                          key={i}
+                          className="border border-[var(--border)] px-2 py-0.5 font-mono text-[9px]"
+                        >
+                          {otherNode?.name ?? humanizeId(otherId)}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
 
-        {/* Right Panel */}
-        <aside className="flex-1 min-w-0 overflow-y-auto p-4 flex flex-col gap-4 bg-white sm:p-6 sm:gap-6 md:flex-[3]">
+        {/* Backdrop */}
+        {panelOpen && (
+          <div
+            className="absolute inset-0 z-30 bg-black/10 backdrop-blur-[1px]"
+            onClick={() => setPanelOpen(false)}
+          />
+        )}
+
+        {/* Slide-over Analysis Panel */}
+        <aside
+          className={`absolute right-0 top-0 z-40 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-[var(--border)] bg-white p-4 shadow-2xl transition-transform duration-300 ease-in-out sm:p-6 ${
+            panelOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {/* Panel header */}
+          <div className="mb-4 flex items-center justify-between sm:mb-6">
+            <p className="mono-label text-[10px]">Analysis Panel</p>
+            <button
+              className="border border-[var(--border)] px-2.5 py-1 text-xs font-medium transition-colors hover:border-[var(--text)]"
+              onClick={() => setPanelOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:gap-6">
           {/* Network Health */}
           <section>
             <p className="mono-label text-[9px] mb-3">Network Health</p>
@@ -1024,7 +1161,7 @@ export default function NetworkPage({ params }: PageProps) {
                   ? "Analyzing..."
                   : exploring
                     ? "Exploring scenarios..."
-                  : "Run Analysis"}
+                  : "Re-run Analysis"}
             </button>
 
             <button
@@ -1049,70 +1186,7 @@ export default function NetworkPage({ params }: PageProps) {
               </button>
             )}
           </div>
-
-          {/* Node Detail Panel */}
-          {selectedNode && (
-            <section className="border border-[var(--border)] bg-white p-4 shadow-lg fade-rise sm:p-6 md:absolute md:bottom-6 md:right-6 md:z-20 md:w-[340px]">
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <p className="mono-label text-[9px] mb-1">Node</p>
-                  <h3 className="text-lg font-medium">{selectedNode.name}</h3>
-                </div>
-                <button
-                  className="text-xs text-[var(--text-light)] hover:text-[var(--text)]"
-                  onClick={() => setSelectedNode(null)}
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="mb-4 inline-block border border-[var(--border)] px-2 py-0.5 text-[10px] font-medium">
-                {selectedNode.layer}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <NodeStat
-                  label="Impact"
-                  value={(
-                    impactByNodeId.get(selectedNode.id) ?? selectedNode.theta
-                  ).toFixed(3)}
-                />
-                <NodeStat
-                  label="Health"
-                  value={selectedNode.h.toFixed(3)}
-                  alert={selectedNode.phi}
-                />
-                <NodeStat
-                  label="Theta"
-                  value={selectedNode.theta.toFixed(3)}
-                />
-                <NodeStat
-                  label="Recovery"
-                  value={`$${(selectedNode.r / 1000).toFixed(0)}K`}
-                />
-                <div className="col-span-2 pt-2 border-t border-[var(--border)]">
-                  <p className="mono-label text-[8px] mb-2">Connections</p>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedEdges.map((e, i) => {
-                      const otherId =
-                        e.from === selectedNode.id ? e.to : e.from;
-                      const otherNode = graph.nodes.find(
-                        (n) => n.id === otherId,
-                      );
-                      return (
-                        <span
-                          key={i}
-                          className="border border-[var(--border)] px-2 py-0.5 font-mono text-[9px]"
-                        >
-                          {otherNode?.name ?? humanizeId(otherId)}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
+          </div>
         </aside>
       </div>
     </div>
