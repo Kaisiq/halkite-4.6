@@ -22,6 +22,8 @@ class Agent:
 
 The state tree (Module 4) calls `select_events` at each tree node. The agent returns events, the tree applies each one (using the cascade engine from Module 2A), and recurses.
 
+For scenario-generation agents, AI may propose a small set of realistic, high-impact plans as long as the cascade math and ranking stay deterministic.
+
 ---
 
 ## Agent 1: Critical Node Attacker

@@ -17,8 +17,8 @@ from collections.abc import Awaitable, Callable
 from pathlib import PurePath
 from typing import Any, cast
 
+import google.genai as genai
 import numpy as np
-from google import genai
 from google.genai import types
 
 from achilles_api.gemini import generate_content_with_fallback

@@ -61,7 +61,7 @@ const AGENTS: AgentDef[] = [
   {
     label: "Full Spectrum Sweep",
     type: "monte_carlo",
-    description: "Samples random people, system, client, and supplier shocks",
+    description: "Uses AI to test a few realistic worst-case branches",
   },
 ];
 
@@ -139,6 +139,8 @@ interface TreeNode {
   agent: string;
   event_key: string;
   event_summary: string;
+  scenario_title: string | undefined;
+  expected_outcome: string | undefined;
   failed_count: number;
   depth: number;
   parent_id: string | null;
@@ -321,6 +323,39 @@ function extractNarrativeText(narrative: Scenario["narrative"]): string {
   return "";
 }
 
+function formatCompactCurrency(value: number): string {
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+  return `$${Math.round(value)}`;
+}
+
+function resolveScenarioFocusNode(
+  scenario: Scenario | null | undefined,
+  rootTreeNode: TreeNode | null,
+  childrenByNodeId: Map<string, TreeNode[]>,
+  graph: NonNullable<ReturnType<typeof useNexusStore.getState>["graph"]> | null,
+): TreeNode | null {
+  if (!scenario || !rootTreeNode) return null;
+
+  let current = rootTreeNode;
+  for (const step of scenario.path) {
+    const eventKey = formatScenarioEvent(step.event, graph, {
+      includeMagnitude: false,
+    });
+    const nextCandidates = (childrenByNodeId.get(current.id) ?? []).filter(
+      (node) => node.event_key === eventKey,
+    );
+    if (nextCandidates.length === 0) return current;
+    current = nextCandidates.reduce((best, candidate) =>
+      Math.abs(candidate.H - step.H_after) < Math.abs(best.H - step.H_after)
+        ? candidate
+        : best,
+    );
+  }
+
+  return current;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -356,6 +391,10 @@ export default function SimulatePage() {
     node: TreeNode;
   } | null>(null);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [selectedStepSelection, setSelectedStepSelection] = useState<{
+    rank: number;
+    index: number;
+  } | null>(null);
   const [, setHoveredTreeNodeId] = useState<string | null>(null);
 
   // -- Refs --
@@ -419,10 +458,16 @@ export default function SimulatePage() {
     const rawNodes = (vizData.state_tree.nodes ?? []) as Array<
       Omit<
         TreeNode,
-        "delta_H" | "failed_count" | "event_summary" | "parent_id"
+        | "delta_H"
+        | "failed_count"
+        | "event_summary"
+        | "parent_id"
+        | "event_key"
       > & {
         event_summary?: string;
         failed_count?: number;
+        scenario_title?: string;
+        expected_outcome?: string;
       }
     >;
     const provisional = rawNodes.map((node) => ({
@@ -432,6 +477,8 @@ export default function SimulatePage() {
       agent: node.agent,
       event_key: formatTreeEventSummary(node.event_summary, graph),
       event_summary: formatTreeEventSummary(node.event_summary, graph),
+      scenario_title: node.scenario_title,
+      expected_outcome: node.expected_outcome,
       failed_count: node.failed_count ?? 0,
       parent_id: parentByNodeId.get(node.id) ?? null,
       delta_H: 0,
@@ -483,28 +530,13 @@ export default function SimulatePage() {
   }, [childrenByNodeId, treeNodes]);
 
   const scenarioFocusNode = useMemo(() => {
-    if (activeScenarioIndex === null || !rootTreeNode) return null;
-
-    const scenario = scenarios[activeScenarioIndex];
-    if (!scenario) return null;
-
-    let current = rootTreeNode;
-    for (const step of scenario.path) {
-      const eventKey = formatScenarioEvent(step.event, graph, {
-        includeMagnitude: false,
-      });
-      const nextCandidates = (childrenByNodeId.get(current.id) ?? []).filter(
-        (node) => node.event_key === eventKey,
-      );
-      if (nextCandidates.length === 0) return current;
-      current = nextCandidates.reduce((best, candidate) =>
-        Math.abs(candidate.H - step.H_after) < Math.abs(best.H - step.H_after)
-          ? candidate
-          : best,
-      );
-    }
-
-    return current;
+    if (activeScenarioIndex === null) return null;
+    return resolveScenarioFocusNode(
+      scenarios[activeScenarioIndex],
+      rootTreeNode,
+      childrenByNodeId,
+      graph,
+    );
   }, [activeScenarioIndex, childrenByNodeId, graph, rootTreeNode, scenarios]);
 
   const focusTargetId =
@@ -568,6 +600,33 @@ export default function SimulatePage() {
       ? scenarios[activeScenarioIndex]
       : (scenarios[0] ?? null);
 
+  const selectedStepIndex =
+    selectedScenario &&
+    selectedStepSelection?.rank === selectedScenario.rank &&
+    selectedStepSelection.index < selectedScenario.path.length
+      ? selectedStepSelection.index
+      : selectedScenario?.path.length
+        ? selectedScenario.path.length - 1
+        : null;
+
+  const scenarioStepCards = useMemo(() => {
+    if (!selectedScenario) return [];
+    return selectedScenario.path.map((step, index) => ({
+      index,
+      step: index + 1,
+      label: step.step_description || formatScenarioEvent(step.event, graph),
+      outcome: step.expected_outcome || "Cascade pressure increases from this point.",
+      healthAfter: step.H_after,
+      deltaH: step.H_before - step.H_after,
+      failures: step.new_failures.length,
+    }));
+  }, [graph, selectedScenario]);
+
+  const activeScenarioResolvedIndex = useMemo(() => {
+    if (!selectedScenario) return -1;
+    return scenarios.findIndex((scenario) => scenario.rank === selectedScenario.rank);
+  }, [scenarios, selectedScenario]);
+
   const nextBranchCandidates = useMemo(() => {
     if (!focusTargetId) return [] as TreeNode[];
     return [...(childrenByNodeId.get(focusTargetId) ?? [])].sort(
@@ -616,6 +675,8 @@ export default function SimulatePage() {
         : "The system is still at the initial state root.");
 
     const story =
+      selectedScenario?.intended_outcome ||
+      focusedPathNodes.at(-1)?.expected_outcome ||
       extractNarrativeText(selectedScenario?.narrative ?? null) ||
       (events.length > 0
         ? `The branch compounds through ${events.length} event${events.length === 1 ? "" : "s"}, with each step reducing resilience and widening the failure set around the focused path.`
@@ -659,6 +720,7 @@ export default function SimulatePage() {
 
     return {
       title:
+        focusedPathNodes.at(-1)?.scenario_title ??
         selectedScenario?.title ??
         (focusedPathNodes.length > 1
           ? `Focused branch at depth ${focusedPathNodes.at(-1)?.depth ?? 0}`
@@ -1030,27 +1092,49 @@ export default function SimulatePage() {
 
   return (
     <div
-      className="flex min-h-screen flex-col bg-white"
+      className="flex min-h-screen flex-col bg-[linear-gradient(180deg,#fcfcfc_0%,#f3f4f6_100%)]"
     >
       {/* ---- Navigation ---- */}
       <NavBar sessionId={sessionId} />
 
       {/* ---- Agent Controls ---- */}
       <section
-        className="mx-8 mt-8 border border-[var(--border)] bg-white p-8"
+        className="mx-6 mt-6 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur lg:mx-8 lg:p-8"
       >
-        <div className="flex items-center gap-3 mb-8">
-          <div className="h-1 w-6 bg-[var(--text)]" />
-          <h2 className="mono-label text-[10px] text-[var(--text-secondary)]">
-            ADVERSARIAL_SIMULATION_CONTROLS
-          </h2>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-2">
+            <p className="mono-label text-[10px] text-[var(--text-secondary)]">
+              Scenario Explorer
+            </p>
+            <div>
+              <h2 className="display-face text-2xl font-semibold tracking-tight text-[var(--text)]">
+                Keep the tree tight and follow only decisive branches
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[var(--text-muted)]">
+                Strategic agents test known structural weak points. The AI sweep adds a
+                few believable worst-case paths, then the tree keeps only the most damaging branches.
+              </p>
+            </div>
+          </div>
+          <div className="grid min-w-[220px] grid-cols-2 gap-3">
+            <StatCard
+              label="Agents on"
+              value={String(enabledAgents.size)}
+              accent="var(--text)"
+            />
+            <StatCard
+              label="Scenario mode"
+              value={enabledAgents.has("monte_carlo") ? "AI" : "Rules"}
+              accent={enabledAgents.has("monte_carlo") ? "var(--healthy)" : "var(--text-muted)"}
+            />
+          </div>
         </div>
 
         <div className="grid gap-10 lg:grid-cols-[1fr_auto]">
           <div className="flex flex-col gap-8">
             {/* Agents row */}
             <div className="flex flex-col gap-4">
-              <div className="mono-label text-[9px] text-[var(--text-muted)]">ACTIVE_AGENTS</div>
+              <div className="mono-label text-[9px] text-[var(--text-muted)]">Active agents</div>
               <div className="flex flex-wrap gap-3">
                 {AGENTS.map((agent) => {
                   const active = enabledAgents.has(agent.type);
@@ -1061,8 +1145,8 @@ export default function SimulatePage() {
                       onClick={() => toggleAgent(agent.type)}
                       className={`flex items-center gap-3 border px-5 py-3 text-[11px] font-bold uppercase tracking-widest transition-all ${
                         active
-                          ? "border-[var(--text)] bg-[var(--text)] text-white"
-                          : "border-[var(--border)] bg-white text-[var(--text-muted)] hover:bg-[var(--bg-alt)]"
+                          ? "border-transparent bg-[linear-gradient(135deg,#111827,#334155)] text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)]"
+                          : "border-[var(--border)] bg-white text-[var(--text-muted)] hover:border-[rgba(15,23,42,0.16)] hover:bg-[var(--bg-alt)]"
                       }`}
                       title={agent.description}
                     >
@@ -1077,12 +1161,12 @@ export default function SimulatePage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="mono-label text-[9px] text-[var(--text-muted)]">
-                  WHAT_IF_SWEEP_PROFILE
+                  AI scenario profile
                 </div>
                 <span className="mono-label text-[8px] text-[var(--text-light)]">
                   {enabledAgents.has("monte_carlo")
-                    ? "FULL_SPECTRUM_SWEEP_ENABLED"
-                    : "FULL_SPECTRUM_SWEEP_DISABLED"}
+                    ? "AI sweep enabled"
+                    : "AI sweep disabled"}
                 </span>
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1096,9 +1180,9 @@ export default function SimulatePage() {
                       onClick={() => setScenarioProfileId(profile.id)}
                       disabled={disabled}
                       className={`border p-4 text-left transition-all ${
-                        active
-                          ? "border-[var(--text)] bg-[var(--bg-alt)]"
-                          : "border-[var(--border)] bg-white hover:bg-[var(--bg-alt)]"
+                          active
+                            ? "border-[rgba(15,23,42,0.14)] bg-[linear-gradient(180deg,#f8fafc,#eef2f7)]"
+                            : "border-[var(--border)] bg-white hover:bg-[var(--bg-alt)]"
                       } ${disabled ? "opacity-40" : ""}`}
                     >
                       <div className="mono-label text-[8px] text-[var(--text-secondary)]">
@@ -1112,7 +1196,7 @@ export default function SimulatePage() {
                 })}
               </div>
               <p className="max-w-3xl text-xs leading-relaxed text-[var(--text-muted)]">
-                The full-spectrum sweep adds non-deterministic branches on top of the strategic agents so the tree explores routine human mistakes, intermittent technical degradation, supplier failures, and broken dependencies across all mapped nodes.
+                The AI sweep now proposes only a small set of realistic scenarios with clear intended outcomes, so the tree stays readable instead of ballooning with low-value branches.
               </p>
             </div>
 
@@ -1121,9 +1205,9 @@ export default function SimulatePage() {
               {/* Depth slider */}
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <label className="mono-label text-[9px] text-[var(--text-muted)]">
-                    EXPLORATION_DEPTH
-                  </label>
+                    <label className="mono-label text-[9px] text-[var(--text-muted)]">
+                      Depth
+                    </label>
                   <span className="font-mono text-xl font-bold text-[var(--text)]">{depth.toString().padStart(2, '0')}</span>
                 </div>
                 <div className="relative flex items-center h-6">
@@ -1142,9 +1226,9 @@ export default function SimulatePage() {
               {/* Tree limit slider */}
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                  <label className="mono-label text-[9px] text-[var(--text-muted)]">
-                    NODE_COMPUTE_LIMIT
-                  </label>
+                    <label className="mono-label text-[9px] text-[var(--text-muted)]">
+                      Tree cap
+                    </label>
                   <span className="font-mono text-xl font-bold text-[var(--text)]">
                     {(treeLimit / 1000).toFixed(1)}K
                   </span>
@@ -1170,41 +1254,63 @@ export default function SimulatePage() {
               type="button"
               onClick={handleRun}
               disabled={exploring || enabledAgents.size === 0}
-              className="min-w-[240px] border border-[var(--text)] bg-[var(--text)] text-white py-6 text-xs font-bold uppercase tracking-[0.2em] disabled:opacity-20"
-            >
-              {exploring ? "COMPUTING..." : "RUN EXPLORATION ->"}
+                className="min-w-[240px] rounded-full border border-[var(--text)] bg-[var(--text)] px-8 py-5 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] disabled:opacity-20"
+              >
+              {exploring ? "Exploring..." : "Run exploration"}
             </button>
           </div>
         </div>
       </section>
 
       {/* ---- Bottom: Tree + Results ---- */}
-      <div className="flex flex-1 gap-8 mx-8 my-8 min-h-0">
+      <div className="mx-6 my-6 flex flex-1 gap-6 min-h-0 lg:mx-8 lg:my-8">
         {/* -- Left: State Tree Visualization -- */}
         <section
           ref={containerRef}
-          className="relative flex-1 border border-[var(--border)] overflow-hidden"
-          style={{ minHeight: 480, background: "#fafafa" }}
+          className="relative flex-1 overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f7fa_62%,#edf1f5_100%)] shadow-[0_20px_60px_rgba(15,23,42,0.08)]"
+          style={{ minHeight: 480 }}
         >
-          <div className="absolute top-8 left-8 z-10 flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="h-1.5 w-1.5 bg-[var(--text)]" />
-              <div className="mono-label text-[10px] text-[var(--text-secondary)]">STATE_TREE_TOPOLOGY</div>
+          <div className="absolute left-6 top-6 z-10 flex max-w-[420px] flex-col gap-3 lg:left-8 lg:top-8">
+            <div className="rounded-full border border-[rgba(15,23,42,0.08)] bg-white/88 px-4 py-2 shadow-sm backdrop-blur">
+              <div className="mono-label text-[10px] text-[var(--text-secondary)]">State tree</div>
             </div>
+            {selectedScenario && (
+              <div className="rounded-[22px] border border-[rgba(15,23,42,0.08)] bg-white/92 p-4 shadow-sm backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--text)]">
+                      {selectedScenario.title || `Scenario ${selectedScenario.rank}`}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">
+                      {selectedScenario.summary || selectedScenario.intended_outcome || "Focused on the currently selected worst-case branch."}
+                    </p>
+                  </div>
+                  <span
+                    className="rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                    style={{
+                      color: severityColor(selectedScenario.severity_label),
+                      background: `${severityColor(selectedScenario.severity_label)}15`,
+                    }}
+                  >
+                    {selectedScenario.severity_label}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="pointer-events-none absolute right-8 top-8 z-10 border border-[var(--border)] bg-white px-5 py-2">
-            <span className="mono-label text-[9px] text-[var(--text-light)]">INTERACTION: CLICK_BRANCH_TO_FOCUS</span>
+          <div className="pointer-events-none absolute right-6 top-6 z-10 rounded-full border border-[rgba(15,23,42,0.08)] bg-white/88 px-4 py-2 shadow-sm backdrop-blur lg:right-8 lg:top-8">
+            <span className="mono-label text-[9px] text-[var(--text-light)]">Click a branch to inspect it</span>
           </div>
           {treeStats && totalTreeNodes > 0 && (
-            <div className="absolute bottom-8 left-8 z-10 flex max-w-[420px] items-end gap-3">
-              <div className="border border-[var(--border)] bg-white px-5 py-4">
-                <div className="mono-label text-[8px] text-[var(--text-muted)]">TREE_SCOPE</div>
+            <div className="absolute bottom-6 left-6 z-10 flex max-w-[460px] items-end gap-3 lg:bottom-8 lg:left-8">
+              <div className="rounded-[22px] border border-[rgba(15,23,42,0.08)] bg-white/92 px-5 py-4 shadow-sm backdrop-blur">
+                <div className="mono-label text-[8px] text-[var(--text-muted)]">Tree scope</div>
                 <div className="mt-2 flex items-center gap-4">
                   <span className="font-mono text-xs text-[var(--text)]">
-                    {String(totalTreeNodes).padStart(2, "0")}_NODES
+                    {String(totalTreeNodes).padStart(2, "0")} nodes
                   </span>
                   <span className="font-mono text-xs text-[var(--text)]">
-                    {String(totalTreeLeaves).padStart(2, "0")}_LEAVES
+                    {String(totalTreeLeaves).padStart(2, "0")} leaves
                   </span>
                 </div>
                 <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
@@ -1220,11 +1326,68 @@ export default function SimulatePage() {
                     setFocusedNodeId(rootTreeNode?.id ?? null);
                     setTooltip(null);
                   }}
-                  className="border border-[var(--border)] bg-white px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text)] transition hover:bg-[var(--bg-alt)]"
+                  className="rounded-full border border-[rgba(15,23,42,0.08)] bg-white/92 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text)] shadow-sm transition hover:bg-[var(--bg-alt)]"
                 >
                   Reset Focus
                 </button>
               )}
+            </div>
+          )}
+
+          {!exploring && topScenarios.length > 0 && (
+            <div className="absolute inset-x-0 bottom-0 z-10 border-t border-[rgba(15,23,42,0.08)] bg-white/94 p-4 backdrop-blur">
+              <div className="mb-3 flex items-center justify-between gap-4">
+                <div>
+                  <p className="mono-label text-[8px] text-[var(--text-light)]">Top branches</p>
+                  <p className="text-sm font-medium text-[var(--text)]">
+                    Pick a scenario card to jump the tree to its terminal branch
+                  </p>
+                </div>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Only the highest-signal branches are kept.
+                </p>
+              </div>
+              <div className="custom-scrollbar flex gap-3 overflow-x-auto pb-1">
+                {topScenarios.map((scenario, index) => {
+                  const isActive = selectedScenario?.rank === scenario.rank;
+                  return (
+                    <button
+                      key={`${scenario.rank}-${index}`}
+                      type="button"
+                      onClick={() => {
+                        const scenarioIndex = scenarios.findIndex(
+                          (candidate) => candidate.rank === scenario.rank,
+                        );
+                        setActiveScenario(scenarioIndex >= 0 ? scenarioIndex : index);
+                        const focusNode = resolveScenarioFocusNode(
+                          scenario,
+                          rootTreeNode,
+                          childrenByNodeId,
+                          graph,
+                        );
+                        setFocusedNodeId(focusNode?.id ?? null);
+                      }}
+                      className={`min-w-[220px] rounded-[18px] border p-4 text-left transition-all ${
+                        isActive
+                          ? "border-[rgba(15,23,42,0.14)] bg-[linear-gradient(180deg,#f8fafc,#eef2f7)]"
+                          : "border-[rgba(15,23,42,0.08)] bg-white hover:bg-[var(--bg-alt)]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-[var(--text)] line-clamp-1">
+                          {scenario.title || `Scenario ${scenario.rank}`}
+                        </span>
+                        <span className="font-mono text-xs" style={{ color: healthColor(scenario.health_remaining) }}>
+                          H {scenario.health_remaining.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">
+                        {scenario.summary || scenario.intended_outcome || "Coherent worst-case branch selected from the explored tree."}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -1307,12 +1470,12 @@ export default function SimulatePage() {
 
         {/* -- Right: Progress / Results Panel -- */}
         <aside
-          className="flex-[4] min-w-[340px] max-w-[480px] border border-[var(--border)] bg-white p-8 flex flex-col gap-8 overflow-y-auto"
+          className="custom-scrollbar flex-[4] min-w-[340px] max-w-[500px] overflow-y-auto rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white/92 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur lg:p-8"
         >
           <div className="flex items-center gap-3">
             <div className="h-1 w-4 bg-[var(--text)]" />
             <h3 className="mono-label text-[10px]">
-              {exploring ? "MONITORING_THREAD..." : treeStats ? "SIMULATION_RESULTS" : "SYSTEM_LOG"}
+              {exploring ? "Exploration in progress" : treeStats ? "Scenario summary" : "System log"}
             </h3>
           </div>
 
@@ -1367,18 +1530,18 @@ export default function SimulatePage() {
               {/* Summary stats */}
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
-                  label="NODES_EXPLORED"
-                  value={treeStats.total_nodes_explored.toLocaleString().replace(/,/g, '_')}
+                  label="Nodes explored"
+                  value={treeStats.total_nodes_explored.toLocaleString()}
                 />
                 <StatCard
-                  label="MAX_DEPTH"
+                  label="Max depth"
                   value={String(treeStats.max_depth_reached).padStart(2, '0')}
                 />
                 <StatCard
-                  label="COMPUTE_LATENCY"
+                  label="Compute latency"
                   value={`${(treeStats.computation_time_ms / 1000).toFixed(1)}S`}
                 />
-                <StatCard label="UNIQUE_SCENARIOS" value={String(scenarios.length).padStart(2, '0')} />
+                <StatCard label="Kept scenarios" value={String(scenarios.length).padStart(2, '0')} />
               </div>
 
               {resilienceProfile && (
@@ -1408,82 +1571,202 @@ export default function SimulatePage() {
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-[var(--border)]" />
-                    <span className="mono-label text-[9px] text-[var(--text-light)]">SELECTED_PATH_DIAGNOSTICS</span>
+                    <span className="mono-label text-[9px] text-[var(--text-light)]">Selected branch</span>
                     <div className="h-px flex-1 bg-[var(--border)]" />
                   </div>
 
                   <div
-                    className="flex flex-col gap-6 border border-[var(--border)] bg-white p-6"
+                    className="flex flex-col gap-6 rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,#ffffff,#f8fafc)] p-6"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <div
                           className="mono-label text-[9px] text-[var(--text-secondary)]"
                         >
-                          CASE_STUDY
+                          Active scenario
                         </div>
-                        <h4
-                          className="text-xl font-bold tracking-tight text-[var(--text)] uppercase"
-                        >
+                        <h4 className="text-xl font-semibold tracking-tight text-[var(--text)]">
                           {currentPathBriefing.title}
                         </h4>
+                        <p className="max-w-xl text-sm leading-relaxed text-[var(--text-muted)]">
+                          {currentPathBriefing.summary}
+                        </p>
                       </div>
-                      <span
-                        className="px-3 py-1 text-[9px] font-bold uppercase tracking-widest"
-                        style={{
-                          color: severityColor(currentPathBriefing.severityLabel),
-                          background: `${severityColor(currentPathBriefing.severityLabel)}18`,
-                          border: `1px solid ${severityColor(currentPathBriefing.severityLabel)}33`,
-                        }}
-                      >
-                        {currentPathBriefing.severityLabel}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeScenarioResolvedIndex <= 0) return;
+                            const nextIndex = activeScenarioResolvedIndex - 1;
+                            setActiveScenario(nextIndex);
+                            const focusNode = resolveScenarioFocusNode(
+                              scenarios[nextIndex],
+                              rootTreeNode,
+                              childrenByNodeId,
+                              graph,
+                            );
+                            setFocusedNodeId(focusNode?.id ?? null);
+                          }}
+                          disabled={activeScenarioResolvedIndex <= 0}
+                          className="rounded-full border border-[var(--border)] px-3 py-2 text-[10px] font-semibold text-[var(--text)] disabled:opacity-30"
+                        >
+                          Prev
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeScenarioResolvedIndex < 0 || activeScenarioResolvedIndex >= scenarios.length - 1) return;
+                            const nextIndex = activeScenarioResolvedIndex + 1;
+                            setActiveScenario(nextIndex);
+                            const focusNode = resolveScenarioFocusNode(
+                              scenarios[nextIndex],
+                              rootTreeNode,
+                              childrenByNodeId,
+                              graph,
+                            );
+                            setFocusedNodeId(focusNode?.id ?? null);
+                          }}
+                          disabled={activeScenarioResolvedIndex < 0 || activeScenarioResolvedIndex >= scenarios.length - 1}
+                          className="rounded-full border border-[var(--border)] px-3 py-2 text-[10px] font-semibold text-[var(--text)] disabled:opacity-30"
+                        >
+                          Next
+                        </button>
+                        <span
+                          className="rounded-full px-3 py-1 text-[10px] font-semibold"
+                          style={{
+                            color: severityColor(currentPathBriefing.severityLabel),
+                            background: `${severityColor(currentPathBriefing.severityLabel)}18`,
+                            border: `1px solid ${severityColor(currentPathBriefing.severityLabel)}33`,
+                          }}
+                        >
+                          {currentPathBriefing.severityLabel}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <MiniMetric
-                        label="TOTAL_H_LOSS"
+                        label="Health loss"
                         value={`-${currentPathBriefing.impact.healthLoss.toFixed(2)}`}
                         tone="var(--danger)"
                       />
                       <MiniMetric
-                        label="CASCADE_COUNT"
+                        label="Failed nodes"
                         value={String(currentPathBriefing.impact.failedCount).padStart(2, '0')}
+                        tone="var(--text)"
+                      />
+                      <MiniMetric
+                        label="Recovery"
+                        value={formatCompactCurrency(selectedScenario?.recovery_cost ?? 0)}
+                        tone="var(--text)"
+                      />
+                      <MiniMetric
+                        label="Depth"
+                        value={String(selectedScenario?.depth ?? focusedTreeNode?.depth ?? 0)}
                         tone="var(--text)"
                       />
                     </div>
 
                     <div className="flex flex-col gap-4">
-                      <div className="mono-label text-[9px] text-[var(--text-muted)]">EVENT_NARRATIVE</div>
-                      <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                        {currentPathBriefing.summary}
-                      </p>
+                      <div className="mono-label text-[9px] text-[var(--text-muted)]">Outcome</div>
                       <p className="text-xs leading-relaxed text-[var(--text-muted)]">
                         {currentPathBriefing.story}
                       </p>
+                      <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                        {currentPathBriefing.forecast}
+                      </p>
                     </div>
 
-                    {currentPathBriefing.events.length > 0 && (
+                    {scenarioStepCards.length > 0 && (
                       <div className="flex flex-col gap-4">
-                        <div className="mono-label text-[9px] text-[var(--text-muted)]">PROPAGATION_SEQUENCE</div>
-                        <div className="flex flex-col gap-2">
-                          {currentPathBriefing.events.map((event) => (
-                            <div
-                              key={`${event.step}-${event.event}`}
-                              className="flex items-center justify-between gap-4 border border-[var(--border)] bg-white p-3"
-                            >
-                              <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="mono-label !text-[8px] text-[var(--text-light)]">STEP_{String(event.step).padStart(2, '0')}</span>
-                                <span className="truncate text-[11px] font-bold text-[var(--text)] uppercase tracking-tight">
-                                  {event.event}
-                                </span>
-                              </div>
-                              <span
-                                className="font-mono text-[11px] font-bold text-[var(--danger)] shrink-0"
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="mono-label text-[9px] text-[var(--text-muted)]">Steps</div>
+                          <div className="text-xs text-[var(--text-muted)]">
+                            Click a step to jump the tree focus.
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {scenarioStepCards.map((event) => {
+                            const active = selectedStepIndex === event.index;
+                            return (
+                              <button
+                                key={`${event.step}-${event.label}`}
+                                type="button"
+                                onClick={() => {
+                                  if (!selectedScenario) return;
+                                  setSelectedStepSelection({
+                                    rank: selectedScenario.rank,
+                                    index: event.index,
+                                  });
+                                  const focusNode = resolveScenarioFocusNode(
+                                    {
+                                      ...selectedScenario,
+                                      path: selectedScenario.path.slice(0, event.index + 1),
+                                    },
+                                    rootTreeNode,
+                                    childrenByNodeId,
+                                    graph,
+                                  );
+                                  setFocusedNodeId(focusNode?.id ?? focusTargetId);
+                                }}
+                                className={`rounded-[18px] border p-4 text-left transition-all ${
+                                  active
+                                    ? "border-[rgba(15,23,42,0.14)] bg-white shadow-sm"
+                                    : "border-[var(--border)] bg-[rgba(255,255,255,0.7)] hover:bg-white"
+                                }`}
                               >
-                                -{event.deltaH.toFixed(2)}H
-                              </span>
-                            </div>
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="mono-label !text-[8px] text-[var(--text-light)]">
+                                      Step {String(event.step).padStart(2, "0")}
+                                    </div>
+                                    <div className="mt-1 text-sm font-semibold text-[var(--text)]">
+                                      {event.label}
+                                    </div>
+                                    <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+                                      {event.outcome}
+                                    </p>
+                                  </div>
+                                  <div className="shrink-0 text-right">
+                                    <div className="font-mono text-xs font-semibold text-[var(--danger)]">
+                                      -{event.deltaH.toFixed(2)}H
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-[var(--text-muted)]">
+                                      H {event.healthAfter.toFixed(2)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {nextBranchCandidates.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <div className="mono-label text-[9px] text-[var(--text-muted)]">Likely next branches</div>
+                        <div className="grid gap-3">
+                          {nextBranchCandidates.slice(0, 3).map((candidate) => (
+                            <button
+                              key={candidate.id}
+                              type="button"
+                              onClick={() => setFocusedNodeId(candidate.id)}
+                              className="flex items-center justify-between rounded-[16px] border border-[var(--border)] bg-white px-4 py-3 text-left transition hover:bg-[var(--bg-alt)]"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-[var(--text)]">
+                                  {candidate.event_summary}
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                  {candidate.expected_outcome || "This branch continues the current cascade path."}
+                                </p>
+                              </div>
+                              <div className="text-right font-mono text-xs">
+                                <p style={{ color: healthColor(candidate.H) }}>H {candidate.H.toFixed(2)}</p>
+                                <p className="mt-1 text-[var(--text-muted)]">{candidate.failed_count} failed</p>
+                              </div>
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -1491,7 +1774,7 @@ export default function SimulatePage() {
 
                     {currentPathBriefing.recommendations.length > 0 && (
                       <div className="flex flex-col gap-4">
-                        <div className="mono-label text-[9px] text-[var(--text-muted)]">COUNTERMEASURE_ADVISORY</div>
+                        <div className="mono-label text-[9px] text-[var(--text-muted)]">Best interventions</div>
                         <div className="flex flex-col gap-3">
                           {currentPathBriefing.recommendations
                             .slice(0, 2)
@@ -1594,7 +1877,7 @@ export default function SimulatePage() {
                           setFocusedNodeId(focusNode?.id ?? null);
                         }}
                         className={`group flex items-center justify-between border p-4 text-left transition-all ${
-                          activeScenarioIndex === i
+                          selectedScenario?.rank === s.rank
                             ? "border-[var(--text)] bg-[var(--bg-alt)]"
                             : "border-[var(--border)] bg-white hover:bg-[var(--bg-alt)]"
                         }`}

@@ -4,6 +4,8 @@
 
 The state tree is the data structure that stores all explored failure scenarios. It is a rooted tree where each node represents a network state and each edge represents an event that transforms one state into another. Multiple agents explore this tree concurrently, building different branches based on their strategies.
 
+Exploration should stay compact. AI-guided scenario agents propose only a few plausible, high-impact branches with clear intended outcomes, and the tree retains only the strongest child branches at each expansion step.
+
 ---
 
 ## Data Structure
@@ -125,6 +127,8 @@ function EXPLORE(tree, parent_node, agent, config):
     // Ask agent for events to explore
     events = agent.select_events(parent_node.state, parent_node.depth)
 
+    candidate_children = []
+
     for event in events:
         // Apply event to a copy of the state
         G_copy = rebuild_graph_from_state(parent_node.state)
@@ -152,6 +156,12 @@ function EXPLORE(tree, parent_node, agent, config):
             worst_path: parent_node.worst_path + [event]
         }
 
+        candidate_children.append(child)
+
+    // Keep only the highest-signal branches so the tree stays small
+    candidate_children.sort(by=(H asc, delta_H desc, failed_count desc))
+
+    for child in candidate_children[:top_branch_limit]:
         parent_node.children.append(child)
         tree.all_nodes.append(child)
         tree.total_nodes_explored += 1

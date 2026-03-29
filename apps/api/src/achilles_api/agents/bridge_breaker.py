@@ -27,7 +27,12 @@ class BridgeBreaker(Agent):
     def __init__(self, brief: AgentBrief) -> None:
         super().__init__(brief)
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Find current bridge nodes and kill them; fall back to edge cuts.
 
         1. Build an undirected networkx subgraph of surviving nodes.

@@ -25,7 +25,12 @@ class CriticalNodeAttacker(Agent):
     def __init__(self, brief: AgentBrief) -> None:
         super().__init__(brief)
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Score every surviving candidate by simulated damage, return top-k.
 
         1. Collect surviving nodes (``phi == False``).

@@ -25,7 +25,12 @@ class LayerAssassin(Agent):
     def __init__(self, brief: AgentBrief) -> None:
         super().__init__(brief)
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Kill highest-theta survivors in the target layer; fall back to
         weakest survivors in other layers once the target is fully dead.
 

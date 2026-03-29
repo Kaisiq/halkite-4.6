@@ -35,7 +35,12 @@ class ClusterIsolator(Agent):
     def __init__(self, brief: AgentBrief) -> None:
         super().__init__(brief)
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Recompute clusters, find most valuable, cut its boundaries.
 
         1. Build surviving subgraph and detect communities.

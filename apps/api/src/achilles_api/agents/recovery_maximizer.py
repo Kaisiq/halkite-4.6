@@ -33,7 +33,12 @@ class RecoveryCostMaximizer(Agent):
     def __init__(self, brief: AgentBrief) -> None:
         super().__init__(brief)
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Score surviving nodes by total recovery cost of the cascade they
         trigger, breaking ties with health loss.
 

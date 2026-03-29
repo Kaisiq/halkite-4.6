@@ -49,7 +49,7 @@ The AI never touches the numbers. It builds the graph from user data, generates 
 | 2A — Cascade Engine    | `02A_CASCADE_ENGINE.md`    | Cascade propagation math               | No — pure math               |
 | 3 — Agent Briefing     | `03_AGENT_BRIEFING.md`     | Convert analysis → agent instructions  | No — structured mapping      |
 | 3A — Agent Strategies  | `03A_AGENT_STRATEGIES.md`  | Each agent's exploration logic         | Partially — event generation |
-| 4 — State Tree         | `04_STATE_TREE.md`         | Tree structure, exploration, pruning   | No — pure computation        |
+| 4 — State Tree         | `04_STATE_TREE.md`         | Tree structure, exploration, pruning   | Yes — branch proposal only   |
 | 4A — Results & Ranking | `04A_RESULTS_RANKING.md`   | Collect, rank, present worst scenarios | Yes — narrative generation   |
 | 5 — API                | `05_API.md`                | FastAPI endpoints, tool definitions    | No                           |
 | 6 — Frontend           | `06_FRONTEND.md`           | React + D3 visualization               | No                           |

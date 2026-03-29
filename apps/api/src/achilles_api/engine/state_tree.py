@@ -24,7 +24,7 @@ import logging
 import uuid
 from typing import Any
 
-from achilles_api.agents.base import Agent
+from achilles_api.agents.base import Agent, BranchMetadata
 from achilles_api.engine.cascade import cascade
 from achilles_api.models.events import Event
 from achilles_api.models.graph import Graph, State
@@ -57,7 +57,12 @@ class TreeNode:
         "id",
         "parent",
         "recovery_cost",
+        "scenario_id",
+        "scenario_summary",
+        "scenario_title",
+        "step_description",
         "state",
+        "expected_outcome",
         "worst_descendant_H",
         "worst_path",
     )
@@ -79,6 +84,11 @@ class TreeNode:
         recovery_cost: float,
         worst_descendant_H: float,
         worst_path: list[Event] | None = None,
+        scenario_id: str = "",
+        scenario_title: str = "",
+        scenario_summary: str = "",
+        expected_outcome: str = "",
+        step_description: str = "",
     ) -> None:
         self.id: str = id
         self.state: State = state
@@ -92,6 +102,11 @@ class TreeNode:
         self.cumulative_loss: float = cumulative_loss
         self.failed_count: int = failed_count
         self.recovery_cost: float = recovery_cost
+        self.scenario_id: str = scenario_id
+        self.scenario_title: str = scenario_title
+        self.scenario_summary: str = scenario_summary
+        self.expected_outcome: str = expected_outcome
+        self.step_description: str = step_description
         self.worst_descendant_H: float = worst_descendant_H
         self.worst_path: list[Event] = worst_path if worst_path is not None else []
 
@@ -113,6 +128,11 @@ class TreeNode:
             "cumulative_loss": self.cumulative_loss,
             "failed_count": self.failed_count,
             "recovery_cost": self.recovery_cost,
+            "scenario_id": self.scenario_id,
+            "scenario_title": self.scenario_title,
+            "scenario_summary": self.scenario_summary,
+            "expected_outcome": self.expected_outcome,
+            "step_description": self.step_description,
             "worst_descendant_H": self.worst_descendant_H,
             "worst_path": [e.to_dict() for e in self.worst_path],
         }
@@ -212,15 +232,15 @@ def rebuild_graph_from_state(original_graph: Graph, state: State) -> Graph:
 # ---------------------------------------------------------------------------
 
 
-def is_duplicate_state(tree: StateTree, phi: list[bool]) -> bool:
-    """Return ``True`` if any existing tree node has the same failure pattern.
+def is_duplicate_state(tree: StateTree, state: State) -> bool:
+    """Return ``True`` if any existing tree node has the same state snapshot.
 
-    Two states are considered duplicates when exactly the same set of nodes
-    has failed (``phi`` vectors are identical).  This prevents the tree from
-    exploring the same failure configuration via different paths.
+    A duplicate must match both the failure pattern and the node health vector.
+    This still removes obvious repeats while allowing distinct partial-damage
+    scenarios to survive even when they have not yet produced new failures.
     """
     for existing in tree.all_nodes:
-        if existing.state.phi == phi:
+        if existing.state == state:
             return True
     return False
 
@@ -260,7 +280,11 @@ def explore(
 
     # -- Ask agent for events to explore -----------------------------------
     graph_for_agent = rebuild_graph_from_state(original_graph, parent.state)
-    events: list[Event] = agent.select_events(graph_for_agent, parent.depth)
+    current_path = list(parent.worst_path)
+    events: list[Event] = agent.select_events(graph_for_agent, parent.depth, current_path)
+
+    candidate_children: list[TreeNode] = []
+    local_failure_patterns: set[tuple[tuple[bool, ...], tuple[float, ...]]] = set()
 
     for event in events:
         # Respect tree size cap between events as well.
@@ -277,8 +301,15 @@ def explore(
             continue
 
         # Duplicate-state pruning.
-        if is_duplicate_state(tree, new_state.phi):
+        if is_duplicate_state(tree, new_state):
             continue
+        failure_pattern = (
+            tuple(new_state.phi),
+            tuple(round(value, 6) for value in new_state.h),
+        )
+        if failure_pattern in local_failure_patterns:
+            continue
+        local_failure_patterns.add(failure_pattern)
 
         # Compute metrics for the new node.
         new_H: float = new_state.H
@@ -286,6 +317,10 @@ def explore(
         cumulative_loss: float = tree.root.H - new_H
         failed_count: int = sum(new_state.phi)
         recovery_cost: float = sum(g_copy.nodes[i].r for i, phi in enumerate(new_state.phi) if phi)
+
+        branch_metadata: BranchMetadata | None = agent.describe_path(
+            list(parent.worst_path) + [event]
+        )
 
         child = TreeNode(
             id=str(uuid.uuid4()),
@@ -301,14 +336,46 @@ def explore(
             recovery_cost=recovery_cost,
             worst_descendant_H=new_H,
             worst_path=list(parent.worst_path) + [event],
+            scenario_id=(branch_metadata.scenario_id if branch_metadata is not None else ""),
+            scenario_title=(
+                branch_metadata.scenario_title if branch_metadata is not None else ""
+            ),
+            scenario_summary=(
+                branch_metadata.scenario_summary if branch_metadata is not None else ""
+            ),
+            expected_outcome=(
+                branch_metadata.expected_outcome if branch_metadata is not None else ""
+            ),
+            step_description=(
+                branch_metadata.step_description if branch_metadata is not None else ""
+            ),
         )
 
+        candidate_children.append(child)
+
+    candidate_children.sort(
+        key=lambda node: (
+            node.H,
+            -node.delta_H,
+            -node.failed_count,
+            -node.recovery_cost,
+        )
+    )
+
+    branch_limit = min(
+        len(candidate_children),
+        3 if parent.depth == 0 else 2,
+    )
+
+    for child in candidate_children[:branch_limit]:
+        if tree.total_nodes_explored >= config.max_tree_nodes:
+            return
         parent.children.append(child)
         tree.all_nodes.append(child)
         tree.total_nodes_explored += 1
         tree.max_depth_reached = max(tree.max_depth_reached, child.depth)
 
-        # Recurse.
+        # Recurse only into the highest-signal branches.
         explore(tree, child, agent, config, original_graph)
 
 
@@ -393,6 +460,8 @@ def extract_path(
                 "delta_H": current.delta_H,
                 "new_failures": new_failures,
                 "recovery_cost_so_far": current.recovery_cost,
+                "step_description": current.step_description,
+                "expected_outcome": current.expected_outcome,
             }
         )
         current = current.parent

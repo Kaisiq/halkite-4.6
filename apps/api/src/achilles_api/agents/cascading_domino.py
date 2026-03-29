@@ -32,7 +32,12 @@ class CascadingDomino(Agent):
     def __init__(self, brief: AgentBrief) -> None:
         super().__init__(brief)
 
-    def select_events(self, graph: Graph, depth: int) -> list[Event]:
+    def select_events(
+        self,
+        graph: Graph,
+        depth: int,
+        path: list[Event] | None = None,
+    ) -> list[Event]:
         """Score surviving nodes by cascade *depth* (propagation steps),
         breaking ties with cascade *size* (fraction of nodes affected).
 
