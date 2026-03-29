@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { AnimatedBeam } from "@/components/ui/animated-beam";
+import { BackgroundPaths } from "@/components/ui/background-paths";
 import { extractErrorMessage, joinWaitlist } from "@/lib/api";
 import { useAchillesStore } from "@/lib/store";
 
@@ -605,8 +606,11 @@ export default function DataInputPage() {
       </nav>
 
       {/* Hero */}
-      <section className="flex min-h-screen flex-col justify-center px-4 pt-24 pb-12 sm:px-6 sm:pt-28 sm:pb-16 md:px-10">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-8 sm:gap-12">
+      <section className="relative flex min-h-screen flex-col justify-center px-4 pt-24 pb-12 sm:px-6 sm:pt-28 sm:pb-16 md:px-10">
+        <div className="hidden md:block">
+          <BackgroundPaths />
+        </div>
+        <div className="relative z-10 mx-auto grid w-full max-w-[1400px] gap-8 sm:gap-12">
           <div className="text-center sm:text-left">
             <p className="mono-label">AI generates. Math computes. AI explains.</p>
             <h1 className="display-face mt-4 max-w-[1000px] text-[clamp(2.3rem,8vw,7rem)] font-bold leading-[1.05] tracking-[-0.035em] sm:mt-6">
