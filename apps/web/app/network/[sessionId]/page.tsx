@@ -72,6 +72,13 @@ interface OrbitLink {
   crossLayer: boolean;
 }
 
+type StoredNodeLayout = {
+  x: number;
+  y: number;
+  fx: number | null;
+  fy: number | null;
+};
+
 // ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
@@ -119,6 +126,7 @@ export default function NetworkPage({ params }: PageProps) {
   const hiddenLayersRef = useRef(hiddenLayers);
   const selectedNodeRef = useRef(selectedNodeId);
   const hoveredNodeRef = useRef(hoveredNodeId);
+  const layoutRef = useRef<Map<string, StoredNodeLayout>>(new Map());
 
   useEffect(() => {
     hiddenLayersRef.current = hiddenLayers;
@@ -177,10 +185,31 @@ export default function NetworkPage({ params }: PageProps) {
       1,
     );
 
+    const storedLayouts = layoutRef.current;
+    const existingLayouts = graph.nodes
+      .map((node) => storedLayouts.get(node.id))
+      .filter((layout): layout is StoredNodeLayout => layout !== undefined);
+    const anchorX =
+      existingLayouts.length > 0
+        ? existingLayouts.reduce((sum, layout) => sum + layout.x, 0) /
+          existingLayouts.length
+        : width / 2;
+    const anchorY =
+      existingLayouts.length > 0
+        ? existingLayouts.reduce((sum, layout) => sum + layout.y, 0) /
+          existingLayouts.length
+        : height / 2;
+
     const orbitNodes: OrbitNode[] = graph.nodes.map((node) => ({
       ...node,
-      x: width / 2 + (Math.random() - 0.5) * 160,
-      y: height / 2 + (Math.random() - 0.5) * 120,
+      x:
+        storedLayouts.get(node.id)?.x ??
+        (anchorX + (Math.random() - 0.5) * 42),
+      y:
+        storedLayouts.get(node.id)?.y ??
+        (anchorY + (Math.random() - 0.5) * 42),
+      fx: storedLayouts.get(node.id)?.fx ?? null,
+      fy: storedLayouts.get(node.id)?.fy ?? null,
       impact: (impactMap.get(node.id) ?? node.theta) / impactMax,
     }));
 
@@ -268,6 +297,9 @@ export default function NetworkPage({ params }: PageProps) {
       )
       .force("x", d3.forceX<OrbitNode>(width / 2).strength(0.03))
       .force("y", d3.forceY<OrbitNode>(height / 2).strength(0.03));
+
+    simulation.alpha(graphBuildState === "building" ? 0.16 : 0.34);
+    simulation.alphaDecay(graphBuildState === "building" ? 0.08 : 0.04);
 
     const drag = d3
       .drag<SVGGElement, OrbitNode>()
@@ -377,10 +409,21 @@ export default function NetworkPage({ params }: PageProps) {
     render();
 
     return () => {
+      layoutRef.current = new Map(
+        orbitNodes.map((node) => [
+          node.id,
+          {
+            x: node.x ?? width / 2,
+            y: node.y ?? height / 2,
+            fx: node.fx ?? null,
+            fy: node.fy ?? null,
+          },
+        ]),
+      );
       simulation.stop();
       svg.selectAll("*").remove();
     };
-  }, [graph, setSelectedNode, vulnerabilityReport]);
+  }, [graph, graphBuildState, setSelectedNode, vulnerabilityReport]);
 
   // ---- Layer toggle handler ----
   const toggleLayer = useCallback((layer: string) => {
@@ -399,6 +442,7 @@ export default function NetworkPage({ params }: PageProps) {
   const graphBuilding = graphBuildState === "building";
   const graphBuildFailed = graphBuildState === "failed";
   const waitingForFirstNode = graphBuilding && (graph?.nodes.length ?? 0) === 0;
+  const enrichingDraft = graphBuilding && (graph?.nodes.length ?? 0) > 0;
   const selectedEdges =
     graph && selectedNodeId
       ? graph.edges.filter(
@@ -477,6 +521,31 @@ export default function NetworkPage({ params }: PageProps) {
                 </p>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
                   Waiting for the first nodes to appear.
+                </p>
+              </div>
+            </div>
+          )}
+          {enrichingDraft && (
+            <div className="pointer-events-none absolute right-6 top-6 z-20">
+              <div className="w-[320px] border border-[var(--border)] bg-white/94 p-4 shadow-sm backdrop-blur-sm">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--text)]" />
+                  <div>
+                    <p className="mono-label text-[10px]">Draft Visible</p>
+                    <p className="text-sm font-medium">
+                      {uploadStageMessage || "Enriching graph with dependencies"}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-black/8">
+                  <div
+                    className="h-full bg-[var(--text)] transition-all duration-300"
+                    style={{ width: `${Math.round(uploadProgressValue * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">
+                  The draft graph is on screen. Halkantir is still enriching it
+                  with evidence, missing relationships, and deterministic scores.
                 </p>
               </div>
             </div>

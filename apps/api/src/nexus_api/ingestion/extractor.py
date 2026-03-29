@@ -14,6 +14,7 @@ import os
 import re
 import time
 from collections.abc import Awaitable, Callable
+from pathlib import PurePath
 from typing import Any, cast
 
 import numpy as np
@@ -831,6 +832,238 @@ def _empty_raw_graph() -> dict[str, Any]:
     }
 
 
+_GENERIC_ENTITY_STOPWORDS = {
+    "Headers",
+    "Header",
+    "Sheet",
+    "Page",
+    "Table",
+    "Structured JSON",
+    "USER DESCRIPTION",
+    "FILE",
+    "Image",
+    "Unknown",
+}
+
+_SINGLE_FILE_CHUNK_THRESHOLD_CHARS = int(
+    os.environ.get("INGEST_SINGLE_FILE_CHUNK_THRESHOLD_CHARS", "8000")
+)
+_SINGLE_FILE_CHUNK_TARGET_CHARS = int(
+    os.environ.get("INGEST_SINGLE_FILE_CHUNK_TARGET_CHARS", "3500")
+)
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+    return slug[:64] or "node"
+
+
+def _guess_layer(name: str, context_hint: str = "") -> str:
+    sample = f"{name} {context_hint}".lower()
+    if any(token in sample for token in ("ceo", "cto", "cfo", "manager", "director", "lead", "team", "staff", "employee", "people", "hr")):
+        return "People"
+    if any(token in sample for token in ("server", "system", "service", "database", "app", "infra", "network", "platform", "tech", "software")):
+        return "Technology"
+    if any(token in sample for token in ("supplier", "vendor", "warehouse", "fleet", "shipment", "inventory", "supply")):
+        return "Supply"
+    if any(token in sample for token in ("office", "plant", "facility", "site", "building", "hq")):
+        return "Facilities"
+    if any(token in sample for token in ("revenue", "billing", "finance", "accounting", "budget", "invoice")):
+        return "Financial"
+    return "Operations"
+
+
+def _clean_entity_name(raw: str) -> str:
+    name = raw.strip(" \t\r\n-_:,.;()[]{}")
+    name = re.sub(r"\s+", " ", name)
+    return name[:80]
+
+
+def _candidate_entities_from_content(content: str) -> list[str]:
+    candidates: list[str] = []
+
+    for match in re.finditer(
+        r"\b(?:[A-Z][a-z]+|[A-Z]{2,})(?:[ /-](?:[A-Z][a-z]+|[A-Z]{2,}|\d+)){0,3}\b",
+        content,
+    ):
+        value = _clean_entity_name(match.group(0))
+        if len(value) < 3:
+            continue
+        if value in _GENERIC_ENTITY_STOPWORDS:
+            continue
+        candidates.append(value)
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Headers:"):
+            parts = [part.strip() for part in stripped.replace("Headers:", "", 1).split("|")]
+            candidates.extend(part for part in parts if len(part) >= 3)
+        elif ":" in stripped:
+            key, value = stripped.split(":", 1)
+            key = _clean_entity_name(key)
+            value = _clean_entity_name(value.split(",")[0])
+            if 2 < len(key) <= 40:
+                candidates.append(key)
+            if 2 < len(value) <= 60 and not value.isdigit():
+                candidates.append(value)
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = candidate.casefold()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(candidate)
+        if len(deduped) >= 18:
+            break
+
+    return deduped
+
+
+def build_draft_graph(parsed_files: list[ParsedFile], description: str = "") -> dict[str, Any]:
+    raw = _empty_raw_graph()
+    raw["company"] = description.strip()[:120]
+    raw["confidence"] = 0.18
+
+    nodes_by_id: dict[str, dict[str, Any]] = {}
+    edge_keys: set[tuple[str, str]] = set()
+
+    for parsed_file in parsed_files:
+        stem = PurePath(parsed_file.filename).stem.replace("_", " ").replace("-", " ").strip()
+        candidates = []
+        if stem:
+            candidates.append(_clean_entity_name(stem.title() if stem.islower() else stem))
+        candidates.extend(_candidate_entities_from_content(parsed_file.content))
+
+        ordered_ids: list[str] = []
+        for candidate in candidates:
+            node_id = _slugify(candidate)
+            if node_id not in nodes_by_id:
+                layer = _guess_layer(candidate, parsed_file.file_type)
+                if layer not in raw["layers"]:
+                    raw["layers"].append(layer)
+                nodes_by_id[node_id] = {
+                    "id": node_id,
+                    "name": candidate,
+                    "layer": layer,
+                    "h": 1.0,
+                    "r_candidate": None,
+                    "meta": {
+                        "type": "draft_entity",
+                        "source_type": parsed_file.file_type,
+                        "draft": True,
+                        "evidence": [
+                            {
+                                "kind": "draft_parse",
+                                "source": parsed_file.filename,
+                                "confidence": 0.2,
+                                "note": "Deterministic draft entity extracted before AI enrichment",
+                            }
+                        ],
+                        "scoring_features": {
+                            "blast_radius": 0.25,
+                            "operational_criticality": 0.3,
+                            "irreplaceability": 0.2,
+                            "recovery_penalty": 0.1,
+                            "historical_incident_impact": 0.0,
+                        },
+                    },
+                }
+            ordered_ids.append(node_id)
+
+        for left, right in zip(ordered_ids, ordered_ids[1:], strict=False):
+            if left == right:
+                continue
+            key = (left, right)
+            if key in edge_keys:
+                continue
+            edge_keys.add(key)
+            raw["edges"].append(
+                {
+                    "from": left,
+                    "to": right,
+                    "meta": {
+                        "dependency_type": "draft_inferred",
+                        "directness": "reconstructed",
+                        "evidence": [
+                            {
+                                "kind": "draft_parse",
+                                "source": parsed_file.filename,
+                                "confidence": 0.15,
+                                "note": "Provisional dependency inferred from local file ordering",
+                            }
+                        ],
+                        "scoring_features": {
+                            "operational": 0.25,
+                            "informational": 0.15,
+                            "control": 0.05,
+                            "physical": 0.05,
+                            "financial": 0.05,
+                            "substitutability_penalty": 0.05,
+                            "workaround_delay": 0.1,
+                        },
+                    },
+                }
+            )
+
+    raw["nodes"] = list(nodes_by_id.values())
+    return raw
+
+
+def _split_text_semantically(text: str, target_chars: int) -> list[str]:
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
+    if not paragraphs:
+        stripped = text.strip()
+        return [stripped] if stripped else []
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+
+    for paragraph in paragraphs:
+        paragraph_len = len(paragraph)
+        if current and current_len + paragraph_len + 2 > target_chars:
+            chunks.append("\n\n".join(current))
+            current = [paragraph]
+            current_len = paragraph_len
+            continue
+        current.append(paragraph)
+        current_len += paragraph_len + (2 if current_len else 0)
+
+    if current:
+        chunks.append("\n\n".join(current))
+
+    return chunks
+
+
+def _chunk_single_large_file(parsed_files: list[ParsedFile]) -> list[ParsedFile] | None:
+    if len(parsed_files) != 1:
+        return None
+
+    parsed_file = parsed_files[0]
+    if parsed_file.raw_bytes is not None:
+        return None
+    if len(parsed_file.content) < _SINGLE_FILE_CHUNK_THRESHOLD_CHARS:
+        return None
+
+    chunks = _split_text_semantically(parsed_file.content, _SINGLE_FILE_CHUNK_TARGET_CHARS)
+    if len(chunks) <= 1:
+        return None
+
+    chunked_files: list[ParsedFile] = []
+    total = len(chunks)
+    for index, chunk in enumerate(chunks, start=1):
+        chunked_files.append(
+            ParsedFile(
+                filename=f"{parsed_file.filename} [chunk {index}/{total}]",
+                file_type=parsed_file.file_type,
+                content=chunk,
+            )
+        )
+    return chunked_files
+
+
 def _merge_unique_strings(existing: list[Any], incoming: list[Any]) -> list[str]:
     merged: list[str] = []
     seen: set[str] = set()
@@ -1105,6 +1338,8 @@ async def _ingest_impl(
     # Step 1: Parse
     parse_t0 = time.perf_counter()
     parsed = parse_files(files)
+    chunked_single_file = _chunk_single_large_file(parsed)
+    extraction_units = chunked_single_file if chunked_single_file is not None else parsed
     await _emit_progress(
         progress_callback,
         {
@@ -1115,16 +1350,42 @@ async def _ingest_impl(
             "metrics": {
                 "files_total": len(parsed),
                 "files_processed": 0,
+                "extraction_units_total": len(extraction_units),
                 "parse_time_ms": int((time.perf_counter() - parse_t0) * 1000),
             },
         },
     )
 
-    raw = _empty_raw_graph()
-    preview_graph: Graph | None = None
+    draft_raw = build_draft_graph(parsed, description)
+    if draft_raw["nodes"]:
+        preview_graph = build_graph_from_dict(draft_raw, refine_inference=False)
+        await _emit_progress(
+            progress_callback,
+            {
+                "type": "preview",
+                "status": "merging",
+                "progress": 0.2,
+                "stage_message": "Seeding draft graph",
+                "graph": preview_graph.to_dict(),
+                "new_nodes": [node.to_dict() for node in preview_graph.nodes],
+                "new_edges": [edge.to_dict() for edge in preview_graph.edges],
+                "metrics": {
+                    "files_total": len(parsed),
+                    "files_processed": 0,
+                    "extraction_units_total": len(extraction_units),
+                    "extraction_units_processed": 0,
+                    "candidate_nodes": len(preview_graph.nodes),
+                    "candidate_edges": len(preview_graph.edges),
+                },
+            },
+        )
+    else:
+        preview_graph = None
 
-    for index, parsed_file in enumerate(parsed, start=1):
-        progress_base = 0.1 + ((index - 1) / max(len(parsed), 1)) * 0.65
+    raw = _empty_raw_graph()
+
+    for index, parsed_file in enumerate(extraction_units, start=1):
+        progress_base = 0.1 + ((index - 1) / max(len(extraction_units), 1)) * 0.65
         await _emit_progress(
             progress_callback,
             {
@@ -1134,7 +1395,9 @@ async def _ingest_impl(
                 "stage_message": f"Extracting entities from {parsed_file.filename}",
                 "metrics": {
                     "files_total": len(parsed),
-                    "files_processed": index - 1,
+                    "files_processed": min(index - 1, len(parsed)),
+                    "extraction_units_total": len(extraction_units),
+                    "extraction_units_processed": index - 1,
                     "candidate_nodes": len(raw["nodes"]),
                     "candidate_edges": len(raw["edges"]),
                 },
@@ -1160,14 +1423,16 @@ async def _ingest_impl(
             {
                 "type": "preview",
                 "status": "merging",
-                "progress": 0.1 + (index / max(len(parsed), 1)) * 0.7,
+                "progress": 0.1 + (index / max(len(extraction_units), 1)) * 0.7,
                 "stage_message": f"Merging graph from {parsed_file.filename}",
                 "graph": next_graph.to_dict(),
                 "new_nodes": new_nodes,
                 "new_edges": new_edges,
                 "metrics": {
                     "files_total": len(parsed),
-                    "files_processed": index,
+                    "files_processed": min(index, len(parsed)),
+                    "extraction_units_total": len(extraction_units),
+                    "extraction_units_processed": index,
                     "candidate_nodes": len(next_graph.nodes),
                     "candidate_edges": len(next_graph.edges),
                 },
@@ -1200,6 +1465,8 @@ async def _ingest_impl(
             "metrics": {
                 "files_total": len(parsed),
                 "files_processed": len(parsed),
+                "extraction_units_total": len(extraction_units),
+                "extraction_units_processed": len(extraction_units),
                 "candidate_nodes": len(graph.nodes),
                 "candidate_edges": len(graph.edges),
             },
@@ -1249,6 +1516,8 @@ async def _ingest_impl(
             "metrics": {
                 "files_total": len(parsed),
                 "files_processed": len(parsed),
+                "extraction_units_total": len(extraction_units),
+                "extraction_units_processed": len(extraction_units),
                 "candidate_nodes": len(graph.nodes),
                 "candidate_edges": len(graph.edges),
             },

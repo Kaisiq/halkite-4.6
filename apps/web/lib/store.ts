@@ -21,6 +21,7 @@ import type {
   TreeStats,
   UploadJobEvent,
   UploadJobStatus,
+  UploadResponse,
   VulnerabilityReport,
 } from "./types";
 
@@ -120,6 +121,11 @@ let uploadSocket: WebSocket | null = null;
 let previewNodeQueue: GraphNode[] = [];
 let previewEdgeQueue: GraphEdge[] = [];
 let previewFlushTimer: number | null = null;
+let pendingUploadCompletion:
+  | (UploadResponse & {
+      drive_folder?: DriveFolderSummary;
+    })
+  | null = null;
 
 function closeUploadSocket(): void {
   if (uploadSocket) {
@@ -131,10 +137,34 @@ function closeUploadSocket(): void {
 function resetPreviewQueues(): void {
   previewNodeQueue = [];
   previewEdgeQueue = [];
+  pendingUploadCompletion = null;
   if (previewFlushTimer !== null && typeof window !== "undefined") {
     window.clearTimeout(previewFlushTimer);
   }
   previewFlushTimer = null;
+}
+
+function completeUploadReveal(): void {
+  const completion = pendingUploadCompletion;
+  if (!completion) {
+    return;
+  }
+  pendingUploadCompletion = null;
+  useNexusStore.setState({
+    sessionId: completion.session_id,
+    graph: completion.graph,
+    uploading: false,
+    uploadStatus: "completed",
+    uploadStageMessage: "Graph ready",
+    uploadProgress: null,
+    uploadProgressValue: 1,
+    graphBuildState: "complete",
+    confidence: completion.confidence,
+    gaps: completion.gaps,
+    followUpQuestions: completion.follow_up_questions,
+    driveFolder: completion.drive_folder ?? null,
+  });
+  closeUploadSocket();
 }
 
 function mergePreviewGraph(
@@ -176,10 +206,6 @@ function flushPreviewQueues(): void {
   if (nextNode) {
     useNexusStore.setState((state) => ({
       graph: mergePreviewGraph(state.graph, nextNode),
-      uploadProgressValue:
-        state.graphBuildState === "building"
-          ? Math.min(Math.max(state.uploadProgressValue, 0.2) + 0.05, 0.95)
-          : state.uploadProgressValue,
     }));
   } else {
     const nextEdge = previewEdgeQueue.shift();
@@ -199,8 +225,11 @@ function flushPreviewQueues(): void {
   }
 
   if (previewNodeQueue.length > 0 || previewEdgeQueue.length > 0) {
-    previewFlushTimer = window.setTimeout(flushPreviewQueues, 32);
+    previewFlushTimer = window.setTimeout(flushPreviewQueues, 140);
+    return;
   }
+
+  completeUploadReveal();
 }
 
 function enqueuePreviewNode(node: GraphNode): void {
@@ -383,21 +412,35 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             }
 
             if (event.type === "job_complete") {
-              resetPreviewQueues();
-              set({
-                sessionId: event.session_id,
-                graph: event.graph,
-                uploading: false,
-                uploadStatus: "completed",
-                uploadStageMessage: "Graph ready",
-                uploadProgress: null,
-                uploadProgressValue: 1,
-                graphBuildState: "complete",
-                confidence: event.confidence,
-                gaps: event.gaps,
-                followUpQuestions: event.follow_up_questions,
-              });
-              closeUploadSocket();
+              const currentGraph = get().graph;
+              pendingUploadCompletion = event;
+              set((state) => ({
+                uploadStatus: "refining",
+                uploadStageMessage: "Rendering final graph",
+                uploadProgress: "Rendering final graph",
+                uploadProgressValue: Math.max(state.uploadProgressValue, 0.9),
+              }));
+              for (const node of event.graph.nodes) {
+                if (!currentGraph?.nodes.some((existing) => existing.id === node.id)) {
+                  enqueuePreviewNode(node);
+                }
+              }
+              for (const edge of event.graph.edges) {
+                if (
+                  !currentGraph?.edges.some(
+                    (existing) => existing.from === edge.from && existing.to === edge.to,
+                  )
+                ) {
+                  enqueuePreviewEdge(edge);
+                }
+              }
+              if (
+                previewNodeQueue.length === 0 &&
+                previewEdgeQueue.length === 0 &&
+                previewFlushTimer === null
+              ) {
+                completeUploadReveal();
+              }
               return;
             }
 
@@ -439,7 +482,9 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
                       : "building",
               });
               if (job.status === "completed" || job.status === "failed") {
-                resetPreviewQueues();
+                if (job.status === "failed") {
+                  resetPreviewQueues();
+                }
                 return;
               }
               window.setTimeout(() => {
@@ -565,22 +610,35 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
             }
 
             if (event.type === "job_complete") {
-              resetPreviewQueues();
-              set({
-                sessionId: event.session_id,
-                graph: event.graph,
-                uploading: false,
-                uploadStatus: "completed",
-                uploadStageMessage: "Graph ready",
-                uploadProgress: null,
-                uploadProgressValue: 1,
-                graphBuildState: "complete",
-                confidence: event.confidence,
-                gaps: event.gaps,
-                followUpQuestions: event.follow_up_questions,
-                driveFolder: event.drive_folder ?? null,
-              });
-              closeUploadSocket();
+              const currentGraph = get().graph;
+              pendingUploadCompletion = event;
+              set((state) => ({
+                uploadStatus: "refining",
+                uploadStageMessage: "Rendering final graph",
+                uploadProgress: "Rendering final graph",
+                uploadProgressValue: Math.max(state.uploadProgressValue, 0.9),
+              }));
+              for (const node of event.graph.nodes) {
+                if (!currentGraph?.nodes.some((existing) => existing.id === node.id)) {
+                  enqueuePreviewNode(node);
+                }
+              }
+              for (const edge of event.graph.edges) {
+                if (
+                  !currentGraph?.edges.some(
+                    (existing) => existing.from === edge.from && existing.to === edge.to,
+                  )
+                ) {
+                  enqueuePreviewEdge(edge);
+                }
+              }
+              if (
+                previewNodeQueue.length === 0 &&
+                previewEdgeQueue.length === 0 &&
+                previewFlushTimer === null
+              ) {
+                completeUploadReveal();
+              }
               return;
             }
 
@@ -622,7 +680,9 @@ export const useNexusStore = create<NexusState>()((set, get) => ({
                       : "building",
               });
               if (job.status === "completed" || job.status === "failed") {
-                resetPreviewQueues();
+                if (job.status === "failed") {
+                  resetPreviewQueues();
+                }
                 return;
               }
               window.setTimeout(() => {
