@@ -50,6 +50,46 @@ export interface UploadResponse {
   follow_up_questions: string[];
 }
 
+export type UploadJobStatus =
+  | "queued"
+  | "parsing"
+  | "extracting"
+  | "merging"
+  | "refining"
+  | "completed"
+  | "failed";
+
+export interface UploadJobResponse {
+  session_id: string;
+  job_id: string;
+  status: UploadJobStatus;
+}
+
+export interface UploadJobState {
+  job_id: string;
+  session_id: string;
+  status: UploadJobStatus;
+  progress: number;
+  stage_message: string;
+  graph_preview: GraphData;
+  metrics: Record<string, number>;
+  error: string | null;
+}
+
+export type UploadJobEvent =
+  | {
+      type: "job_status";
+      status: UploadJobStatus;
+      progress: number;
+      stage_message: string;
+      metrics?: Record<string, number>;
+    }
+  | { type: "node_added"; node: GraphNode }
+  | { type: "edge_added"; edge: GraphEdge }
+  | { type: "graph_snapshot"; graph: GraphData }
+  | ({ type: "job_complete"; drive_folder?: DriveFolderSummary } & UploadResponse)
+  | { type: "job_error"; message: string };
+
 export interface DriveFolderSummary {
   id: string;
   name: string;

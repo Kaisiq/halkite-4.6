@@ -48,6 +48,47 @@ Errors:
     500: AI graph extraction failed
 ```
 
+### POST /api/upload-jobs
+
+Create an asynchronous ingestion job for uploaded files.
+
+```
+Request:
+    Content-Type: multipart/form-data
+    Body: files[] (one or more files)
+    Optional: description (text field)
+
+Response:
+{
+    "session_id": "uuid",
+    "job_id": "uuid",
+    "status": "queued"
+}
+```
+
+### GET /api/upload-jobs/{job_id}
+
+Fetch the current ingestion job state and latest graph preview.
+
+```
+Response:
+{
+    "job_id": "uuid",
+    "session_id": "uuid",
+    "status": "queued|parsing|extracting|merging|refining|completed|failed",
+    "progress": 0.35,
+    "stage_message": "Extracting entities from org_chart.pdf",
+    "graph_preview": Graph,
+    "metrics": {
+        "files_total": 4,
+        "files_processed": 2,
+        "candidate_nodes": 14,
+        "candidate_edges": 11
+    },
+    "error": null
+}
+```
+
 ### POST /api/google-drive/import
 
 Import a Google Drive folder for data ingestion (Module 1).
@@ -218,6 +259,23 @@ Response:
 ```
 
 ### POST /api/explore/stream (WebSocket alternative)
+
+### WS /ws/upload/{job_id}
+
+Streams upload-job progress and incremental graph updates.
+
+```
+Client sends:
+    {"action": "subscribe"}
+
+Server emits:
+    {"type": "job_status", "status": "...", "progress": 0.42, "stage_message": "..."}
+    {"type": "node_added", "node": {...}}
+    {"type": "edge_added", "edge": {...}}
+    {"type": "graph_snapshot", "graph": Graph}
+    {"type": "job_complete", ...final upload response...}
+    {"type": "job_error", "message": "..."}
+```
 
 Stream exploration progress in real-time:
 

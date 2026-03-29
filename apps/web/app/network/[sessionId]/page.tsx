@@ -86,6 +86,10 @@ export default function NetworkPage({ params }: PageProps) {
 
   // ---- Store selectors ----
   const graph = useNexusStore((s) => s.graph);
+  const graphBuildState = useNexusStore((s) => s.graphBuildState);
+  const uploadStageMessage = useNexusStore((s) => s.uploadStageMessage);
+  const uploadProgressValue = useNexusStore((s) => s.uploadProgressValue);
+  const uploadError = useNexusStore((s) => s.uploadError);
   const vulnerabilityReport = useNexusStore((s) => s.vulnerabilityReport);
   const analyzing = useNexusStore((s) => s.analyzing);
   const selectedNodeId = useNexusStore((s) => s.selectedNodeId);
@@ -392,6 +396,9 @@ export default function NetworkPage({ params }: PageProps) {
   const layers = graph?.layers ?? [];
   const selectedNode =
     graph?.nodes.find((n) => n.id === selectedNodeId) ?? null;
+  const graphBuilding = graphBuildState === "building";
+  const graphBuildFailed = graphBuildState === "failed";
+  const waitingForFirstNode = graphBuilding && (graph?.nodes.length ?? 0) === 0;
   const selectedEdges =
     graph && selectedNodeId
       ? graph.edges.filter(
@@ -429,10 +436,52 @@ export default function NetworkPage({ params }: PageProps) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white">
       <NavBar sessionId={sessionId} />
+      {graphBuilding && (
+        <div className="border-b border-[var(--border)] bg-[var(--bg-alt)] px-6 py-4">
+          <div className="flex items-center justify-between gap-6">
+            <div>
+              <p className="mono-label mb-1 text-[10px]">Graph Build In Progress</p>
+              <p className="text-sm font-medium">
+                {uploadStageMessage || "Building dependency graph"}
+              </p>
+            </div>
+            <div className="w-full max-w-sm">
+              <div className="h-2 overflow-hidden rounded-full bg-black/8">
+                <div
+                  className="h-full bg-[var(--text)] transition-all duration-300"
+                  style={{ width: `${Math.round(uploadProgressValue * 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-right font-mono text-[10px] text-[var(--text-light)]">
+                {Math.round(uploadProgressValue * 100)}% synced
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {graphBuildFailed && (
+        <div className="border-b border-red-200 bg-red-50 px-6 py-4 text-sm text-[var(--danger)]">
+          {uploadError || "Graph build failed before completion."}
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
         {/* D3 Graph Canvas */}
         <div className="relative flex-[7] min-w-0 border-r border-[var(--border)]">
+          {waitingForFirstNode && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/92 backdrop-blur-sm">
+              <div className="text-center">
+                <div className="mx-auto mb-4 h-10 w-10 animate-spin border-2 border-[var(--border)] border-t-[var(--text)]" />
+                <p className="text-sm font-medium">
+                  {uploadStageMessage || "Building dependency graph"}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Waiting for the first nodes to appear.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Legend */}
           <div className="pointer-events-none absolute left-6 top-6 z-10">
             <div className="border border-[var(--border)] bg-white p-4">
@@ -600,14 +649,19 @@ export default function NetworkPage({ params }: PageProps) {
             <button
               className="w-full border border-[var(--text)] bg-[var(--text)] py-3 text-sm font-medium text-white transition-colors hover:bg-[var(--text-secondary)] disabled:opacity-30"
               onClick={() => runAnalysis()}
-              disabled={analyzing}
+              disabled={analyzing || graphBuilding || graphBuildFailed}
             >
-              {analyzing ? "Analyzing..." : "Run Analysis"}
+              {graphBuilding
+                ? "Graph Still Building"
+                : analyzing
+                  ? "Analyzing..."
+                  : "Run Analysis"}
             </button>
 
             <button
-              className="w-full border border-[var(--border)] py-3 text-sm font-medium transition-colors hover:border-[var(--text)] hover:bg-[var(--bg-alt)]"
+              className="w-full border border-[var(--border)] py-3 text-sm font-medium transition-colors hover:border-[var(--text)] hover:bg-[var(--bg-alt)] disabled:opacity-30"
               onClick={() => router.push(`/simulate/${sessionId}` as Route)}
+              disabled={graphBuilding || graphBuildFailed}
             >
               Start Simulation
             </button>

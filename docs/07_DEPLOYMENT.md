@@ -41,6 +41,7 @@ MongoDB Container (port 27017, persistent volume)
 ### API
 
 - `GEMINI_API_KEY`: required when AI-backed ingestion or narrative generation is enabled.
+- `GEMINI_MODEL_FALLBACKS`: optional comma-separated ordered fallback list used when the primary Gemini model returns `429 RESOURCE_EXHAUSTED`. Default fallback chain is `gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash`.
 - `MONGODB_URI`: MongoDB connection string. Default `mongodb://mongo:27017/halkantir` in Docker. When unset, the API falls back to in-memory session storage (sessions lost on restart).
 - `API_HOST`: bind host inside the container. Default `0.0.0.0`.
 - `API_PORT`: bind port inside the container. Default `8000`.
